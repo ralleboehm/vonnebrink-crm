@@ -4,17 +4,17 @@
   "description": "Backend API for Vonnebrink CRM",
   "main": "src/server.js",
   "scripts": {
-	"start": "node src/server.js",
-	"dev": "nodemon src/server.js",
-	"test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
-	"crm",
-	"express",
-	"mongodb",
-	"nodejs"
-],
-  "author": "Ralf Böhm",
+    "crm",
+    "express",
+    "mongodb",
+    "nodejs"
+  ],
+  "author": "Vonnebrink IT Operations",
   "license": "MIT",
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -24,7 +24,8 @@
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.10.3",
-    "morgan": "^1.12.1"
+    "morgan": "^1.12.1",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
