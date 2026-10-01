@@ -2,7 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
-
+const routes = require("./routes");
+const notFound = require("./middleware/notFound");
 const app = express();
 
 // Middleware
@@ -12,12 +13,12 @@ app.use(express.json());
 app.use(morgan("dev"));
 
 // Health Check
-app.get("/api/v1/health", (req, res) => {
-    res.status(200).json({
-        status: "ok",
-        version: "1.0.0",
-        timestamp: new Date().toISOString()
-    });
-});
+app.use("/api/v1", routes);
+
+//NOT Found
+
+app.use(notFound);
+
+
 
 module.exports = app;
