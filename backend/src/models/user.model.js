@@ -1,7 +1,17 @@
 const mongoose = require("mongoose");
+const bcrypt = require("bcrypt");
 
 const userSchema = new mongoose.Schema(
     {
+        username: {
+            type: String,
+            required: true,
+            unique: true,
+            trim: true,
+            minlength: 3,
+            maxlength: 50
+        },
+
         firstName: {
             type: String,
             required: true,
@@ -25,15 +35,19 @@ const userSchema = new mongoose.Schema(
             maxlength: 255
         },
 
-        passwordHash: {
+        password: {
             type: String,
             required: true
         },
 
         role: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Role",
-            required: true
+            type: String,
+            enum: [
+                "admin",
+                "technician",
+                "sales"
+            ],
+            default: "technician"
         },
 
         active: {
@@ -42,17 +56,31 @@ const userSchema = new mongoose.Schema(
         },
 
         lastLogin: {
-            type: Date
-        },
-
-        isDeleted: {
-            type: Boolean,
-            default: false
+            type: Date,
+            default: null
         }
     },
     {
         timestamps: true
     }
 );
+
+// Passwort vor dem Speichern verschlüsseln
+userSchema.pre("save", async function () {
+
+    if (!this.isModified("password")) {
+        return;
+    }
+
+    this.password = await bcrypt.hash(this.password, 12);
+
+});
+
+// Passwort vergleichen
+userSchema.methods.comparePassword = async function (password) {
+
+    return bcrypt.compare(password, this.password);
+
+};
 
 module.exports = mongoose.model("User", userSchema);

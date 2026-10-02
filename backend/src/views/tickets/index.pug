@@ -1,0 +1,75 @@
+extends ../layouts/main
+
+block content
+    .d-flex.justify-content-between.align-items-center.mb-4
+        h1.mb-0 Tickets
+        a.btn.btn-primary(href="/tickets/new") Neues Ticket
+
+    .card.shadow-sm
+        .card-body.p-0
+            if tickets.length
+                .table-responsive
+                    table.table.table-hover.mb-0
+                        thead.table-light
+                            tr
+                                th Ticket
+                                th Beschreibung
+                                th Firma
+                                th Priorität
+                                th Status
+                                th Bearbeiter
+                                th.text-end Aktionen
+
+                        tbody
+                            each ticket in tickets
+                                tr
+                                    td
+                                        a.text-decoration-none(href=`/tickets/${ticket._id}`)
+                                            | #{ticket.ticketNumber}
+
+                                    td= ticket.description
+
+                                    td
+                                        if ticket.company
+                                            = ticket.company.companyName
+                                        else
+                                            | -
+
+                                    td
+                                        if ticket.priority === "urgent"
+                                            span.badge.bg-danger Dringend
+                                        else if ticket.priority === "high"
+                                            span.badge.bg-warning.text-dark Hoch
+                                        else if ticket.priority === "low"
+                                            span.badge.bg-secondary Niedrig
+                                        else
+                                            span.badge.bg-primary Normal
+
+                                    td
+                                        if ticket.status === "open"
+                                            span.badge.bg-primary Offen
+                                        else if ticket.status === "in_progress"
+                                            span.badge.bg-warning.text-dark In Bearbeitung
+                                        else if ticket.status === "waiting"
+                                            span.badge.bg-secondary Wartend
+                                        else if ticket.status === "resolved"
+                                            span.badge.bg-success Gelöst
+                                        else if ticket.status === "closed"
+                                            span.badge.bg-dark Geschlossen
+
+                                    td
+                                        if ticket.assignedTo
+                                            | #{ticket.assignedTo.firstName} #{ticket.assignedTo.lastName}
+                                        else
+                                            | Nicht zugewiesen
+
+                                    td.text-end
+                                        a.btn.btn-sm.btn-outline-primary(href=`/tickets/${ticket._id}`)
+                                            | Anzeigen
+                                        | 
+                                        a.btn.btn-sm.btn-outline-secondary(href=`/tickets/${ticket._id}/edit`)
+                                            | Bearbeiten
+
+            else
+                .p-4.text-center.text-muted
+                    | Noch keine Tickets vorhanden.

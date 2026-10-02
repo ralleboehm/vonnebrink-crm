@@ -1,0 +1,106 @@
+:root {
+
+    --vb-primary: #0d6efd;
+    --vb-primary-dark: #0a58ca;
+    --vb-background: #f5f7fb;
+    --vb-card: #ffffff;
+    --vb-text: #212529;
+    --vb-border: #dee2e6;
+
+}
+
+body {
+
+    background: var(--vb-background);
+    color: var(--vb-text);
+
+}
+
+/* Login Card */
+
+.login-card {
+
+    width: 100%;
+    max-width: 430px;
+    border: none;
+    border-radius: 16px;
+    overflow: hidden;
+
+}
+
+.login-card .card-header {
+
+    background: var(--vb-primary);
+    color: white;
+    text-align: center;
+    border-bottom: none;
+    padding: 2rem;
+
+}
+
+.login-card .card-body {
+
+    padding: 2rem;
+
+}
+
+/* Buttons */
+
+.btn-primary {
+
+    background: var(--vb-primary);
+    border-color: var(--vb-primary);
+
+}
+
+.btn-primary:hover {
+
+    background: var(--vb-primary-dark);
+    border-color: var(--vb-primary-dark);
+
+}
+
+/* Cards */
+
+.card {
+
+    border-radius: 14px;
+    border: 1px solid var(--vb-border);
+
+}
+
+/* Tabellen */
+
+.table thead {
+
+    vertical-align: middle;
+
+}
+
+.table td,
+.table th {
+
+    vertical-align: middle;
+
+}
+
+/* Logo */
+
+.crm-logo {
+
+    width: 72px;
+    height: auto;
+    margin-bottom: 1rem;
+
+}
+
+/* Footer */
+
+.login-footer {
+
+    text-align: center;
+    color: #6c757d;
+    font-size: .9rem;
+    margin-top: 1.5rem;
+
+}

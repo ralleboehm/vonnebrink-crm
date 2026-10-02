@@ -2,84 +2,102 @@ extends ../layouts/main
 
 block content
 
-    h1 Firma bearbeiten
+    h1.mb-4 Firma bearbeiten
 
     form(method="POST" action=`/companies/${company._id}/update`)
 
-        div
-            label(for="companyName") Firmenname
-            br
-            input(
+        .mb-3
+            label.form-label(for="companyName") Firmenname
+            input.form-control(
                 type="text"
                 id="companyName"
                 name="companyName"
                 value=company.companyName
                 required
-                autofocus
             )
 
-        br
-
-        div
-            label(for="status") Status
-            br
-            select(
+        .mb-3
+            label.form-label(for="status") Status
+            select.form-select(
                 id="status"
                 name="status"
             )
-                option(
-                    value="prospect"
-                    selected=company.status === "prospect"
-                ) Interessent
+                option(value="prospect" selected=company.status === "prospect") Interessent
+                option(value="customer" selected=company.status === "customer") Kunde
+                option(value="inactive" selected=company.status === "inactive") Inaktiv
 
-                option(
-                    value="customer"
-                    selected=company.status === "customer"
-                ) Kunde
-
-                option(
-                    value="inactive"
-                    selected=company.status === "inactive"
-                ) Inaktiv
-
-        br
-
-        div
-            label(for="phone") Telefon
-            br
-            input(
+        .mb-3
+            label.form-label(for="phone") Telefon
+            input.form-control(
                 type="text"
                 id="phone"
                 name="phone"
                 value=company.phone
             )
 
-        br
-
-        div
-            label(for="email") E-Mail
-            br
-            input(
+        .mb-3
+            label.form-label(for="email") E-Mail
+            input.form-control(
                 type="email"
                 id="email"
                 name="email"
                 value=company.email
             )
 
-        br
-
-        div
-            label(for="website") Webseite
-            br
-            input(
+        .mb-3
+            label.form-label(for="website") Webseite
+            input.form-control(
                 type="url"
                 id="website"
                 name="website"
                 value=company.website
             )
 
-        br
+        hr
 
-        button(type="submit") 💾 Änderungen speichern
-        |  
-        a(href="/companies") Abbrechen
+        h4 Adresse
+
+        .mb-3
+            label.form-label(for="street") Straße
+            input.form-control(
+                type="text"
+                id="street"
+                name="street"
+                value=company.address && company.address.street
+            )
+
+        .row
+
+            .col-md-3.mb-3
+                label.form-label(for="postalCode") PLZ
+                input.form-control(
+                    type="text"
+                    id="postalCode"
+                    name="postalCode"
+                    value=company.address && company.address.postalCode
+                )
+
+            .col-md-5.mb-3
+                label.form-label(for="city") Ort
+                input.form-control(
+                    type="text"
+                    id="city"
+                    name="city"
+                    value=company.address && company.address.city
+                )
+
+            .col-md-4.mb-3
+                label.form-label(for="country") Land
+                input.form-control(
+                    type="text"
+                    id="country"
+                    name="country"
+                    value=company.address && company.address.country
+                )
+
+        .mt-4
+            button.btn.btn-primary(type="submit")
+                | 💾 Änderungen speichern
+
+            a.btn.btn-secondary.ms-2(href="/companies")
+                | Abbrechen

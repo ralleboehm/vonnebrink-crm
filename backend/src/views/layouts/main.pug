@@ -2,21 +2,86 @@ doctype html
 html(lang="de")
     head
         meta(charset="UTF-8")
-        meta(name="viewport", content="width=device-width, initial-scale=1.0")
+        meta(name="viewport" content="width=device-width, initial-scale=1")
+        title #{title || "Vonnebrink CRM"}
 
-        title Vonnebrink CRM
+        link(
+            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+            rel="stylesheet"
+        )
 
-        link(rel="stylesheet", href="/css/style.css")
+        link(
+            href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
+            rel="stylesheet"
+        )
+
+        link(rel="stylesheet" href="/css/vonnebrink.css")
 
     body
+        nav.navbar.navbar-expand-lg.navbar-dark.bg-primary.shadow-sm
+            .container-fluid
 
-        include ../partials/navbar
+                a.navbar-brand(href="/")
+                    | Vonnebrink CRM
 
-        .container
+                button.navbar-toggler(
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#navbarNav"
+                )
+                    span.navbar-toggler-icon
 
-            include ../partials/sidebar
+                .collapse.navbar-collapse#navbarNav
 
-            main.content
-                block content
+                    ul.navbar-nav.me-auto
 
-        include ../partials/footer
+                        li.nav-item
+                            a.nav-link(href="/")
+                                | Dashboard
+
+                        li.nav-item
+                            a.nav-link(href="/companies")
+                                | Firmen
+
+                        li.nav-item
+                            a.nav-link(href="/contacts")
+                                | Kontakte
+
+                        li.nav-item
+                            a.nav-link(href="/tickets")
+                                | Tickets
+
+                        if session && session.user && session.user.role === "admin"
+                            li.nav-item
+                                a.nav-link(href="/users")
+                                    | Benutzer
+
+                    if session && session.user
+                        ul.navbar-nav
+                            li.nav-item.dropdown
+                                a.nav-link.dropdown-toggle(
+                                    href="#"
+                                    role="button"
+                                    data-bs-toggle="dropdown"
+                                )
+                                    | #{session.user.firstName} #{session.user.lastName}
+
+                                ul.dropdown-menu.dropdown-menu-end
+                                    li
+                                        span.dropdown-item-text
+                                            small.text-muted
+                                                | #{session.user.role}
+
+                                    li
+                                        hr.dropdown-divider
+
+                                    li
+                                        a.dropdown-item(href="/logout")
+                                            | Abmelden
+
+        main.container.py-4
+            block content
+
+        script(
+            src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+        )

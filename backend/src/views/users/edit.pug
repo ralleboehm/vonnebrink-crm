@@ -1,0 +1,80 @@
+extends ../layouts/main
+
+block content
+    .d-flex.justify-content-between.align-items-center.mb-4
+        h1.mb-0 Benutzer bearbeiten
+        a.btn.btn-outline-secondary(href=`/users/${user._id}`) Zurück
+
+    .card.shadow-sm
+        .card-body
+            form(method="POST" action=`/users/${user._id}/update`)
+                .row.g-3
+                    .col-md-6
+                        label.form-label(for="firstName") Vorname
+                        input.form-control(
+                            type="text"
+                            id="firstName"
+                            name="firstName"
+                            value=user.firstName
+                            required
+                            maxlength="100"
+                        )
+
+                    .col-md-6
+                        label.form-label(for="lastName") Nachname
+                        input.form-control(
+                            type="text"
+                            id="lastName"
+                            name="lastName"
+                            value=user.lastName
+                            required
+                            maxlength="100"
+                        )
+
+                    .col-md-6
+                        label.form-label(for="username") Benutzername
+                        input.form-control(
+                            type="text"
+                            id="username"
+                            name="username"
+                            value=user.username
+                            required
+                            minlength="3"
+                            maxlength="50"
+                        )
+
+                    .col-md-6
+                        label.form-label(for="email") E-Mail
+                        input.form-control(
+                            type="email"
+                            id="email"
+                            name="email"
+                            value=user.email
+                            required
+                            maxlength="255"
+                        )
+
+                    .col-md-6
+                        label.form-label(for="password") Neues Passwort
+                        input.form-control(
+                            type="password"
+                            id="password"
+                            name="password"
+                        )
+                        .form-text
+                            | Leer lassen, wenn das Passwort nicht geändert werden soll.
+
+                    .col-md-6
+                        label.form-label(for="role") Rolle
+                        select.form-select(
+                            id="role"
+                            name="role"
+                            required
+                        )
+                            option(value="technician" selected=user.role === "technician") Techniker
+                            option(value="sales" selected=user.role === "sales") Vertrieb
+                            option(value="admin" selected=user.role === "admin") Administrator
+
+                .mt-4
+                    button.btn.btn-primary(type="submit") Änderungen speichern
+                    a.btn.btn-outline-secondary.ms-2(href=`/users/${user._id}`) Abbrechen

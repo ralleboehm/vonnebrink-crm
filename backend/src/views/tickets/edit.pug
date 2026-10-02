@@ -1,0 +1,91 @@
+extends ../layouts/main
+
+block content
+    .d-flex.justify-content-between.align-items-center.mb-4
+        h1.mb-0 Ticket bearbeiten
+        a.btn.btn-outline-secondary(href=`/tickets/${ticket._id}`) Zurück
+
+    .card.shadow-sm
+        .card-body
+            form(method="POST" action=`/tickets/${ticket._id}/update`)
+                .row.g-3
+                    .col-md-6
+                        label.form-label(for="company") Firma
+                        select.form-select(
+                            id="company"
+                            name="company"
+                            required
+                        )
+                            each company in companies
+                                option(
+                                    value=company._id
+                                    selected=String(ticket.company._id) === String(company._id)
+                                )= company.companyName
+
+                    .col-md-6
+                        label.form-label(for="contact") Ansprechpartner
+                        select.form-select(
+                            id="contact"
+                            name="contact"
+                        )
+                            option(
+                                value=""
+                                selected=!ticket.contact
+                            ) Kein Ansprechpartner
+
+                            each contact in contacts
+                                option(
+                                    value=contact._id
+                                    selected=ticket.contact && String(ticket.contact._id) === String(contact._id)
+                                )
+                                    | #{contact.firstName} #{contact.lastName} – #{contact.company.companyName}
+
+                    .col-md-8
+                        label.form-label(for="subject") Betreff
+                        input.form-control(
+                            type="text"
+                            id="subject"
+                            name="subject"
+                            value=ticket.subject
+                            required
+                            maxlength="255"
+                        )
+
+                    .col-md-4
+                        label.form-label(for="priority") Priorität
+                        select.form-select(
+                            id="priority"
+                            name="priority"
+                            required
+                        )
+                            option(value="low" selected=ticket.priority === "low") Niedrig
+                            option(value="normal" selected=ticket.priority === "normal") Normal
+                            option(value="high" selected=ticket.priority === "high") Hoch
+                            option(value="urgent" selected=ticket.priority === "urgent") Dringend
+
+                    .col-md-6
+                        label.form-label(for="status") Status
+                        select.form-select(
+                            id="status"
+                            name="status"
+                            required
+                        )
+                            option(value="open" selected=ticket.status === "open") Offen
+                            option(value="in_progress" selected=ticket.status === "in_progress") In Bearbeitung
+                            option(value="waiting" selected=ticket.status === "waiting") Wartend
+                            option(value="resolved" selected=ticket.status === "resolved") Gelöst
+                            option(value="closed" selected=ticket.status === "closed") Geschlossen
+
+                    .col-12
+                        label.form-label(for="description") Beschreibung
+                        textarea.form-control(
+                            id="description"
+                            name="description"
+                            rows="8"
+                            required
+                            maxlength="10000"
+                        )= ticket.description
+
+                .mt-4
+                    button.btn.btn-primary(type="submit") Änderungen speichern
+                    a.btn.btn-outline-secondary.ms-2(href=`/tickets/${ticket._id}`) Abbrechen

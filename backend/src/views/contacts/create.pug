@@ -2,14 +2,13 @@ extends ../layouts/main
 
 block content
 
-    h1 Neuer Kontakt
+    h1.mb-4 Neuer Kontakt
 
     form(method="POST" action="/contacts")
 
-        div
-            label(for="company") Firma
-            br
-            select(
+        .mb-3
+            label.form-label(for="company") Firma
+            select.form-select(
                 id="company"
                 name="company"
                 required
@@ -22,12 +21,9 @@ block content
                         selected=(selectedCompany && selectedCompany.toString() === company._id.toString())
                     )= company.companyName
 
-        br
-
-        div
-            label(for="salutation") Anrede
-            br
-            select(
+        .mb-3
+            label.form-label(for="salutation") Anrede
+            select.form-select(
                 id="salutation"
                 name="salutation"
             )
@@ -35,99 +31,80 @@ block content
                 option(value="mrs") Frau
                 option(value="diverse") Divers
 
-        br
+        .row
 
-        div
-            label(for="firstName") Vorname
-            br
-            input(
-                type="text"
-                id="firstName"
-                name="firstName"
-                required
-            )
+            .col-md-6.mb-3
+                label.form-label(for="firstName") Vorname
+                input.form-control(
+                    type="text"
+                    id="firstName"
+                    name="firstName"
+                    required
+                )
 
-        br
+            .col-md-6.mb-3
+                label.form-label(for="lastName") Nachname
+                input.form-control(
+                    type="text"
+                    id="lastName"
+                    name="lastName"
+                    required
+                )
 
-        div
-            label(for="lastName") Nachname
-            br
-            input(
-                type="text"
-                id="lastName"
-                name="lastName"
-                required
-            )
-
-        br
-
-        div
-            label(for="position") Position
-            br
-            input(
+        .mb-3
+            label.form-label(for="position") Position
+            input.form-control(
                 type="text"
                 id="position"
                 name="position"
             )
 
-        br
+        .row
 
-        div
-            label(for="phone") Telefon
-            br
-            input(
-                type="text"
-                id="phone"
-                name="phone"
-            )
+            .col-md-6.mb-3
+                label.form-label(for="phone") Telefon
+                input.form-control(
+                    type="text"
+                    id="phone"
+                    name="phone"
+                )
 
-        br
+            .col-md-6.mb-3
+                label.form-label(for="mobile") Mobil
+                input.form-control(
+                    type="text"
+                    id="mobile"
+                    name="mobile"
+                )
 
-        div
-            label(for="mobile") Mobil
-            br
-            input(
-                type="text"
-                id="mobile"
-                name="mobile"
-            )
-
-        br
-
-        div
-            label(for="email") E-Mail
-            br
-            input(
+        .mb-3
+            label.form-label(for="email") E-Mail
+            input.form-control(
                 type="email"
                 id="email"
                 name="email"
             )
 
-        br
-
-        div
-            label(for="status") Status
-            br
-            select(
+        .mb-3
+            label.form-label(for="status") Status
+            select.form-select(
                 id="status"
                 name="status"
             )
                 option(value="active" selected) Aktiv
                 option(value="inactive") Inaktiv
 
-        br
-
-        div
-            label(for="notes") Notizen
-            br
-            textarea(
+        .mb-3
+            label.form-label(for="notes") Notizen
+            textarea.form-control(
                 id="notes"
                 name="notes"
                 rows="5"
             )
 
-        br
+        .mt-4
+            button.btn.btn-primary(type="submit")
+                | 💾 Kontakt anlegen
 
-        button(type="submit") 💾 Kontakt anlegen
-        |  
-        a(href="/contacts") Abbrechen
+            a.btn.btn-secondary.ms-2(href="/contacts")
+                | Abbrechen

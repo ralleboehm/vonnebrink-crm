@@ -2,70 +2,88 @@ extends ../layouts/main
 
 block content
 
-    h1 Kontakte
+    .d-flex.justify-content-between.align-items-center.mb-4
 
-    p
-        a(href="/contacts/new") ➕ Neuer Kontakt
+        h1.mb-0 Kontakte
+
+        a.btn.btn-primary(href="/contacts/new")
+            | ➕ Neuer Kontakt
 
     if contacts.length
 
-        table
-            thead
-                tr
-                    th Kontaktnummer
-                    th Name
-                    th Firma
-                    th Position
-                    th Telefon
-                    th E-Mail
-                    th Status
-                    th Aktionen
+        .card.shadow-sm
 
-            tbody
-                each contact in contacts
-                    tr
+            .card-body.p-0
 
-                        td= contact.contactNumber
+                table.table.table-hover.table-striped.mb-0
 
-                        td
-                            a(href=`/contacts/${contact._id}`)
-                                = `${contact.firstName} ${contact.lastName}`
+                    thead.table-dark
 
-                        td
-                            if contact.company
-                                = contact.company.companyName
-                            else
-                                | -
+                        tr
+                            th Kontaktnummer
+                            th Name
+                            th Firma
+                            th Position
+                            th Telefon
+                            th E-Mail
+                            th Status
+                            th.text-end Aktionen
 
-                        td= contact.position
+                    tbody
 
-                        td= contact.phone
+                        each contact in contacts
 
-                        td= contact.email
+                            tr
 
-                        td
-                            case contact.status
-                                when "active"
-                                    | Aktiv
-                                when "inactive"
-                                    | Inaktiv
-                                default
-                                    | Unbekannt
+                                td= contact.contactNumber
 
-                        td
-                            a(href=`/contacts/${contact._id}`) Anzeigen
-                            |  |
-                            a(href=`/contacts/${contact._id}/edit`) Bearbeiten
-                            |  |
+                                td
+                                    a.text-decoration-none(href=`/contacts/${contact._id}`)
+                                        strong #{contact.firstName} #{contact.lastName}
 
-                            form(
-                                action=`/contacts/${contact._id}/delete`
-                                method="POST"
-                                style="display:inline;"
-                                onsubmit="return confirm('Kontakt wirklich löschen?');"
-                            )
-                                button(type="submit") Löschen
+                                td
+                                    if contact.company
+                                        a.text-decoration-none(href=`/companies/${contact.company._id}`)
+                                            = contact.company.companyName
+                                    else
+                                        | -
+
+                                td= contact.position
+
+                                td= contact.phone
+
+                                td= contact.email
+
+                                td
+                                    case contact.status
+                                        when "active"
+                                            span.badge.bg-success Aktiv
+                                        when "inactive"
+                                            span.badge.bg-secondary Inaktiv
+                                        default
+                                            span.badge.bg-light.text-dark Unbekannt
+
+                                td.text-end
+
+                                    a.btn.btn-sm.btn-outline-primary.me-1(
+                                        href=`/contacts/${contact._id}`
+                                    ) Anzeigen
+
+                                    a.btn.btn-sm.btn-outline-secondary.me-1(
+                                        href=`/contacts/${contact._id}/edit`
+                                    ) Bearbeiten
+
+                                    form(
+                                        action=`/contacts/${contact._id}/delete`
+                                        method="POST"
+                                        style="display:inline;"
+                                        onsubmit="return confirm('Kontakt wirklich löschen?');"
+                                    )
+                                        button.btn.btn-sm.btn-outline-danger(type="submit")
+                                            | Löschen
 
     else
 
-        p Es sind noch keine Kontakte vorhanden.
+        .alert.alert-info
+
+            | Es sind noch keine Kontakte vorhanden.

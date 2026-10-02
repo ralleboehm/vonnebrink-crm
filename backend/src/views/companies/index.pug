@@ -2,62 +2,84 @@ extends ../layouts/main
 
 block content
 
-    h1 Firmen
+    .d-flex.justify-content-between.align-items-center.mb-4
 
-    p
-        a(href="/companies/new") ➕ Neue Firma
+        h1.mb-0 Firmen
+
+        a.btn.btn-primary(href="/companies/new")
+            | ➕ Neue Firma
 
     if companies.length
 
-        table
-            thead
-                tr
-                    th Kundennummer
-                    th Firma
-                    th Status
-                    th Telefon
-                    th E-Mail
-                    th Aktionen
+        .card.shadow-sm
 
-            tbody
-                each company in companies
-                    tr
+            .card-body.p-0
 
-                        td= company.customerNumber
+                table.table.table-hover.table-striped.mb-0
 
-                        td
-                            a(href=`/companies/${company._id}`)
-                                = company.companyName
+                    thead.table-dark
 
-                        td
-                            case company.status
-                                when "prospect"
-                                    | Interessent
-                                when "customer"
-                                    | Kunde
-                                when "inactive"
-                                    | Inaktiv
-                                default
-                                    | Unbekannt
+                        tr
+                            th Kundennummer
+                            th Firma
+                            th Status
+                            th Telefon
+                            th E-Mail
+                            th.text-end Aktionen
 
-                        td= company.phone
+                    tbody
 
-                        td= company.email
+                        each company in companies
 
-                        td
-                            a(href=`/companies/${company._id}`) Anzeigen
-                            |  |
-                            a(href=`/companies/${company._id}/edit`) Bearbeiten
-                            |  |
+                            tr
 
-                            form(
-                                action=`/companies/${company._id}/delete`
-                                method="POST"
-                                style="display:inline;"
-                                onsubmit="return confirm('Firma wirklich löschen?');"
-                            )
-                                button(type="submit") Löschen
+                                td
+                                    if company.customerNumber
+                                        = company.customerNumber
+                                    else
+                                        | -
+
+                                td
+                                    a.text-decoration-none(href=`/companies/${company._id}`)
+                                        strong= company.companyName
+
+                                td
+                                    case company.status
+                                        when "prospect"
+                                            span.badge.bg-warning.text-dark Interessent
+                                        when "customer"
+                                            span.badge.bg-success Kunde
+                                        when "inactive"
+                                            span.badge.bg-secondary Inaktiv
+                                        default
+                                            span.badge.bg-light.text-dark Unbekannt
+
+                                td= company.phone
+
+                                td= company.email
+
+                                td.text-end
+
+                                    a.btn.btn-sm.btn-outline-primary.me-1(
+                                        href=`/companies/${company._id}`
+                                    ) Anzeigen
+
+                                    a.btn.btn-sm.btn-outline-secondary.me-1(
+                                        href=`/companies/${company._id}/edit`
+                                    ) Bearbeiten
+
+                                    form(
+                                        action=`/companies/${company._id}/delete`
+                                        method="POST"
+                                        style="display:inline;"
+                                        onsubmit="return confirm('Firma wirklich löschen?');"
+                                    )
+
+                                        button.btn.btn-sm.btn-outline-danger(type="submit")
+                                            | Löschen
 
     else
 
-        p Es sind noch keine Firmen vorhanden.
+        .alert.alert-info
+
+            | Es sind noch keine Firmen vorhanden.

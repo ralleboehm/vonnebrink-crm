@@ -1,0 +1,150 @@
+extends ../layouts/main
+
+block content
+    .d-flex.justify-content-between.align-items-center.mb-4
+        h1.mb-0= ticket.ticketNumber
+
+        .d-flex.gap-2
+            a.btn.btn-outline-secondary(href="/tickets") Zurück
+            a.btn.btn-primary(href=`/tickets/${ticket._id}/edit`) Bearbeiten
+
+    //- Ticketinformationen
+    .card.shadow-sm.mb-4
+        .card-body
+            h3.mb-4= ticket.subject
+
+            .row.g-4
+                .col-md-6
+                    strong Firma
+                    p.mb-0
+                        if ticket.company
+                            a(href=`/companies/${ticket.company._id}`)
+                                = ticket.company.companyName
+                        else
+                            | -
+
+                .col-md-6
+                    strong Ansprechpartner
+                    p.mb-0
+                        if ticket.contact
+                            = ticket.contact.firstName
+                            |  
+                            = ticket.contact.lastName
+                        else
+                            | -
+
+                .col-md-4
+                    strong Priorität
+                    p.mb-0
+                        if ticket.priority === "urgent"
+                            span.badge.bg-danger Dringend
+                        else if ticket.priority === "high"
+                            span.badge.bg-warning.text-dark Hoch
+                        else if ticket.priority === "low"
+                            span.badge.bg-secondary Niedrig
+                        else
+                            span.badge.bg-primary Normal
+
+                .col-md-4
+                    strong Status
+                    p.mb-0
+                        if ticket.status === "open"
+                            span.badge.bg-primary Offen
+                        else if ticket.status === "in_progress"
+                            span.badge.bg-warning.text-dark In Bearbeitung
+                        else if ticket.status === "waiting"
+                            span.badge.bg-secondary Wartend
+                        else if ticket.status === "resolved"
+                            span.badge.bg-success Gelöst
+                        else
+                            span.badge.bg-dark Geschlossen
+
+                .col-md-4
+                    strong Bearbeiter
+                    p.mb-2
+                        if ticket.assignedTo
+                            | #{ticket.assignedTo.firstName} #{ticket.assignedTo.lastName}
+                        else
+                            | Nicht zugewiesen
+
+                    if session && session.user
+                        if session.user.role === "admin" || session.user.role === "technician" || session.user.role === "sales"
+                            form(method="POST" action=`/tickets/${ticket._id}/assign`)
+                                .input-group.input-group-sm
+                                    select.form-select(name="assignedTo")
+                                        option(value="") Nicht zugewiesen
+
+                                        each user in users
+                                            option(
+                                                value=user._id
+                                                selected=ticket.assignedTo && String(ticket.assignedTo._id) === String(user._id)
+                                            )
+                                                | #{user.firstName} #{user.lastName}
+
+                                    button.btn.btn-outline-primary(type="submit")
+                                        | Zuweisen
+
+            hr.my-4
+
+            h5 Beschreibung
+            .border.rounded.p-3.bg-light
+                = ticket.description
+
+    //- Nachrichten
+    .card.shadow-sm.mb-4
+        .card-header
+            h5.mb-0 Nachrichten
+
+        .card-body
+            if messages.length
+                each message in messages
+                    .border-bottom.pb-3.mb-3
+                        .d-flex.justify-content-between.align-items-center.mb-2
+                            strong
+                                | #{message.author.firstName} #{message.author.lastName}
+
+                            small.text-muted
+                                = message.createdAt.toLocaleString("de-DE")
+
+                        p.mb-0
+                            = message.message
+            else
+                p.text-muted.mb-0
+                    | Noch keine Nachrichten vorhanden.
+
+    //- Neue Nachricht
+    .card.shadow-sm
+        .card-header
+            h5.mb-0 Neue Nachricht
+
+        .card-body
+            form(method="POST" action=`/tickets/${ticket._id}/messages`)
+                .mb-3
+                    label.form-label(for="message") Nachricht
+                    textarea.form-control(
+                        id="message"
+                        name="message"
+                        rows="5"
+                        maxlength="10000"
+                        required
+                        placeholder="Nachricht eingeben..."
+                    )
+
+                button.btn.btn-primary(type="submit")
+                    | Nachricht hinzufügen
+
+    //- Metadaten
+    .card.shadow-sm.mt-4
+        .card-body
+            .row
+                .col-md-6
+                    strong Erstellt von
+                    p.mb-0
+                        if ticket.createdBy
+                            | #{ticket.createdBy.firstName} #{ticket.createdBy.lastName}
+                        else
+                            | -
+
+                .col-md-6
+                    strong Erstellt am
+                    p.mb-0= ticket.createdAt.toLocaleString("de-DE")

@@ -2,64 +2,91 @@ extends ../layouts/main
 
 block content
 
-    h1 #{contact.firstName} #{contact.lastName}
+    .d-flex.justify-content-between.align-items-center.mb-4
 
-    table
-        tbody
-            tr
-                th Kontaktnummer
-                td= contact.contactNumber
+        h1.mb-0 #{contact.firstName} #{contact.lastName}
 
-            tr
-                th Firma
-                td= contact.company.companyName
+        div
+            a.btn.btn-outline-secondary.me-2(
+                href=`/contacts/${contact._id}/edit`
+            ) Bearbeiten
 
-            tr
-                th Anrede
-                td
-                    case contact.salutation
-                        when "mr"
-                            | Herr
-                        when "mrs"
-                            | Frau
-                        when "diverse"
-                            | Divers
-                        default
-                            | -
+            a.btn.btn-secondary(
+                href=`/companies/${contact.company._id}`
+            ) Zurück zur Firma
 
-            tr
-                th Position
-                td= contact.position
+    .card.shadow-sm
 
-            tr
-                th Telefon
-                td= contact.phone
+        .card-header
+            h5.mb-0 Kontaktdaten
 
-            tr
-                th Mobil
-                td= contact.mobile
+        .card-body
 
-            tr
-                th E-Mail
-                td= contact.email
+            .row
 
-            tr
-                th Status
-                td
-                    case contact.status
-                        when "active"
-                            | Aktiv
-                        when "inactive"
-                            | Inaktiv
-                        default
-                            | Unbekannt
+                .col-md-6
 
-            tr
-                th Notizen
-                td= contact.notes
+                    p
+                        strong Kontaktnummer:
+                        br
+                        = contact.contactNumber
 
-    br
+                    p
+                        strong Firma:
+                        br
+                        a(href=`/companies/${contact.company._id}`)
+                            = contact.company.companyName
 
-    a(href=`/contacts/${contact._id}/edit`) Bearbeiten
-    |   
-    a(href="/contacts") Zurück
+                    p
+                        strong Anrede:
+                        br
+                        case contact.salutation
+                            when "mr"
+                                | Herr
+                            when "mrs"
+                                | Frau
+                            when "diverse"
+                                | Divers
+                            default
+                                | -
+
+                    p
+                        strong Position:
+                        br
+                        = contact.position || "-"
+
+                .col-md-6
+
+                    p
+                        strong Telefon:
+                        br
+                        = contact.phone || "-"
+
+                    p
+                        strong Mobil:
+                        br
+                        = contact.mobile || "-"
+
+                    p
+                        strong E-Mail:
+                        br
+                        = contact.email || "-"
+
+                    p
+                        strong Status:
+                        br
+                        case contact.status
+                            when "active"
+                                span.badge.bg-success Aktiv
+                            when "inactive"
+                                span.badge.bg-secondary Inaktiv
+                            default
+                                span.badge.bg-light.text-dark Unbekannt
+
+            if contact.notes
+
+                hr
+
+                h5 Notizen
+
+                p= contact.notes
