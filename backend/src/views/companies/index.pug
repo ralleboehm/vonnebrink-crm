@@ -1,0 +1,46 @@
+extends ../layouts/main
+
+block content
+
+    h1 Firmen
+
+    p
+        a(href="/companies/new") ➕ Neue Firma
+
+    if companies.length
+
+        table
+            thead
+                tr
+                    th Kundennummer
+                    th Firma
+                    th Status
+                    th Telefon
+                    th E-Mail
+                    th Aktionen
+
+            tbody
+                each company in companies
+                    tr
+                        td
+                            if company.customerNumber
+                                = company.customerNumber
+                            else
+                                | -
+
+                        td
+                            a(href=`/companies/${company._id}`)
+                                = company.companyName
+
+                        td= company.status
+                        td= company.phone
+                        td= company.email
+
+                        td
+                            a(href=`/companies/${company._id}/edit`) Bearbeiten
+                            |  |
+                            a(href=`/companies/${company._id}`) Anzeigen
+
+    else
+
+        p Es sind noch keine Firmen vorhanden.

@@ -1,0 +1,64 @@
+extends ../layouts/main
+
+block content
+
+    h1 Neue Firma
+
+    form(method="POST" action="/companies")
+
+        div
+            label(for="companyName") Firmenname
+
+            br
+
+            input(
+                type="text"
+                id="companyName"
+                name="companyName"
+                required
+            )
+
+        br
+
+        div
+            label(for="phone") Telefon
+
+            br
+
+            input(
+                type="text"
+                id="phone"
+                name="phone"
+            )
+
+        br
+
+        div
+            label(for="email") E-Mail
+
+            br
+
+            input(
+                type="email"
+                id="email"
+                name="email"
+            )
+
+        br
+
+        div
+            label(for="website") Webseite
+
+            br
+
+            input(
+                type="text"
+                id="website"
+                name="website"
+            )
+
+        br
+
+        button(type="submit") Speichern
+
+        a(href="/companies") Abbrechen

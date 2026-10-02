@@ -1,0 +1,60 @@
+extends ../layouts/main
+
+block content
+
+    h1 Firma bearbeiten
+
+    form(method="POST" action=`/companies/${company._id}/update`)
+
+        div
+            label(for="companyName") Firmenname
+            br
+            input(
+                type="text"
+                id="companyName"
+                name="companyName"
+                value=company.companyName
+                required
+            )
+
+        br
+
+        div
+            label(for="phone") Telefon
+            br
+            input(
+                type="text"
+                id="phone"
+                name="phone"
+                value=company.phone
+            )
+
+        br
+
+        div
+            label(for="email") E-Mail
+            br
+            input(
+                type="email"
+                id="email"
+                name="email"
+                value=company.email
+            )
+
+        br
+
+        div
+            label(for="website") Webseite
+            br
+            input(
+                type="text"
+                id="website"
+                name="website"
+                value=company.website
+            )
+
+        br
+
+        button(type="submit") 💾 Speichern
+        |  
+        a(href="/companies") Abbrechen
