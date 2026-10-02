@@ -1,0 +1,87 @@
+extends ../layouts/main
+
+block content
+
+    h1= company.companyName
+
+    table
+        tbody
+            tr
+                th Kundennummer
+                td= company.customerNumber
+
+            tr
+                th Status
+                td
+                    case company.status
+                        when "prospect"
+                            | Interessent
+                        when "customer"
+                            | Kunde
+                        when "inactive"
+                            | Inaktiv
+                        default
+                            | Unbekannt
+
+            tr
+                th Telefon
+                td= company.phone
+
+            tr
+                th E-Mail
+                td= company.email
+
+            tr
+                th Webseite
+                td
+                    if company.website
+                        a(href=company.website target="_blank")= company.website
+                    else
+                        | -
+
+    br
+
+    h2 Ansprechpartner
+
+    p
+        a(href=`/contacts/new?company=${company._id}`) ➕ Neuer Ansprechpartner
+
+    if contacts.length
+
+        table
+            thead
+                tr
+                    th Kontaktnummer
+                    th Name
+                    th Position
+                    th Telefon
+                    th E-Mail
+                    th Aktionen
+
+            tbody
+                each contact in contacts
+                    tr
+                        td= contact.contactNumber
+
+                        td
+                            a(href=`/contacts/${contact._id}`)
+                                = `${contact.firstName} ${contact.lastName}`
+
+                        td= contact.position
+
+                        td= contact.phone
+
+                        td= contact.email
+
+                        td
+                            a(href=`/contacts/${contact._id}/edit`) Bearbeiten
+
+    else
+
+        p Für diese Firma sind noch keine Ansprechpartner vorhanden.
+
+    br
+
+    a(href=`/companies/${company._id}/edit`) Firma bearbeiten
+    |  
+    a(href="/companies") Zurück

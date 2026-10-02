@@ -1,4 +1,5 @@
 const companyService = require("../services/company.service");
+const contactService = require("../services/contact.service");
 
 // Alle Firmen anzeigen
 exports.index = async (req, res, next) => {
@@ -20,7 +21,7 @@ exports.index = async (req, res, next) => {
 
 };
 
-// Formular "Neue Firma"
+// Formular für neue Firma
 exports.create = (req, res) => {
 
     res.render("companies/create", {
@@ -29,7 +30,7 @@ exports.create = (req, res) => {
 
 };
 
-// Neue Firma speichern
+// Firma speichern
 exports.store = async (req, res, next) => {
 
     try {
@@ -46,7 +47,7 @@ exports.store = async (req, res, next) => {
 
 };
 
-// Einzelne Firma anzeigen
+// Firma anzeigen
 exports.show = async (req, res, next) => {
 
     try {
@@ -57,9 +58,12 @@ exports.show = async (req, res, next) => {
             return res.status(404).send("Firma nicht gefunden");
         }
 
+        const contacts = await contactService.getByCompany(company._id);
+
         res.render("companies/show", {
             title: company.companyName,
-            company
+            company,
+            contacts
         });
 
     } catch (err) {
@@ -70,7 +74,7 @@ exports.show = async (req, res, next) => {
 
 };
 
-// Formular "Firma bearbeiten"
+// Formular zum Bearbeiten
 exports.edit = async (req, res, next) => {
 
     try {
@@ -111,7 +115,7 @@ exports.update = async (req, res, next) => {
 
 };
 
-// Firma löschen (Soft Delete)
+// Soft Delete
 exports.destroy = async (req, res, next) => {
 
     try {

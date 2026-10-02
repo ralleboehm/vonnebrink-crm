@@ -17,7 +17,10 @@ block content
                 option(value="") Bitte auswählen
 
                 each company in companies
-                    option(value=company._id)= company.companyName
+                    option(
+                        value=company._id
+                        selected=(selectedCompany && selectedCompany.toString() === company._id.toString())
+                    )= company.companyName
 
         br
 

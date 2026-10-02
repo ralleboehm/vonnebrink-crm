@@ -30,7 +30,8 @@ exports.create = async (req, res, next) => {
 
         res.render("contacts/create", {
             title: "Neuer Kontakt",
-            companies
+            companies,
+            selectedCompany: req.query.company || null
         });
 
     } catch (err) {
@@ -48,7 +49,7 @@ exports.store = async (req, res, next) => {
 
         await contactService.create(req.body);
 
-        res.redirect("/contacts");
+        res.redirect(`/companies/${req.body.company}`);
 
     } catch (err) {
 
@@ -116,7 +117,7 @@ exports.update = async (req, res, next) => {
 
         await contactService.update(req.params.id, req.body);
 
-        res.redirect("/contacts");
+        res.redirect(`/companies/${req.body.company}`);
 
     } catch (err) {
 
@@ -131,9 +132,11 @@ exports.destroy = async (req, res, next) => {
 
     try {
 
+        const contact = await contactService.getById(req.params.id);
+
         await contactService.softDelete(req.params.id);
 
-        res.redirect("/contacts");
+        res.redirect(`/companies/${contact.company._id}`);
 
     } catch (err) {
 
