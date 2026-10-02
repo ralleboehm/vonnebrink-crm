@@ -8,23 +8,33 @@ block content
 
         div
             label(for="companyName") Firmenname
-
             br
-
             input(
                 type="text"
                 id="companyName"
                 name="companyName"
                 required
+                autofocus
             )
 
         br
 
         div
-            label(for="phone") Telefon
-
+            label(for="status") Status
             br
+            select(
+                id="status"
+                name="status"
+            )
+                option(value="prospect" selected) Interessent
+                option(value="customer") Kunde
+                option(value="inactive") Inaktiv
 
+        br
+
+        div
+            label(for="phone") Telefon
+            br
             input(
                 type="text"
                 id="phone"
@@ -35,9 +45,7 @@ block content
 
         div
             label(for="email") E-Mail
-
             br
-
             input(
                 type="email"
                 id="email"
@@ -48,17 +56,15 @@ block content
 
         div
             label(for="website") Webseite
-
             br
-
             input(
-                type="text"
+                type="url"
                 id="website"
                 name="website"
             )
 
         br
 
-        button(type="submit") Speichern
-
+        button(type="submit") 💾 Firma anlegen
+        |  
         a(href="/companies") Abbrechen

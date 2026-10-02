@@ -11,9 +11,13 @@ const companySchema = new mongoose.Schema(
         },
 
         customerNumber: {
-            type: Number,
-            unique: true
-        },
+            type: String,
+            required: true,
+            unique: true,
+            immutable: true,
+            trim: true
+
+},
 
         status: {
             type: String,

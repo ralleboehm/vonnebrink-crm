@@ -1,14 +1,11 @@
-const Company = require("../models/company.model");
+const companyService = require("../services/company.service");
 
 // Alle Firmen anzeigen
 exports.index = async (req, res, next) => {
+
     try {
 
-        const companies = await Company.find({
-            isDeleted: false
-        }).sort({
-            companyName: 1
-        });
+        const companies = await companyService.getAll();
 
         res.render("companies/index", {
             title: "Firmen",
@@ -16,11 +13,14 @@ exports.index = async (req, res, next) => {
         });
 
     } catch (err) {
+
         next(err);
+
     }
+
 };
 
-// Formular anzeigen
+// Formular "Neue Firma"
 exports.create = (req, res) => {
 
     res.render("companies/create", {
@@ -29,22 +29,12 @@ exports.create = (req, res) => {
 
 };
 
-// Firma speichern
+// Neue Firma speichern
 exports.store = async (req, res, next) => {
 
     try {
 
-        await Company.create({
-
-            companyName: req.body.companyName,
-
-            phone: req.body.phone,
-
-            email: req.body.email,
-
-            website: req.body.website
-
-        });
+        await companyService.create(req.body);
 
         res.redirect("/companies");
 
@@ -56,12 +46,12 @@ exports.store = async (req, res, next) => {
 
 };
 
-// Detailansicht
+// Einzelne Firma anzeigen
 exports.show = async (req, res, next) => {
 
     try {
 
-        const company = await Company.findById(req.params.id);
+        const company = await companyService.getById(req.params.id);
 
         if (!company) {
             return res.status(404).send("Firma nicht gefunden");
@@ -80,12 +70,12 @@ exports.show = async (req, res, next) => {
 
 };
 
-// Formular bearbeiten
+// Formular "Firma bearbeiten"
 exports.edit = async (req, res, next) => {
 
     try {
 
-        const company = await Company.findById(req.params.id);
+        const company = await companyService.getById(req.params.id);
 
         if (!company) {
             return res.status(404).send("Firma nicht gefunden");
@@ -109,22 +99,7 @@ exports.update = async (req, res, next) => {
 
     try {
 
-        await Company.findByIdAndUpdate(
-
-            req.params.id,
-
-            {
-                companyName: req.body.companyName,
-                phone: req.body.phone,
-                email: req.body.email,
-                website: req.body.website
-            },
-
-            {
-                runValidators: true
-            }
-
-        );
+        await companyService.update(req.params.id, req.body);
 
         res.redirect("/companies");
 
@@ -136,16 +111,12 @@ exports.update = async (req, res, next) => {
 
 };
 
-// Soft Delete
+// Firma löschen (Soft Delete)
 exports.destroy = async (req, res, next) => {
 
     try {
 
-        await Company.findByIdAndUpdate(req.params.id, {
-
-            isDeleted: true
-
-        });
+        await companyService.softDelete(req.params.id);
 
         res.redirect("/companies");
 

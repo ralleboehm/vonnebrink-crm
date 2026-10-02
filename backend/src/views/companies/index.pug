@@ -22,24 +22,41 @@ block content
             tbody
                 each company in companies
                     tr
-                        td
-                            if company.customerNumber
-                                = company.customerNumber
-                            else
-                                | -
+
+                        td= company.customerNumber
 
                         td
                             a(href=`/companies/${company._id}`)
                                 = company.companyName
 
-                        td= company.status
+                        td
+                            case company.status
+                                when "prospect"
+                                    | Interessent
+                                when "customer"
+                                    | Kunde
+                                when "inactive"
+                                    | Inaktiv
+                                default
+                                    | Unbekannt
+
                         td= company.phone
+
                         td= company.email
 
                         td
+                            a(href=`/companies/${company._id}`) Anzeigen
+                            |  |
                             a(href=`/companies/${company._id}/edit`) Bearbeiten
                             |  |
-                            a(href=`/companies/${company._id}`) Anzeigen
+
+                            form(
+                                action=`/companies/${company._id}/delete`
+                                method="POST"
+                                style="display:inline;"
+                                onsubmit="return confirm('Firma wirklich löschen?');"
+                            )
+                                button(type="submit") Löschen
 
     else
 

@@ -15,7 +15,32 @@ block content
                 name="companyName"
                 value=company.companyName
                 required
+                autofocus
             )
+
+        br
+
+        div
+            label(for="status") Status
+            br
+            select(
+                id="status"
+                name="status"
+            )
+                option(
+                    value="prospect"
+                    selected=company.status === "prospect"
+                ) Interessent
+
+                option(
+                    value="customer"
+                    selected=company.status === "customer"
+                ) Kunde
+
+                option(
+                    value="inactive"
+                    selected=company.status === "inactive"
+                ) Inaktiv
 
         br
 
@@ -47,7 +72,7 @@ block content
             label(for="website") Webseite
             br
             input(
-                type="text"
+                type="url"
                 id="website"
                 name="website"
                 value=company.website
@@ -55,6 +80,6 @@ block content
 
         br
 
-        button(type="submit") 💾 Speichern
+        button(type="submit") 💾 Änderungen speichern
         |  
         a(href="/companies") Abbrechen
