@@ -1,0 +1,65 @@
+extends ../layouts/main
+
+block content
+
+    h1 #{contact.firstName} #{contact.lastName}
+
+    table
+        tbody
+            tr
+                th Kontaktnummer
+                td= contact.contactNumber
+
+            tr
+                th Firma
+                td= contact.company.companyName
+
+            tr
+                th Anrede
+                td
+                    case contact.salutation
+                        when "mr"
+                            | Herr
+                        when "mrs"
+                            | Frau
+                        when "diverse"
+                            | Divers
+                        default
+                            | -
+
+            tr
+                th Position
+                td= contact.position
+
+            tr
+                th Telefon
+                td= contact.phone
+
+            tr
+                th Mobil
+                td= contact.mobile
+
+            tr
+                th E-Mail
+                td= contact.email
+
+            tr
+                th Status
+                td
+                    case contact.status
+                        when "active"
+                            | Aktiv
+                        when "inactive"
+                            | Inaktiv
+                        default
+                            | Unbekannt
+
+            tr
+                th Notizen
+                td= contact.notes
+
+    br
+
+    a(href=`/contacts/${contact._id}/edit`) Bearbeiten
+    |   
+    a(href="/contacts") Zurück

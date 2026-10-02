@@ -1,0 +1,137 @@
+extends ../layouts/main
+
+block content
+
+    h1 Kontakt bearbeiten
+
+    form(method="POST" action=`/contacts/${contact._id}/update`)
+
+        div
+            label(for="company") Firma
+            br
+            select(
+                id="company"
+                name="company"
+                required
+            )
+                each company in companies
+                    option(
+                        value=company._id
+                        selected=contact.company && company._id.toString() === contact.company._id.toString()
+                    )= company.companyName
+
+        br
+
+        div
+            label(for="salutation") Anrede
+            br
+            select(
+                id="salutation"
+                name="salutation"
+            )
+                option(value="mr" selected=contact.salutation === "mr") Herr
+                option(value="mrs" selected=contact.salutation === "mrs") Frau
+                option(value="diverse" selected=contact.salutation === "diverse") Divers
+
+        br
+
+        div
+            label(for="firstName") Vorname
+            br
+            input(
+                type="text"
+                id="firstName"
+                name="firstName"
+                value=contact.firstName
+                required
+            )
+
+        br
+
+        div
+            label(for="lastName") Nachname
+            br
+            input(
+                type="text"
+                id="lastName"
+                name="lastName"
+                value=contact.lastName
+                required
+            )
+
+        br
+
+        div
+            label(for="position") Position
+            br
+            input(
+                type="text"
+                id="position"
+                name="position"
+                value=contact.position
+            )
+
+        br
+
+        div
+            label(for="phone") Telefon
+            br
+            input(
+                type="text"
+                id="phone"
+                name="phone"
+                value=contact.phone
+            )
+
+        br
+
+        div
+            label(for="mobile") Mobil
+            br
+            input(
+                type="text"
+                id="mobile"
+                name="mobile"
+                value=contact.mobile
+            )
+
+        br
+
+        div
+            label(for="email") E-Mail
+            br
+            input(
+                type="email"
+                id="email"
+                name="email"
+                value=contact.email
+            )
+
+        br
+
+        div
+            label(for="status") Status
+            br
+            select(
+                id="status"
+                name="status"
+            )
+                option(value="active" selected=contact.status === "active") Aktiv
+                option(value="inactive" selected=contact.status === "inactive") Inaktiv
+
+        br
+
+        div
+            label(for="notes") Notizen
+            br
+            textarea(
+                id="notes"
+                name="notes"
+                rows="5"
+            )= contact.notes
+
+        br
+
+        button(type="submit") 💾 Änderungen speichern
+        |  
+        a(href="/contacts") Abbrechen

@@ -1,0 +1,130 @@
+extends ../layouts/main
+
+block content
+
+    h1 Neuer Kontakt
+
+    form(method="POST" action="/contacts")
+
+        div
+            label(for="company") Firma
+            br
+            select(
+                id="company"
+                name="company"
+                required
+            )
+                option(value="") Bitte auswählen
+
+                each company in companies
+                    option(value=company._id)= company.companyName
+
+        br
+
+        div
+            label(for="salutation") Anrede
+            br
+            select(
+                id="salutation"
+                name="salutation"
+            )
+                option(value="mr") Herr
+                option(value="mrs") Frau
+                option(value="diverse") Divers
+
+        br
+
+        div
+            label(for="firstName") Vorname
+            br
+            input(
+                type="text"
+                id="firstName"
+                name="firstName"
+                required
+            )
+
+        br
+
+        div
+            label(for="lastName") Nachname
+            br
+            input(
+                type="text"
+                id="lastName"
+                name="lastName"
+                required
+            )
+
+        br
+
+        div
+            label(for="position") Position
+            br
+            input(
+                type="text"
+                id="position"
+                name="position"
+            )
+
+        br
+
+        div
+            label(for="phone") Telefon
+            br
+            input(
+                type="text"
+                id="phone"
+                name="phone"
+            )
+
+        br
+
+        div
+            label(for="mobile") Mobil
+            br
+            input(
+                type="text"
+                id="mobile"
+                name="mobile"
+            )
+
+        br
+
+        div
+            label(for="email") E-Mail
+            br
+            input(
+                type="email"
+                id="email"
+                name="email"
+            )
+
+        br
+
+        div
+            label(for="status") Status
+            br
+            select(
+                id="status"
+                name="status"
+            )
+                option(value="active" selected) Aktiv
+                option(value="inactive") Inaktiv
+
+        br
+
+        div
+            label(for="notes") Notizen
+            br
+            textarea(
+                id="notes"
+                name="notes"
+                rows="5"
+            )
+
+        br
+
+        button(type="submit") 💾 Kontakt anlegen
+        |  
+        a(href="/contacts") Abbrechen
