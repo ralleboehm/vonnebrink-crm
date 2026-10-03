@@ -22,8 +22,13 @@ exports.getAll = async () => {
 // Kontakt anhand der ID
 exports.getById = async (id) => {
 
-    return await Contact.findById(id)
-        .populate("company");
+    return await Contact.findOne({
+
+        _id: id,
+        isDeleted: false
+
+    })
+    .populate("company");
 
 };
 
@@ -82,9 +87,14 @@ exports.create = async (contactData) => {
 // Kontakt aktualisieren
 exports.update = async (id, contactData) => {
 
-    return await Contact.findByIdAndUpdate(
+    return await Contact.findOneAndUpdate(
 
-        id,
+        {
+
+            _id: id,
+            isDeleted: false
+
+        },
 
         {
 

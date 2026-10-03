@@ -44,7 +44,7 @@ const contactSchema = new mongoose.Schema({
     position: {
         type: String,
         trim: true,
-        maxlength: 100
+        maxlength: 255
     },
 
     email: {
@@ -77,8 +77,7 @@ const contactSchema = new mongoose.Schema({
 
     notes: {
         type: String,
-        trim: true,
-        maxlength: 5000
+        trim: true
     },
 
     isDeleted: {

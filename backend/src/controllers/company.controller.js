@@ -35,7 +35,16 @@ exports.store = async (req, res, next) => {
 
     try {
 
-        await companyService.create(req.body);
+        await companyService.create({
+
+            companyName: req.body.companyName,
+            status: req.body.status,
+            phone: req.body.phone,
+            email: req.body.email,
+            website: req.body.website,
+            address: req.body.address
+
+        });
 
         res.redirect("/companies");
 
@@ -55,7 +64,7 @@ exports.show = async (req, res, next) => {
         const company = await companyService.getById(req.params.id);
 
         if (!company) {
-            return res.status(404).send("Firma nicht gefunden");
+            return res.redirect("/companies");
         }
 
         const contacts = await contactService.getByCompany(company._id);
@@ -82,7 +91,7 @@ exports.edit = async (req, res, next) => {
         const company = await companyService.getById(req.params.id);
 
         if (!company) {
-            return res.status(404).send("Firma nicht gefunden");
+            return res.redirect("/companies");
         }
 
         res.render("companies/edit", {
@@ -103,7 +112,16 @@ exports.update = async (req, res, next) => {
 
     try {
 
-        await companyService.update(req.params.id, req.body);
+        await companyService.update(req.params.id, {
+
+            companyName: req.body.companyName,
+            status: req.body.status,
+            phone: req.body.phone,
+            email: req.body.email,
+            website: req.body.website,
+            address: req.body.address
+
+        });
 
         res.redirect("/companies");
 
@@ -120,7 +138,11 @@ exports.destroy = async (req, res, next) => {
 
     try {
 
-        await companyService.softDelete(req.params.id);
+        const deleted = await companyService.softDelete(req.params.id);
+
+        if (!deleted) {
+            return res.redirect("/companies");
+        }
 
         res.redirect("/companies");
 

@@ -26,9 +26,15 @@ class TicketService {
         const ticketNumber = await counterService.next("ticket", "TIC");
 
         const ticketData = {
-            ...data,
             ticketNumber,
+            company: data.company,
             contact: data.contact || null,
+            subject: data.subject,
+            description: data.description,
+            category: data.category,
+            priority: data.priority,
+            dueDate: data.dueDate || null,
+            createdBy: data.createdBy,
             assignedTo: null
         };
 
@@ -43,12 +49,17 @@ class TicketService {
             contact: data.contact || null,
             subject: data.subject,
             description: data.description,
+            category: data.category,
             priority: data.priority,
-            status: data.status
+            status: data.status,
+            dueDate: data.dueDate || null
         };
 
-        return await Ticket.findByIdAndUpdate(
-            id,
+        return await Ticket.findOneAndUpdate(
+            {
+                _id: id,
+                isDeleted: false
+            },
             updateData,
             {
                 new: true,
@@ -58,8 +69,11 @@ class TicketService {
     }
 
     async assign(id, assignedTo) {
-        return await Ticket.findByIdAndUpdate(
-            id,
+        return await Ticket.findOneAndUpdate(
+            {
+                _id: id,
+                isDeleted: false
+            },
             {
                 assignedTo: assignedTo || null
             },
@@ -71,9 +85,14 @@ class TicketService {
     }
 
     async updateStatus(id, status) {
-        return await Ticket.findByIdAndUpdate(
-            id,
-            { status },
+        return await Ticket.findOneAndUpdate(
+            {
+                _id: id,
+                isDeleted: false
+            },
+            {
+                status
+            },
             {
                 new: true,
                 runValidators: true
@@ -82,10 +101,17 @@ class TicketService {
     }
 
     async softDelete(id) {
-        return await Ticket.findByIdAndUpdate(
-            id,
-            { isDeleted: true },
-            { new: true }
+        return await Ticket.findOneAndUpdate(
+            {
+                _id: id,
+                isDeleted: false
+            },
+            {
+                isDeleted: true
+            },
+            {
+                new: true
+            }
         );
     }
 }

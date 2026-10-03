@@ -35,6 +35,21 @@ const ticketSchema = new mongoose.Schema(
             default: null
         },
 
+        category: {
+            type: String,
+            enum: [
+                "support",
+                "hardware",
+                "software",
+                "network",
+                "server",
+                "cloud",
+                "security",
+                "other"
+            ],
+            default: "support"
+        },
+
         status: {
             type: String,
             enum: [
@@ -56,6 +71,11 @@ const ticketSchema = new mongoose.Schema(
                 "urgent"
             ],
             default: "normal"
+        },
+
+        dueDate: {
+            type: Date,
+            default: null
         },
 
         assignedTo: {

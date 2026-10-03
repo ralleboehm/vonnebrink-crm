@@ -17,8 +17,7 @@ const ticketMessageSchema = new mongoose.Schema(
         message: {
             type: String,
             required: true,
-            trim: true,
-            maxlength: 10000
+            trim: true
         }
     },
     {

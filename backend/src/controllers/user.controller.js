@@ -34,7 +34,16 @@ exports.store = async (req, res, next) => {
 
     try {
 
-        await userService.create(req.body);
+        await userService.create({
+
+            username: req.body.username,
+            firstName: req.body.firstName,
+            lastName: req.body.lastName,
+            email: req.body.email,
+            password: req.body.password,
+            role: req.body.role
+
+        });
 
         res.redirect("/users");
 
@@ -54,7 +63,7 @@ exports.show = async (req, res, next) => {
         const user = await userService.getById(req.params.id);
 
         if (!user) {
-            return res.status(404).send("Benutzer nicht gefunden");
+            return res.redirect("/users");
         }
 
         res.render("users/show", {
@@ -78,7 +87,7 @@ exports.edit = async (req, res, next) => {
         const user = await userService.getById(req.params.id);
 
         if (!user) {
-            return res.status(404).send("Benutzer nicht gefunden");
+            return res.redirect("/users");
         }
 
         res.render("users/edit", {
@@ -99,7 +108,16 @@ exports.update = async (req, res, next) => {
 
     try {
 
-        await userService.update(req.params.id, req.body);
+        await userService.update(req.params.id, {
+
+            username: req.body.username,
+            firstName: req.body.firstName,
+            lastName: req.body.lastName,
+            email: req.body.email,
+            password: req.body.password,
+            role: req.body.role
+
+        });
 
         res.redirect("/users");
 
@@ -115,6 +133,12 @@ exports.update = async (req, res, next) => {
 exports.deactivate = async (req, res, next) => {
 
     try {
+
+        const user = await userService.getById(req.params.id);
+
+        if (!user) {
+            return res.redirect("/users");
+        }
 
         await userService.deactivate(req.params.id);
 

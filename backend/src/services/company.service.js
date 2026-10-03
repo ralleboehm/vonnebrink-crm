@@ -19,7 +19,12 @@ exports.getAll = async () => {
 // Firma anhand der ID
 exports.getById = async (id) => {
 
-    return await Company.findById(id);
+    return await Company.findOne({
+
+        _id: id,
+        isDeleted: false
+
+    });
 
 };
 
@@ -53,9 +58,14 @@ exports.create = async (companyData) => {
 // Firma aktualisieren
 exports.update = async (id, companyData) => {
 
-    return await Company.findByIdAndUpdate(
+    return await Company.findOneAndUpdate(
 
-        id,
+        {
+
+            _id: id,
+            isDeleted: false
+
+        },
 
         {
 
@@ -88,9 +98,14 @@ exports.update = async (id, companyData) => {
 // Soft Delete
 exports.softDelete = async (id) => {
 
-    return await Company.findByIdAndUpdate(
+    return await Company.findOneAndUpdate(
 
-        id,
+        {
+
+            _id: id,
+            isDeleted: false
+
+        },
 
         {
 

@@ -10,7 +10,10 @@ class UserService {
     }
 
     async getById(id) {
-        return await User.findById(id);
+        return await User.findOne({
+            _id: id,
+            active: true
+        });
     }
 
     async getByUsername(username) {
@@ -33,15 +36,17 @@ class UserService {
     async update(id, data) {
         const updateData = { ...data };
 
-        // Passwort nur ändern, wenn eines eingegeben wurde
         if (updateData.password) {
             updateData.password = await bcrypt.hash(updateData.password, 12);
         } else {
             delete updateData.password;
         }
 
-        return await User.findByIdAndUpdate(
-            id,
+        return await User.findOneAndUpdate(
+            {
+                _id: id,
+                active: true
+            },
             updateData,
             {
                 new: true,
@@ -51,18 +56,32 @@ class UserService {
     }
 
     async deactivate(id) {
-        return await User.findByIdAndUpdate(
-            id,
-            { active: false },
-            { new: true }
+        return await User.findOneAndUpdate(
+            {
+                _id: id,
+                active: true
+            },
+            {
+                active: false
+            },
+            {
+                new: true
+            }
         );
     }
 
     async updateLastLogin(id) {
-        return await User.findByIdAndUpdate(
-            id,
-            { lastLogin: new Date() },
-            { new: true }
+        return await User.findOneAndUpdate(
+            {
+                _id: id,
+                active: true
+            },
+            {
+                lastLogin: new Date()
+            },
+            {
+                new: true
+            }
         );
     }
 }

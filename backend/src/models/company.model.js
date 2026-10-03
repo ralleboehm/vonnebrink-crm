@@ -16,8 +16,7 @@ const companySchema = new mongoose.Schema(
             unique: true,
             immutable: true,
             trim: true
-
-},
+        },
 
         status: {
             type: String,
@@ -74,13 +73,13 @@ const companySchema = new mongoose.Schema(
         website: {
             type: String,
             trim: true,
+            lowercase: true,
             maxlength: 255
         },
 
         notes: {
             type: String,
-            trim: true,
-            maxlength: 5000
+            trim: true
         },
 
         isDeleted: {

@@ -47,7 +47,20 @@ exports.store = async (req, res, next) => {
 
     try {
 
-        await contactService.create(req.body);
+        await contactService.create({
+
+            company: req.body.company,
+            salutation: req.body.salutation,
+            firstName: req.body.firstName,
+            lastName: req.body.lastName,
+            position: req.body.position,
+            email: req.body.email,
+            phone: req.body.phone,
+            mobile: req.body.mobile,
+            status: req.body.status,
+            notes: req.body.notes
+
+        });
 
         res.redirect(`/companies/${req.body.company}`);
 
@@ -67,7 +80,7 @@ exports.show = async (req, res, next) => {
         const contact = await contactService.getById(req.params.id);
 
         if (!contact) {
-            return res.status(404).send("Kontakt nicht gefunden");
+            return res.redirect("/contacts");
         }
 
         res.render("contacts/show", {
@@ -91,7 +104,7 @@ exports.edit = async (req, res, next) => {
         const contact = await contactService.getById(req.params.id);
 
         if (!contact) {
-            return res.status(404).send("Kontakt nicht gefunden");
+            return res.redirect("/contacts");
         }
 
         const companies = await companyService.getAll();
@@ -115,7 +128,20 @@ exports.update = async (req, res, next) => {
 
     try {
 
-        await contactService.update(req.params.id, req.body);
+        await contactService.update(req.params.id, {
+
+            company: req.body.company,
+            salutation: req.body.salutation,
+            firstName: req.body.firstName,
+            lastName: req.body.lastName,
+            position: req.body.position,
+            email: req.body.email,
+            phone: req.body.phone,
+            mobile: req.body.mobile,
+            status: req.body.status,
+            notes: req.body.notes
+
+        });
 
         res.redirect(`/companies/${req.body.company}`);
 
@@ -133,6 +159,10 @@ exports.destroy = async (req, res, next) => {
     try {
 
         const contact = await contactService.getById(req.params.id);
+
+        if (!contact) {
+            return res.redirect("/contacts");
+        }
 
         await contactService.softDelete(req.params.id);
 
