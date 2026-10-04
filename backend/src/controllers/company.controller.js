@@ -1,5 +1,6 @@
 const companyService = require("../services/company.service");
 const contactService = require("../services/contact.service");
+const ticketService = require("../services/ticket.service");
 
 // Alle Firmen anzeigen
 exports.index = async (req, res, next) => {
@@ -69,10 +70,16 @@ exports.show = async (req, res, next) => {
 
         const contacts = await contactService.getByCompany(company._id);
 
+        const recentTickets = await ticketService.getRecentByCompany(
+            company._id,
+            5
+        );
+
         res.render("companies/show", {
             title: company.companyName,
             company,
-            contacts
+            contacts,
+            recentTickets
         });
 
     } catch (err) {
@@ -82,7 +89,6 @@ exports.show = async (req, res, next) => {
     }
 
 };
-
 // Formular zum Bearbeiten
 exports.edit = async (req, res, next) => {
 
@@ -132,7 +138,6 @@ exports.update = async (req, res, next) => {
     }
 
 };
-
 // Soft Delete
 exports.destroy = async (req, res, next) => {
 

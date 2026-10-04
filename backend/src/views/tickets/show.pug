@@ -1,150 +1,475 @@
 extends ../layouts/main
 
 block content
-    .d-flex.justify-content-between.align-items-center.mb-4
-        h1.mb-0= ticket.ticketNumber
 
-        .d-flex.gap-2
-            a.btn.btn-outline-secondary(href="/tickets") Zurück
-            a.btn.btn-primary(href=`/tickets/${ticket._id}/edit`) Bearbeiten
+    // =====================================================
+    // Kopfbereich
+    // =====================================================
 
-    //- Ticketinformationen
+    .d-flex.justify-content-between.align-items-start.flex-wrap.mb-4
+
+        div
+
+            h6.text-muted.mb-1
+                = ticket.ticketNumber
+
+            h2.mb-2
+                = ticket.subject
+
+            .d-flex.flex-wrap.gap-2
+
+                if ticket.status === "open"
+                    span.badge.bg-primary.fs-6 Offen
+                else if ticket.status === "in_progress"
+                    span.badge.bg-warning.text-dark.fs-6 In Bearbeitung
+                else if ticket.status === "waiting"
+                    span.badge.bg-secondary.fs-6 Wartend
+                else if ticket.status === "resolved"
+                    span.badge.bg-success.fs-6 Gelöst
+                else
+                    span.badge.bg-dark.fs-6 Geschlossen
+
+                if ticket.priority === "urgent"
+                    span.badge.bg-danger.fs-6 Dringend
+                else if ticket.priority === "high"
+                    span.badge.bg-warning.text-dark.fs-6 Hoch
+                else if ticket.priority === "low"
+                    span.badge.bg-secondary.fs-6 Niedrig
+                else
+                    span.badge.bg-info.text-dark.fs-6 Normal
+
+        .d-flex.gap-2.mt-3.mt-md-0
+
+            a.btn.btn-outline-secondary(href="/tickets")
+                i.bi.bi-arrow-left.me-2
+                | Zurück
+
+            a.btn.btn-primary(href=`/tickets/${ticket._id}/edit`)
+                i.bi.bi-pencil.me-2
+                | Bearbeiten
+
+
+    // =====================================================
+    // Ticketinformationen
+    // =====================================================
+
     .card.shadow-sm.mb-4
+
+        .card-header.bg-white
+            h5.mb-0
+                i.bi.bi-info-circle.me-2
+                | Ticketinformationen
+
         .card-body
-            h3.mb-4= ticket.subject
 
             .row.g-4
+
                 .col-md-6
-                    strong Firma
-                    p.mb-0
+
+                    small.text-muted Firma
+
+                    p.fs-5.mb-0
+
                         if ticket.company
-                            a(href=`/companies/${ticket.company._id}`)
+                            a.text-decoration-none(
+                                href=`/companies/${ticket.company._id}`
+                            )
                                 = ticket.company.companyName
                         else
-                            | -
+                            | —
 
                 .col-md-6
-                    strong Ansprechpartner
-                    p.mb-0
+
+                    small.text-muted Ansprechpartner
+
+                    p.fs-5.mb-0
+
                         if ticket.contact
-                            = ticket.contact.firstName
-                            |  
-                            = ticket.contact.lastName
+                            | #{ticket.contact.firstName} #{ticket.contact.lastName}
                         else
-                            | -
+                            | —
 
-                .col-md-4
-                    strong Priorität
-                    p.mb-0
-                        if ticket.priority === "urgent"
-                            span.badge.bg-danger Dringend
-                        else if ticket.priority === "high"
-                            span.badge.bg-warning.text-dark Hoch
-                        else if ticket.priority === "low"
-                            span.badge.bg-secondary Niedrig
-                        else
-                            span.badge.bg-primary Normal
+                .col-md-6
 
-                .col-md-4
-                    strong Status
-                    p.mb-0
-                        if ticket.status === "open"
-                            span.badge.bg-primary Offen
-                        else if ticket.status === "in_progress"
-                            span.badge.bg-warning.text-dark In Bearbeitung
-                        else if ticket.status === "waiting"
-                            span.badge.bg-secondary Wartend
-                        else if ticket.status === "resolved"
-                            span.badge.bg-success Gelöst
-                        else
-                            span.badge.bg-dark Geschlossen
+                    small.text-muted Bearbeiter
 
-                .col-md-4
-                    strong Bearbeiter
-                    p.mb-2
+                    p.mb-3
+
                         if ticket.assignedTo
-                            | #{ticket.assignedTo.firstName} #{ticket.assignedTo.lastName}
+                            strong
+                                | #{ticket.assignedTo.firstName} #{ticket.assignedTo.lastName}
                         else
-                            | Nicht zugewiesen
+                            span.text-muted
+                                | Nicht zugewiesen
+                    if session && ["admin", "technician"].includes(session.user.role)
 
-                    if session && session.user
-                        if session.user.role === "admin" || session.user.role === "technician" || session.user.role === "sales"
-                            form(method="POST" action=`/tickets/${ticket._id}/assign`)
-                                .input-group.input-group-sm
-                                    select.form-select(name="assignedTo")
-                                        option(value="") Nicht zugewiesen
+                        form(method="POST" action=`/tickets/${ticket._id}/assign`)
 
-                                        each user in users
+                            .input-group
+
+                                select.form-select(name="assignedTo")
+
+                                    option(value="")
+                                        | Nicht zugewiesen
+
+                                    each user in users
+
+                                        if user.active
+
                                             option(
                                                 value=user._id
                                                 selected=ticket.assignedTo && String(ticket.assignedTo._id) === String(user._id)
                                             )
                                                 | #{user.firstName} #{user.lastName}
 
-                                    button.btn.btn-outline-primary(type="submit")
-                                        | Zuweisen
+                                button.btn.btn-outline-primary(type="submit")
 
-            hr.my-4
+                                    i.bi.bi-person-check.me-2
 
-            h5 Beschreibung
-            .border.rounded.p-3.bg-light
-                = ticket.description
+                                    | Zuweisen
 
-    //- Nachrichten
+                .col-md-3
+
+                    small.text-muted Erstellt
+
+                    p.mb-0
+                        = ticket.createdAt.toLocaleString("de-DE")
+
+                .col-md-3
+
+                    small.text-muted Zuletzt geändert
+
+                    p.mb-0
+                        = ticket.updatedAt.toLocaleString("de-DE")
+
+
+    // =====================================================
+    // Beschreibung
+    // =====================================================
+
     .card.shadow-sm.mb-4
-        .card-header
-            h5.mb-0 Nachrichten
+
+        .card-header.bg-white
+
+            h5.mb-0
+
+                i.bi.bi-card-text.me-2
+
+                | Beschreibung
 
         .card-body
-            if messages.length
+
+            if ticket.description && ticket.description.trim()
+
+                .border.rounded.bg-light.p-4(style="white-space:pre-wrap;")
+                    = ticket.description
+
+            else
+
+                .border.rounded.bg-light.p-4
+
+                    span.text-muted
+
+                        i.bi.bi-info-circle.me-2
+
+                        | Keine Beschreibung vorhanden.
+    // =====================================================
+    // Nachrichten
+    // =====================================================
+
+    .card.shadow-sm.mb-4
+
+        .card-header.bg-white
+
+            h5.mb-0
+
+                i.bi.bi-chat-dots.me-2
+
+                | Unterhaltung
+
+        .card-body
+
+            if messages && messages.length
+
                 each message in messages
-                    .border-bottom.pb-3.mb-3
+
+                    .border.rounded.p-3.mb-3.bg-light
+
                         .d-flex.justify-content-between.align-items-center.mb-2
-                            strong
-                                | #{message.author.firstName} #{message.author.lastName}
+
+                            div
+
+                                strong
+
+                                    i.bi.bi-person-circle.me-2
+
+                                    if message.author
+
+                                        | #{message.author.firstName} #{message.author.lastName}
+
+                                    else
+
+                                        | Unbekannter Benutzer
 
                             small.text-muted
+
+                                i.bi.bi-clock.me-1
+
                                 = message.createdAt.toLocaleString("de-DE")
 
-                        p.mb-0
-                            = message.message
-            else
-                p.text-muted.mb-0
-                    | Noch keine Nachrichten vorhanden.
+                        hr.mt-2.mb-3
 
-    //- Neue Nachricht
-    .card.shadow-sm
-        .card-header
-            h5.mb-0 Neue Nachricht
+                        p.mb-0(style="white-space:pre-wrap;")
+
+                            = message.message
+
+            else
+
+                .text-center.py-5
+
+                    i.bi.bi-chat-square-text.display-4.text-muted
+
+                    p.text-muted.mt-3.mb-0
+
+                        | Dieses Ticket enthält noch keine Nachrichten.
+
+
+    // =====================================================
+    // Neue Nachricht
+    // =====================================================
+
+    .card.shadow-sm.mb-4
+
+        .card-header.bg-white
+
+            h5.mb-0
+
+                i.bi.bi-reply.me-2
+
+                | Antwort schreiben
 
         .card-body
+
             form(method="POST" action=`/tickets/${ticket._id}/messages`)
+
                 .mb-3
-                    label.form-label(for="message") Nachricht
+
                     textarea.form-control(
                         id="message"
                         name="message"
-                        rows="5"
+                        rows="6"
                         maxlength="10000"
-                        required
                         placeholder="Nachricht eingeben..."
+                        required
                     )
+                .d-flex.justify-content-end
 
-                button.btn.btn-primary(type="submit")
-                    | Nachricht hinzufügen
+                    button.btn.btn-primary(type="submit")
 
-    //- Metadaten
-    .card.shadow-sm.mt-4
+                        i.bi.bi-send.me-2
+
+                        | Nachricht hinzufügen
+
+    // =====================================================
+    // Aktivitäten
+    // =====================================================
+
+    .card.shadow-sm.mb-4
+
+        .card-header.bg-white
+
+            h5.mb-0
+
+                i.bi.bi-clock-history.me-2
+
+                | Aktivitäten
+
         .card-body
-            .row
-                .col-md-6
-                    strong Erstellt von
-                    p.mb-0
-                        if ticket.createdBy
-                            | #{ticket.createdBy.firstName} #{ticket.createdBy.lastName}
-                        else
-                            | -
 
-                .col-md-6
-                    strong Erstellt am
-                    p.mb-0= ticket.createdAt.toLocaleString("de-DE")
+            if activities && activities.length
+
+                each activity in activities
+
+                    .border-start.border-4.border-primary.ps-3.mb-4
+
+                        .d-flex.justify-content-between.align-items-center.mb-2
+
+                            div
+
+                                strong
+
+                                    if activity.user
+
+                                        | #{activity.user.firstName} #{activity.user.lastName}
+
+                                    else
+
+                                        | System
+
+                            small.text-muted
+
+                                i.bi.bi-clock.me-1
+
+                                = activity.createdAt.toLocaleString("de-DE")
+
+                        p.mb-1
+
+                            case activity.action
+
+                                when "created"
+
+                                    span.badge.bg-success Ticket erstellt
+
+                                when "updated"
+
+                                    span.badge.bg-primary Ticket geändert
+
+                                when "assigned"
+
+                                    span.badge.bg-info Bearbeiter geändert
+
+                                when "unassigned"
+
+                                    span.badge.bg-warning Bearbeiter entfernt
+
+                                when "status_changed"
+
+                                    span.badge.bg-primary Status geändert
+
+                                when "priority_changed"
+
+                                    span.badge.bg-danger Priorität geändert
+
+                                when "message_added"
+
+                                    span.badge.bg-secondary Nachricht hinzugefügt
+
+                                when "attachment_added"
+
+                                    span.badge.bg-dark Datei hochgeladen
+
+                                when "attachment_removed"
+
+                                    span.badge.bg-dark Datei entfernt
+
+                                when "closed"
+
+                                    span.badge.bg-success Ticket geschlossen
+
+                                when "reopened"
+
+                                    span.badge.bg-warning Ticket erneut geöffnet
+
+                                when "deleted"
+
+                                    span.badge.bg-danger Ticket gelöscht
+
+                                default
+
+                                    span.badge.bg-secondary Aktivität
+
+                        if activity.description
+
+                            p.mb-1
+
+                                = activity.description
+
+                        if activity.field
+
+                            small.text-muted
+
+                                | Feld: #{activity.field}
+
+                        if activity.oldValue || activity.newValue
+
+                            .small.text-muted.mt-2
+
+                                if activity.oldValue
+
+                                    div
+
+                                        strong Alt:
+
+                                        |  #{activity.oldValue}
+
+                                if activity.newValue
+
+                                    div
+
+                                        strong Neu:
+
+                                        |  #{activity.newValue}
+
+            else
+
+                .text-center.py-5
+
+                    i.bi.bi-clock-history.display-4.text-muted
+
+                    p.text-muted.mt-3.mb-0
+
+                        | Für dieses Ticket wurden noch keine Aktivitäten protokolliert.
+    // =====================================================
+    // Ticketdetails
+    // =====================================================
+
+    .card.shadow-sm
+
+        .card-header.bg-white
+
+            h5.mb-0
+
+                i.bi.bi-info-square.me-2
+
+                | Ticketdetails
+
+        .card-body
+
+            .row.g-4
+
+                .col-md-4
+
+                    small.text-muted Erstellt von
+
+                    p.mb-0.mt-1
+
+                        if ticket.createdBy
+
+                            strong
+
+                                | #{ticket.createdBy.firstName} #{ticket.createdBy.lastName}
+
+                        else
+
+                            span.text-muted
+
+                                | —
+
+                .col-md-4
+
+                    small.text-muted Erstellt am
+
+                    p.mb-0.mt-1
+
+                        = ticket.createdAt.toLocaleString("de-DE")
+
+                .col-md-4
+
+                    small.text-muted Zuletzt geändert
+
+                    p.mb-0.mt-1
+
+                        = ticket.updatedAt.toLocaleString("de-DE")
+    // =====================================================
+    // Platzhalter für zukünftige Erweiterungen
+    // =====================================================
+
+    //-
+        Hier können später ohne Umbau ergänzt werden:
+
+        • Dateianhänge
+        • Interne Notizen
+        • Aktivitäten / Historie
+        • SLA-Informationen
+        • Zeiterfassung
+        • Verknüpfte Tickets
