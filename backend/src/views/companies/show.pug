@@ -64,9 +64,9 @@ block content
 
                                 span.badge.bg-warning.text-dark Interessent
 
-                            when "customer"
+                            when "active"
 
-                                span.badge.bg-success Kunde
+                                span.badge.bg-success Aktiv
 
                             when "inactive"
 
@@ -137,6 +137,7 @@ block content
                         else
 
                             | -
+
     // =====================================================
     // Ansprechpartner
     // =====================================================
@@ -224,6 +225,7 @@ block content
             i.bi.bi-info-circle.me-2
 
             | Für diese Firma sind noch keine Ansprechpartner vorhanden.
+
     // =====================================================
     // Letzte Tickets
     // =====================================================
@@ -259,15 +261,10 @@ block content
                             tr
 
                                 th Ticket
-
                                 th Betreff
-
                                 th Status
-
                                 th Priorität
-
                                 th Bearbeiter
-
                                 th Erstellt
 
                         tbody
@@ -339,6 +336,7 @@ block content
                                     td
 
                                         = ticket.createdAt.toLocaleDateString("de-DE")
+
             else
 
                 .p-5.text-center

@@ -75,6 +75,40 @@ const contactSchema = new mongoose.Schema({
         default: "active"
     },
 
+    portal: {
+
+        enabled: {
+            type: Boolean,
+            default: false
+        },
+
+        password: {
+            type: String
+        },
+
+        mustChangePassword: {
+            type: Boolean,
+            default: true
+        },
+
+        lastLogin: {
+            type: Date
+        },
+
+        passwordChangedAt: {
+            type: Date
+        },
+
+        passwordResetToken: {
+            type: String
+        },
+
+        passwordResetExpires: {
+            type: Date
+        }
+
+    },
+
     notes: {
         type: String,
         trim: true
