@@ -1,0 +1,116 @@
+extends ../layouts/main
+
+block content
+
+    .d-flex.justify-content-between.align-items-center.mb-4
+
+        h1.mb-0 Kontakte
+
+        a.btn.btn-primary(href="/crm/contacts/new")
+
+            i.bi.bi-plus-circle.me-2
+
+            | Neuer Kontakt
+
+    if contacts.length
+
+        .card.shadow-sm
+
+            .card-body.p-0
+
+                table.table.table-hover.table-striped.mb-0
+
+                    thead.table-dark
+
+                        tr
+                            th Kontaktnummer
+                            th Firma
+                            th Name
+                            th Position
+                            th Telefon
+                            th E-Mail
+                            th Status
+                            th Portal
+                            th.text-end Aktionen
+
+                    tbody
+
+                        each contact in contacts
+
+                            tr
+
+                                td= contact.contactNumber
+
+                                td
+                                    if contact.company
+                                        a.text-decoration-none(href=`/crm/companies/${contact.company._id}`)
+                                            = contact.company.companyName
+                                    else
+                                        | -
+
+                                td
+                                    a.text-decoration-none(href=`/crm/contacts/${contact._id}`)
+                                        strong #{contact.firstName} #{contact.lastName}
+
+                                td= contact.position || "-"
+
+                                td= contact.phone || "-"
+
+                                td= contact.email || "-"
+
+                                td
+
+                                    if contact.status === "active"
+                                        span.badge.bg-success Aktiv
+                                    else
+                                        span.badge.bg-secondary Inaktiv
+
+                                td
+
+                                    if contact.portal && contact.portal.enabled
+                                        span.badge.bg-primary
+                                            i.bi.bi-person-check.me-1
+                                            | Aktiv
+                                    else
+                                        span.badge.bg-light.text-dark
+                                            i.bi.bi-person-x.me-1
+                                            | Deaktiviert
+
+                                td.text-end
+
+                                    a.btn.btn-sm.btn-outline-primary.me-1(
+                                        href=`/crm/contacts/${contact._id}`
+                                    )
+
+                                        i.bi.bi-eye.me-1
+
+                                        | Anzeigen
+
+                                    a.btn.btn-sm.btn-outline-secondary.me-1(
+                                        href=`/crm/contacts/${contact._id}/edit`
+                                    )
+
+                                        i.bi.bi-pencil.me-1
+
+                                        | Bearbeiten
+
+                                    form(
+                                        action=`/crm/contacts/${contact._id}/delete`
+                                        method="POST"
+                                        style="display:inline;"
+                                        onsubmit="return confirm('Kontakt wirklich löschen?');"
+                                    )
+
+                                        button.btn.btn-sm.btn-outline-danger(type="submit")
+
+                                            i.bi.bi-trash.me-1
+
+                                            | Löschen
+
+    else
+
+        .alert.alert-info
+
+            i.bi.bi-info-circle.me-2
+
+            | Es sind noch keine Kontakte vorhanden.

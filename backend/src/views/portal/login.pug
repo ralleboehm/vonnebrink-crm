@@ -1,0 +1,65 @@
+extends layouts/main
+
+block content
+
+    .row.justify-content-center
+
+        .col-lg-5.col-md-7
+
+            .card.shadow
+
+                .card-header.text-center
+
+                    h3.mb-0
+
+                        i.bi.bi-shield-lock.me-2
+
+                        | Kundenportal
+
+                .card-body
+
+                    p.text-muted.text-center.mb-4
+
+                        | Bitte melden Sie sich mit Ihrer E-Mail-Adresse und Ihrem Passwort an.
+
+                    form(method="POST" action="/portal/login")
+
+                        .mb-3
+
+                            label.form-label(for="email")
+
+                                | E-Mail-Adresse
+
+                            input.form-control(
+                                type="email"
+                                id="email"
+                                name="email"
+                                required
+                                autocomplete="username"
+                            )
+
+                        .mb-4
+
+                            label.form-label(for="password")
+
+                                | Passwort
+
+                            input.form-control(
+                                type="password"
+                                id="password"
+                                name="password"
+                                required
+                                autocomplete="current-password"
+                            )
+
+                        button.btn.btn-primary.w-100(type="submit")
+
+                            i.bi.bi-box-arrow-in-right.me-2
+
+                            | Anmelden
+
+                .card-footer.text-center
+
+                    small.text-muted
+
+                        | © #{new Date().getFullYear()} Vonnebrink IT Operations

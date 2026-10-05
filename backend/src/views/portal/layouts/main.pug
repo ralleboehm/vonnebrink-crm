@@ -1,0 +1,64 @@
+doctype html
+
+html(lang="de")
+
+    head
+
+        meta(charset="UTF-8")
+        meta(name="viewport" content="width=device-width, initial-scale=1")
+
+        title #{title || "Kundenportal"}
+
+        // Bootstrap
+        link(
+            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+            rel="stylesheet"
+        )
+
+        // Bootstrap Icons
+        link(
+            href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
+            rel="stylesheet"
+        )
+
+        // Google Fonts
+        link(rel="preconnect" href="https://fonts.googleapis.com")
+        link(rel="preconnect" href="https://fonts.gstatic.com" crossorigin)
+
+        link(
+            href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
+            rel="stylesheet"
+        )
+
+        // Eigenes Stylesheet
+        link(
+            rel="stylesheet"
+            href="/css/vonnebrink.css"
+        )
+
+    body.bg-light
+
+        nav.navbar.navbar-expand-lg.navbar-dark.bg-primary.shadow-sm
+
+            .container
+
+                a.navbar-brand.d-flex.align-items-center(href="/portal/login")
+
+                    img(
+                        src="/images/logo-only.png"
+                        alt="Vonnebrink IT Operations"
+                        height="36"
+                        class="me-2"
+                    )
+
+                    span Kundenportal
+
+        main.container.py-5
+
+            block content
+
+        script(
+            src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+        )
+
+        block scripts

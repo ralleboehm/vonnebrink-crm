@@ -1,0 +1,127 @@
+extends ../layouts/main
+
+block content
+
+    .d-flex.justify-content-between.align-items-center.mb-4
+
+        h1.mb-0 Profil bearbeiten
+
+        a.btn.btn-secondary(
+            href="/crm/profile"
+        )
+
+            i.bi.bi-arrow-left.me-2
+
+            | Zurück
+
+    .card.shadow-sm
+
+        .card-header
+
+            h5.mb-0
+
+                i.bi.bi-person-gear.me-2
+
+                | Persönliche Daten
+
+        .card-body
+
+            form(method="POST" action="/crm/profile/update")
+
+                .row
+
+                    .col-md-6.mb-3
+
+                        label.form-label(for="firstName")
+
+                            | Vorname
+
+                        input.form-control(
+                            type="text"
+                            id="firstName"
+                            name="firstName"
+                            value=user.firstName
+                            required
+                        )
+
+                    .col-md-6.mb-3
+
+                        label.form-label(for="lastName")
+
+                            | Nachname
+
+                        input.form-control(
+                            type="text"
+                            id="lastName"
+                            name="lastName"
+                            value=user.lastName
+                            required
+                        )
+
+                .mb-3
+
+                    label.form-label(for="email")
+
+                        | E-Mail
+
+                    input.form-control(
+                        type="email"
+                        id="email"
+                        name="email"
+                        value=user.email
+                        required
+                    )
+
+                hr
+
+                h5.mb-3
+
+                    i.bi.bi-info-circle.me-2
+
+                    | Kontoinformationen
+
+                .row
+
+                    .col-md-6
+
+                        p
+
+                            strong Benutzername:
+                            br
+
+                            = user.username
+
+                    .col-md-6
+
+                        p
+
+                            strong Rolle:
+                            br
+
+                            case user.role
+
+                                when "admin"
+
+                                    span.badge.bg-danger Administrator
+
+                                when "technician"
+
+                                    span.badge.bg-primary Techniker
+
+                                default
+
+                                    span.badge.bg-secondary Benutzer
+
+                .mt-4
+
+                    button.btn.btn-primary(type="submit")
+
+                        i.bi.bi-floppy.me-2
+
+                        | Änderungen speichern
+
+                    a.btn.btn-secondary.ms-2(
+                        href="/crm/profile"
+                    )
+
+                        | Abbrechen

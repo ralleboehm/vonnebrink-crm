@@ -1,0 +1,186 @@
+extends ../layouts/main
+
+block content
+
+    h1.mb-4 Neuer Kontakt
+
+    form(method="POST" action="/crm/contacts")
+
+        .mb-3
+            label.form-label(for="company") Firma
+            select.form-select(
+                id="company"
+                name="company"
+                required
+            )
+                option(value="") Bitte auswählen
+
+                each company in companies
+                    option(
+                        value=company._id
+                        selected=(selectedCompany && selectedCompany.toString() === company._id.toString())
+                    )= company.companyName
+
+        .mb-3
+            label.form-label(for="salutation") Anrede
+            select.form-select(
+                id="salutation"
+                name="salutation"
+            )
+                option(value="mr") Herr
+                option(value="mrs") Frau
+                option(value="diverse") Divers
+
+        .row
+
+            .col-md-6.mb-3
+                label.form-label(for="firstName") Vorname
+                input.form-control(
+                    type="text"
+                    id="firstName"
+                    name="firstName"
+                    required
+                )
+
+            .col-md-6.mb-3
+                label.form-label(for="lastName") Nachname
+                input.form-control(
+                    type="text"
+                    id="lastName"
+                    name="lastName"
+                    required
+                )
+
+        .mb-3
+            label.form-label(for="position") Position
+            input.form-control(
+                type="text"
+                id="position"
+                name="position"
+            )
+
+        .row
+
+            .col-md-6.mb-3
+                label.form-label(for="phone") Telefon
+                input.form-control(
+                    type="text"
+                    id="phone"
+                    name="phone"
+                )
+
+            .col-md-6.mb-3
+                label.form-label(for="mobile") Mobil
+                input.form-control(
+                    type="text"
+                    id="mobile"
+                    name="mobile"
+                )
+
+        .mb-3
+            label.form-label(for="email") E-Mail
+            input.form-control(
+                type="email"
+                id="email"
+                name="email"
+            )
+
+        .mb-3
+            label.form-label(for="status") Status
+            select.form-select(
+                id="status"
+                name="status"
+            )
+                option(value="active" selected) Aktiv
+                option(value="inactive") Inaktiv
+
+        hr
+
+        h4.mb-3
+
+            i.bi.bi-person-lock.me-2
+
+            | Portalzugang
+
+        .form-check.form-switch.mb-3
+
+            input.form-check-input(
+                type="checkbox"
+                id="portalEnabled"
+                name="portalEnabled"
+            )
+
+            label.form-check-label(for="portalEnabled")
+                | Portalzugang aktivieren
+
+        .mb-3
+
+            label.form-label(for="portalPassword")
+
+                | Temporäres Passwort
+
+            input.form-control(
+                type="text"
+                id="portalPassword"
+                name="portalPassword"
+                autocomplete="off"
+                placeholder="Passwort generieren"
+                readonly
+                disabled
+            )
+
+        .d-flex.gap-2.mb-3
+
+            button.btn.btn-outline-primary(
+                type="button"
+                id="generatePassword"
+            )
+
+                i.bi.bi-shuffle.me-2
+
+                | Passwort generieren
+
+            button.btn.btn-outline-secondary(
+                type="button"
+                id="copyPassword"
+            )
+
+                i.bi.bi-clipboard.me-2
+
+                | Kopieren
+
+        .alert.alert-info
+
+            i.bi.bi-info-circle.me-2
+
+            | Der Benutzer muss dieses Passwort beim ersten Login ändern.
+
+        hr
+
+        .mb-3
+
+            label.form-label(for="notes")
+
+                | Notizen
+
+            textarea.form-control(
+                id="notes"
+                name="notes"
+                rows="5"
+            )
+
+        .mt-4
+
+            button.btn.btn-primary(type="submit")
+
+                i.bi.bi-floppy.me-2
+
+                | Kontakt anlegen
+
+            a.btn.btn-secondary.ms-2(href="/crm/contacts")
+
+                | Abbrechen
+
+block scripts
+
+    script(src="/js/password-generator.js")

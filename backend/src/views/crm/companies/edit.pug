@@ -1,0 +1,104 @@
+extends ../layouts/main
+
+block content
+
+    h1.mb-4 Firma bearbeiten
+
+    form(method="POST" action=`/crm/companies/${company._id}/update`)
+
+        .mb-3
+            label.form-label(for="companyName") Firmenname
+            input.form-control(
+                type="text"
+                id="companyName"
+                name="companyName"
+                value=company.companyName
+                required
+            )
+
+        .mb-3
+            label.form-label(for="status") Status
+            select.form-select(
+                id="status"
+                name="status"
+            )
+                option(value="prospect" selected=company.status === "prospect") Interessent
+                option(value="active" selected=company.status === "active") Kunde
+                option(value="inactive" selected=company.status === "inactive") Inaktiv
+
+        .mb-3
+            label.form-label(for="phone") Telefon
+            input.form-control(
+                type="text"
+                id="phone"
+                name="phone"
+                value=company.phone
+            )
+
+        .mb-3
+            label.form-label(for="email") E-Mail
+            input.form-control(
+                type="email"
+                id="email"
+                name="email"
+                value=company.email
+            )
+
+        .mb-3
+            label.form-label(for="website") Webseite
+            input.form-control(
+                type="url"
+                id="website"
+                name="website"
+                value=company.website
+            )
+
+        hr
+
+        h4 Adresse
+
+        .mb-3
+            label.form-label(for="street") Straße
+            input.form-control(
+                type="text"
+                id="street"
+                name="street"
+                value=company.address && company.address.street
+            )
+
+        .row
+
+            .col-md-3.mb-3
+                label.form-label(for="postalCode") PLZ
+                input.form-control(
+                    type="text"
+                    id="postalCode"
+                    name="postalCode"
+                    value=company.address && company.address.postalCode
+                )
+
+            .col-md-5.mb-3
+                label.form-label(for="city") Ort
+                input.form-control(
+                    type="text"
+                    id="city"
+                    name="city"
+                    value=company.address && company.address.city
+                )
+
+            .col-md-4.mb-3
+                label.form-label(for="country") Land
+                input.form-control(
+                    type="text"
+                    id="country"
+                    name="country"
+                    value=company.address && company.address.country
+                )
+
+        .mt-4
+
+            button.btn.btn-primary(type="submit")
+                | 💾 Änderungen speichern
+
+            a.btn.btn-secondary.ms-2(href="/crm/companies")
+                | Abbrechen

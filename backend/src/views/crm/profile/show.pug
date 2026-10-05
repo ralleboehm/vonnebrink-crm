@@ -1,0 +1,130 @@
+extends ../layouts/main
+
+block content
+
+    .d-flex.justify-content-between.align-items-center.mb-4
+
+        h1.mb-0 Mein Profil
+
+        div
+
+            a.btn.btn-outline-secondary.me-2(
+                href="/crm/profile/edit"
+            )
+
+                i.bi.bi-pencil.me-2
+
+                | Profil bearbeiten
+
+            a.btn.btn-primary(
+                href="/crm/profile/password"
+            )
+
+                i.bi.bi-key.me-2
+
+                | Passwort ändern
+
+    .card.shadow-sm
+
+        .card-header
+
+            h5.mb-0
+
+                i.bi.bi-person-circle.me-2
+
+                | Persönliche Daten
+
+        .card-body
+
+            .row
+
+                .col-md-6
+
+                    p
+
+                        strong Benutzername:
+                        br
+
+                        = user.username
+
+                    p
+
+                        strong Vorname:
+                        br
+
+                        = user.firstName
+
+                    p
+
+                        strong Nachname:
+                        br
+
+                        = user.lastName
+
+                    p
+
+                        strong E-Mail:
+                        br
+
+                        = user.email || "-"
+
+                .col-md-6
+
+                    p
+
+                        strong Rolle:
+                        br
+
+                        case user.role
+
+                            when "admin"
+
+                                span.badge.bg-danger Administrator
+
+                            when "technician"
+
+                                span.badge.bg-primary Techniker
+
+                            default
+
+                                span.badge.bg-secondary Benutzer
+
+                    p
+
+                        strong Status:
+                        br
+
+                        if user.active
+
+                            span.badge.bg-success Aktiv
+
+                        else
+
+                            span.badge.bg-secondary Deaktiviert
+
+                    p
+
+                        strong Letzte Anmeldung:
+                        br
+
+                        if user.lastLogin
+
+                            = user.lastLogin.toLocaleString("de-DE")
+
+                        else
+
+                            span.text-muted Noch keine Anmeldung
+
+                    p
+
+                        strong Konto erstellt:
+                        br
+
+                        = user.createdAt.toLocaleString("de-DE")
+
+                    p
+
+                        strong Zuletzt geändert:
+                        br
+
+                        = user.updatedAt.toLocaleString("de-DE")

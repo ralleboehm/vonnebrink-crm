@@ -82,7 +82,7 @@ const contactSchema = new mongoose.Schema({
             default: false
         },
 
-        password: {
+        passwordHash: {
             type: String
         },
 

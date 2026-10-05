@@ -1,0 +1,151 @@
+extends ../layouts/main
+
+block content
+
+    .d-flex.justify-content-between.align-items-center.mb-4
+
+        h1.mb-0 #{contact.firstName} #{contact.lastName}
+
+        div
+
+            a.btn.btn-outline-secondary.me-2(
+                href=`/crm/contacts/${contact._id}/edit`
+            )
+
+                i.bi.bi-pencil.me-2
+
+                | Bearbeiten
+
+            a.btn.btn-secondary(
+                href=`/crm/companies/${contact.company._id}`
+            )
+
+                i.bi.bi-arrow-left.me-2
+
+                | Zurück zur Firma
+
+    .card.shadow-sm
+
+        .card-header
+
+            h5.mb-0 Kontaktdaten
+
+        .card-body
+
+            .row
+
+                .col-md-6
+
+                    p
+                        strong Kontaktnummer:
+                        br
+                        = contact.contactNumber
+
+                    p
+                        strong Firma:
+                        br
+                        a(href=`/crm/companies/${contact.company._id}`)
+                            = contact.company.companyName
+
+                    p
+                        strong Anrede:
+                        br
+                        case contact.salutation
+                            when "mr"
+                                | Herr
+                            when "mrs"
+                                | Frau
+                            when "diverse"
+                                | Divers
+                            default
+                                | -
+
+                    p
+                        strong Position:
+                        br
+                        = contact.position || "-"
+
+                .col-md-6
+
+                    p
+                        strong Telefon:
+                        br
+                        = contact.phone || "-"
+
+                    p
+                        strong Mobil:
+                        br
+                        = contact.mobile || "-"
+
+                    p
+                        strong E-Mail:
+                        br
+                        = contact.email || "-"
+
+                    p
+                        strong Status:
+                        br
+                        case contact.status
+                            when "active"
+                                span.badge.bg-success Aktiv
+                            when "inactive"
+                                span.badge.bg-secondary Inaktiv
+                            default
+                                span.badge.bg-light.text-dark Unbekannt
+
+            hr
+
+            h5.mb-3
+
+                i.bi.bi-person-lock.me-2
+
+                | Kundenportal
+
+            .row
+
+                .col-md-6
+
+                    p
+                        strong Portalzugang:
+                        br
+
+                        if contact.portal && contact.portal.enabled
+                            span.badge.bg-primary
+                                i.bi.bi-person-check.me-1
+                                | Aktiv
+                        else
+                            span.badge.bg-secondary
+                                i.bi.bi-person-x.me-1
+                                | Deaktiviert
+
+                    p
+                        strong Passwortstatus:
+                        br
+
+                        if contact.portal && contact.portal.passwordChangedAt
+                            span.badge.bg-success
+                                i.bi.bi-check-circle.me-1
+                                | Passwort geändert
+                        else
+                            span.badge.bg-warning.text-dark
+                                i.bi.bi-exclamation-triangle.me-1
+                                | Passwortwechsel erforderlich
+
+                .col-md-6
+
+                    p
+                        strong Letzte Anmeldung:
+                        br
+
+                        if contact.portal && contact.portal.lastLogin
+                            = contact.portal.lastLogin.toLocaleString("de-DE")
+                        else
+                            span.text-muted Noch keine Anmeldung
+
+            if contact.notes
+
+                hr
+
+                h5 Notizen
+
+                p= contact.notes

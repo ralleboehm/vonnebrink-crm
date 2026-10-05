@@ -1,0 +1,126 @@
+extends ../layouts/main
+
+block content
+
+    .d-flex.justify-content-between.align-items-center.mb-4
+
+        h1.mb-0 Neuer Benutzer
+
+        a.btn.btn-secondary(
+            href="/crm/users"
+        )
+
+            i.bi.bi-arrow-left.me-2
+
+            | Zurück
+
+    .card.shadow-sm
+
+        .card-header
+
+            h5.mb-0
+
+                i.bi.bi-person-plus.me-2
+
+                | Benutzerdaten
+
+        .card-body
+
+            form(method="POST" action="/crm/users")
+
+                .row
+
+                    .col-md-6.mb-3
+
+                        label.form-label(for="firstName")
+
+                            | Vorname
+
+                        input.form-control(
+                            type="text"
+                            id="firstName"
+                            name="firstName"
+                            required
+                        )
+
+                    .col-md-6.mb-3
+
+                        label.form-label(for="lastName")
+
+                            | Nachname
+
+                        input.form-control(
+                            type="text"
+                            id="lastName"
+                            name="lastName"
+                            required
+                        )
+
+                .mb-3
+
+                    label.form-label(for="username")
+
+                        | Benutzername
+
+                    input.form-control(
+                        type="text"
+                        id="username"
+                        name="username"
+                        required
+                    )
+
+                .mb-3
+
+                    label.form-label(for="email")
+
+                        | E-Mail
+
+                    input.form-control(
+                        type="email"
+                        id="email"
+                        name="email"
+                        required
+                    )
+
+                .row
+
+                    .col-md-6.mb-3
+
+                        label.form-label(for="password")
+
+                            | Passwort
+
+                        input.form-control(
+                            type="password"
+                            id="password"
+                            name="password"
+                            required
+                        )
+
+                    .col-md-6.mb-3
+
+                        label.form-label(for="role")
+
+                            | Rolle
+
+                        select.form-select(
+                            id="role"
+                            name="role"
+                        )
+
+                            option(value="technician") Techniker
+                            option(value="admin") Administrator
+
+                .mt-4
+
+                    button.btn.btn-primary(type="submit")
+
+                        i.bi.bi-floppy.me-2
+
+                        | Benutzer anlegen
+
+                    a.btn.btn-secondary.ms-2(
+                        href="/crm/users"
+                    )
+
+                        | Abbrechen

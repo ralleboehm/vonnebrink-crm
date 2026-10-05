@@ -1,0 +1,120 @@
+extends ../layouts/main
+
+block content
+
+    .d-flex.justify-content-between.align-items-center.mb-4
+
+        h1.mb-0 Neues Ticket
+
+        a.btn.btn-outline-secondary(href="/crm/tickets")
+
+            Zurück
+
+    .card.shadow-sm
+
+        .card-body
+
+            form(method="POST" action="/crm/tickets")
+
+                .row.g-3
+
+                    .col-md-6
+
+                        label.form-label(for="company") Firma
+
+                        select.form-select(
+                            id="company"
+                            name="company"
+                            required
+                        )
+
+                            option(value="") Bitte auswählen
+
+                            each company in companies
+
+                                option(value=company._id)= company.companyName
+
+                    .col-md-6
+
+                        label.form-label(for="contact") Ansprechpartner
+
+                        select.form-select(
+                            id="contact"
+                            name="contact"
+                        )
+
+                            option(value="") Kein Ansprechpartner
+
+                            each contact in contacts
+
+                                option(value=contact._id)
+
+                                    | #{contact.firstName} #{contact.lastName} – #{contact.company.companyName}
+
+                    .col-md-8
+
+                        label.form-label(for="subject") Betreff
+
+                        input.form-control(
+                            type="text"
+                            id="subject"
+                            name="subject"
+                            required
+                            maxlength="255"
+                        )
+
+                    .col-md-4
+
+                        label.form-label(for="priority") Priorität
+
+                        select.form-select(
+                            id="priority"
+                            name="priority"
+                            required
+                        )
+
+                            option(value="low") Niedrig
+                            option(value="normal" selected) Normal
+                            option(value="high") Hoch
+                            option(value="urgent") Dringend
+
+                    .col-md-6
+
+                        label.form-label(for="assignedTo") Bearbeiter
+
+                        select.form-select(
+                            id="assignedTo"
+                            name="assignedTo"
+                        )
+
+                            option(value="") Nicht zugewiesen
+
+                            each user in users
+
+                                option(value=user._id)
+
+                                    | #{user.firstName} #{user.lastName}
+
+                    .col-12
+
+                        label.form-label(for="description") Beschreibung
+
+                        textarea.form-control(
+                            id="description"
+                            name="description"
+                            rows="8"
+                            required
+                            maxlength="10000"
+                        )
+
+                .mt-4
+
+                    button.btn.btn-primary(type="submit")
+
+                        Ticket erstellen
+
+                    a.btn.btn-outline-secondary.ms-2(
+                        href="/crm/tickets"
+                    )
+
+                        Abbrechen

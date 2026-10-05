@@ -1,0 +1,131 @@
+extends ../layouts/main
+
+block content
+
+    .d-flex.justify-content-between.align-items-center.mb-4
+
+        h1.mb-0 #{user.firstName} #{user.lastName}
+
+        div
+
+            a.btn.btn-outline-secondary.me-2(
+                href=`/crm/users/${user._id}/edit`
+            )
+
+                i.bi.bi-pencil.me-2
+
+                | Bearbeiten
+
+            a.btn.btn-secondary(
+                href="/crm/users"
+            )
+
+                i.bi.bi-arrow-left.me-2
+
+                | Zurück
+
+    .card.shadow-sm
+
+        .card-header
+
+            h5.mb-0
+
+                i.bi.bi-person.me-2
+
+                | Benutzerdaten
+
+        .card-body
+
+            .row
+
+                .col-md-6
+
+                    p
+
+                        strong Benutzername:
+                        br
+                        = user.username
+
+                    p
+
+                        strong Vorname:
+                        br
+                        = user.firstName
+
+                    p
+
+                        strong Nachname:
+                        br
+                        = user.lastName
+
+                    p
+
+                        strong E-Mail:
+                        br
+                        = user.email || "-"
+
+                .col-md-6
+
+                    p
+
+                        strong Rolle:
+                        br
+
+                        case user.role
+
+                            when "admin"
+                                span.badge.bg-danger Administrator
+
+                            when "technician"
+                                span.badge.bg-primary Techniker
+
+                            default
+                                span.badge.bg-secondary Benutzer
+
+                    p
+
+                        strong Status:
+                        br
+
+                        if user.active
+                            span.badge.bg-success Aktiv
+                        else
+                            span.badge.bg-secondary Deaktiviert
+
+                    p
+
+                        strong Letzte Anmeldung:
+                        br
+
+                        if user.lastLogin
+                            = user.lastLogin.toLocaleString("de-DE")
+                        else
+                            span.text-muted Noch keine Anmeldung
+
+                    p
+
+                        strong Erstellt:
+                        br
+                        = user.createdAt.toLocaleString("de-DE")
+
+                    p
+
+                        strong Zuletzt geändert:
+                        br
+                        = user.updatedAt.toLocaleString("de-DE")
+
+    .mt-4
+
+        if user.active
+
+            form(
+                action=`/crm/users/${user._id}/deactivate`
+                method="POST"
+                onsubmit="return confirm('Benutzer wirklich deaktivieren?');"
+            )
+
+                button.btn.btn-outline-danger(type="submit")
+
+                    i.bi.bi-person-x.me-2
+
+                    | Benutzer deaktivieren

@@ -5,10 +5,12 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const session = require("express-session");
 
-const routes = require("./routes");
+const crmRoutes = require("./routes/crm");
+const portalRoutes = require("./routes/portal");
 
 const viewData = require("./middleware/viewData.middleware");
-const { requireAuth } = require("./middleware/auth.middleware");
+
+const { requireAuth } = require("./middleware/auth/crmAuth.middleware");
 
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
@@ -37,7 +39,12 @@ app.use(morgan("dev"));
 // ----------------------------------------------------
 
 app.set("view engine", "pug");
-app.set("views", path.join(__dirname, "views"));
+
+app.set("views", [
+    path.join(__dirname, "views/crm"),
+    path.join(__dirname, "views/portal"),
+    path.join(__dirname, "views")
+]);
 
 // ----------------------------------------------------
 // Static Files
@@ -83,15 +90,32 @@ app.use("/health", require("./routes/health.routes"));
 
 app.use((req, res, next) => {
 
+    const publicRoutes = [
+
+        "/crm/login",
+        "/crm/logout",
+
+        "/portal/login",
+        "/portal/logout"
+
+    ];
+
     if (
-        req.path === "/login" ||
-        req.path === "/logout" ||
+
+        publicRoutes.includes(req.path) ||
+
         req.path.startsWith("/css") ||
+
         req.path.startsWith("/js") ||
+
         req.path.startsWith("/images") ||
+
         req.path === "/favicon.ico"
+
     ) {
+
         return next();
+
     }
 
     requireAuth(req, res, next);
@@ -99,16 +123,19 @@ app.use((req, res, next) => {
 });
 
 // ----------------------------------------------------
-// Geschützte Routen
+// Anwendungen
 // ----------------------------------------------------
 
-app.use("/", routes);
+app.use("/crm", crmRoutes);
+
+app.use("/portal", portalRoutes);
 
 // ----------------------------------------------------
 // Fehlerbehandlung
 // ----------------------------------------------------
 
 app.use(notFound);
+
 app.use(errorHandler);
 
 module.exports = app;

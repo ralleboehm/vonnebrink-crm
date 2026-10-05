@@ -1,0 +1,175 @@
+extends ../layouts/main
+
+block content
+
+    .d-flex.justify-content-between.align-items-center.mb-4
+
+        h1.mb-0 Benutzer bearbeiten
+
+        a.btn.btn-secondary(
+            href="/crm/users"
+        )
+
+            i.bi.bi-arrow-left.me-2
+
+            | Zurück
+
+    .card.shadow-sm
+
+        .card-header
+
+            h5.mb-0
+
+                i.bi.bi-person-gear.me-2
+
+                | Benutzerdaten bearbeiten
+
+        .card-body
+
+            form(method="POST" action=`/crm/users/${user._id}/update`)
+
+                .row
+
+                    .col-md-6.mb-3
+
+                        label.form-label(for="firstName")
+
+                            | Vorname
+
+                        input.form-control(
+                            type="text"
+                            id="firstName"
+                            name="firstName"
+                            value=user.firstName
+                            required
+                        )
+
+                    .col-md-6.mb-3
+
+                        label.form-label(for="lastName")
+
+                            | Nachname
+
+                        input.form-control(
+                            type="text"
+                            id="lastName"
+                            name="lastName"
+                            value=user.lastName
+                            required
+                        )
+
+                .mb-3
+
+                    label.form-label(for="username")
+
+                        | Benutzername
+
+                    input.form-control(
+                        type="text"
+                        id="username"
+                        name="username"
+                        value=user.username
+                        required
+                    )
+
+                .mb-3
+
+                    label.form-label(for="email")
+
+                        | E-Mail
+
+                    input.form-control(
+                        type="email"
+                        id="email"
+                        name="email"
+                        value=user.email
+                        required
+                    )
+
+                .row
+
+                    .col-md-6.mb-3
+
+                        label.form-label(for="password")
+
+                            | Neues Passwort
+
+                        input.form-control(
+                            type="password"
+                            id="password"
+                            name="password"
+                            placeholder="Leer lassen, um das Passwort beizubehalten"
+                        )
+
+                        .form-text
+
+                            | Wird dieses Feld leer gelassen, bleibt das bisherige Passwort erhalten.
+
+                    .col-md-6.mb-3
+
+                        label.form-label(for="role")
+
+                            | Rolle
+
+                        select.form-select(
+                            id="role"
+                            name="role"
+                        )
+
+                            option(
+                                value="technician"
+                                selected=user.role === "technician"
+                            ) Techniker
+
+                            option(
+                                value="admin"
+                                selected=user.role === "admin"
+                            ) Administrator
+
+                hr
+
+                h5.mb-3
+
+                    i.bi.bi-shield-lock.me-2
+
+                    | Kontostatus
+
+                .row
+
+                    .col-md-6
+
+                        p
+
+                            strong Status:
+                            br
+
+                            if user.active
+                                span.badge.bg-success Aktiv
+                            else
+                                span.badge.bg-secondary Deaktiviert
+
+                    .col-md-6
+
+                        p
+
+                            strong Letzte Anmeldung:
+                            br
+
+                            if user.lastLogin
+                                = user.lastLogin.toLocaleString("de-DE")
+                            else
+                                span.text-muted Noch keine Anmeldung
+
+                .mt-4
+
+                    button.btn.btn-primary(type="submit")
+
+                        i.bi.bi-floppy.me-2
+
+                        | Änderungen speichern
+
+                    a.btn.btn-secondary.ms-2(
+                        href="/crm/users"
+                    )
+
+                        | Abbrechen
