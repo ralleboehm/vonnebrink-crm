@@ -1,0 +1,104 @@
+extends ../layouts/main
+
+block content
+
+    .d-flex.justify-content-between.align-items-center.mb-4
+
+        h1.mb-0 Neues Ticket
+
+        a.btn.btn-secondary(
+            href="/portal/tickets"
+        )
+
+            i.bi.bi-arrow-left.me-2
+
+            | Zurück
+
+    .card.shadow-sm
+
+        .card-header
+
+            h5.mb-0
+
+                i.bi.bi-ticket-detailed.me-2
+
+                | Ticket erstellen
+
+        .card-body
+
+            form(method="POST" action="/portal/tickets/new")
+
+                .mb-3
+
+                    label.form-label(for="subject")
+
+                        | Betreff
+
+                    input.form-control(
+                        type="text"
+                        id="subject"
+                        name="subject"
+                        required
+                        maxlength="200"
+                    )
+
+                .row
+
+                    .col-md-6.mb-3
+
+                        label.form-label(for="category")
+
+                            | Kategorie
+
+                        select.form-select(
+                            id="category"
+                            name="category"
+                            required
+                        )
+
+                            option(value="support") Support
+                            option(value="incident") Störung
+                            option(value="request") Anfrage
+                            option(value="maintenance") Wartung
+
+                    .col-md-6.mb-3
+
+                        label.form-label(for="priority")
+
+                            | Priorität
+
+                        select.form-select(
+                            id="priority"
+                            name="priority"
+                            required
+                        )
+
+                            option(value="low") Niedrig
+                            option(value="normal" selected) Normal
+                            option(value="high") Hoch
+                            option(value="urgent") Kritisch
+
+                .mb-4
+
+                    label.form-label(for="description")
+
+                        | Beschreibung
+
+                    textarea.form-control(
+                        id="description"
+                        name="description"
+                        rows="10"
+                        required
+                    )
+
+                button.btn.btn-primary(type="submit")
+
+                    i.bi.bi-send.me-2
+
+                    | Ticket erstellen
+
+                a.btn.btn-secondary.ms-2(
+                    href="/portal/tickets"
+                )
+
+                    | Abbrechen

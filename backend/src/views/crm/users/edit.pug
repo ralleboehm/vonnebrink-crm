@@ -20,13 +20,16 @@ block content
 
             h5.mb-0
 
-                i.bi.bi-person-gear.me-2
+                i.bi.bi-pencil-square.me-2
 
-                | Benutzerdaten bearbeiten
+                | Benutzerdaten
 
         .card-body
 
-            form(method="POST" action=`/crm/users/${user._id}/update`)
+            form(
+                method="POST"
+                action=`/crm/users/${user._id}/update`
+            )
 
                 .row
 
@@ -101,10 +104,6 @@ block content
                             placeholder="Leer lassen, um das Passwort beizubehalten"
                         )
 
-                        .form-text
-
-                            | Wird dieses Feld leer gelassen, bleibt das bisherige Passwort erhalten.
-
                     .col-md-6.mb-3
 
                         label.form-label(for="role")
@@ -122,43 +121,46 @@ block content
                             ) Techniker
 
                             option(
+                                value="sales"
+                                selected=user.role === "sales"
+                            ) Vertrieb
+
+                            option(
                                 value="admin"
                                 selected=user.role === "admin"
                             ) Administrator
 
-                hr
+                            option(
+                                value="portal"
+                                selected=user.role === "portal"
+                            ) Portal-Benutzer
 
-                h5.mb-3
+                .mb-3
 
-                    i.bi.bi-shield-lock.me-2
+                    label.form-label(for="company")
 
-                    | Kontostatus
+                        | Unternehmen
 
-                .row
+                    select.form-select(
+                        id="company"
+                        name="company"
+                    )
 
-                    .col-md-6
+                        option(
+                            value=""
+                            selected=!user.company
+                        )
 
-                        p
+                            | -- Kein Unternehmen --
 
-                            strong Status:
-                            br
+                        each company in companies
 
-                            if user.active
-                                span.badge.bg-success Aktiv
-                            else
-                                span.badge.bg-secondary Deaktiviert
+                            option(
+                                value=company._id
+                                selected=user.company && user.company.toString() === company._id.toString()
+                            )
 
-                    .col-md-6
-
-                        p
-
-                            strong Letzte Anmeldung:
-                            br
-
-                            if user.lastLogin
-                                = user.lastLogin.toLocaleString("de-DE")
-                            else
-                                span.text-muted Noch keine Anmeldung
+                                | #{company.customerNumber} - #{company.companyName}
 
                 .mt-4
 

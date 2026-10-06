@@ -2,13 +2,28 @@ const express = require("express");
 
 const router = express.Router();
 
-// Login
+// ----------------------------------------------------
+// Authentifizierung
+// ----------------------------------------------------
+
 router.use("/", require("./auth.routes"));
 
-// Später:
-//
-// router.use("/", require("./dashboard.routes"));
-// router.use("/tickets", require("./ticket.routes"));
-// router.use("/profile", require("./profile.routes"));
+// ----------------------------------------------------
+// Dashboard
+// ----------------------------------------------------
+
+router.use("/", require("./dashboard.routes"));
+
+// ----------------------------------------------------
+// Tickets
+// ----------------------------------------------------
+
+router.use("/tickets", require("./ticket.routes"));
+
+// ----------------------------------------------------
+// Profil
+// ----------------------------------------------------
+
+router.use("/profile", require("./profile.routes"));
 
 module.exports = router;

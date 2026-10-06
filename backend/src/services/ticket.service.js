@@ -61,7 +61,8 @@ class TicketService {
             .sort({ createdAt: -1 });
 
     }
-        /**
+
+    /**
      * Einzelnes Ticket laden
      */
     async getById(id) {
@@ -103,6 +104,28 @@ class TicketService {
     }
 
     /**
+     * Alle Tickets einer Firma
+     */
+    async getByCompany(companyId) {
+
+        return await Ticket.find({
+
+            company: companyId,
+            isDeleted: false
+
+        })
+
+            .populate("contact")
+            .populate("assignedTo")
+            .populate("createdBy")
+
+            .sort({
+                createdAt: -1
+            });
+
+    }
+
+    /**
      * Ticket erstellen
      */
     async create(data) {
@@ -136,7 +159,8 @@ class TicketService {
         return await ticket.save();
 
     }
-        /**
+
+    /**
      * Ticket aktualisieren
      */
     async update(id, data) {
@@ -199,7 +223,8 @@ class TicketService {
         );
 
     }
-        /**
+
+    /**
      * Status ändern
      */
     async updateStatus(id, status) {
@@ -247,6 +272,7 @@ class TicketService {
         );
 
     }
-    }
+
+}
 
 module.exports = new TicketService();

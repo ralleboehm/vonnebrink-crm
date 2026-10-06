@@ -1,0 +1,107 @@
+extends layouts/main
+
+block content
+
+    .d-flex.justify-content-between.align-items-center.mb-4
+
+        h1.mb-0 Kundenportal
+
+        a.btn.btn-primary(
+            href="/portal/tickets/new"
+        )
+
+            i.bi.bi-plus-circle.me-2
+
+            | Neues Ticket
+
+    .row
+
+        .col-md-4.mb-4
+
+            .card.shadow-sm
+
+                .card-body.text-center
+
+                    h2.display-6.mb-0= tickets.length
+
+                    p.text-muted.mb-0 Meine Tickets
+
+        .col-md-8.mb-4
+
+            .card.shadow-sm
+
+                .card-header
+
+                    h5.mb-0 Letzte Tickets
+
+                .card-body.p-0
+
+                    if tickets.length
+
+                        table.table.table-hover.mb-0
+
+                            thead
+
+                                tr
+
+                                    th Ticket
+
+                                    th Betreff
+
+                                    th Status
+
+                                    th
+
+                            tbody
+
+                                each ticket in tickets
+
+                                    tr
+
+                                        td= ticket.ticketNumber
+
+                                        td= ticket.subject
+
+                                        td
+
+                                            case ticket.status
+
+                                                when "open"
+
+                                                    span.badge.bg-primary Offen
+
+                                                when "in_progress"
+
+                                                    span.badge.bg-warning.text-dark In Bearbeitung
+
+                                                when "waiting"
+
+                                                    span.badge.bg-info Wartend
+
+                                                when "resolved"
+
+                                                    span.badge.bg-success Gelöst
+
+                                                when "closed"
+
+                                                    span.badge.bg-secondary Geschlossen
+
+                                                default
+
+                                                    span.badge.bg-light.text-dark= ticket.status
+
+                                        td.text-end
+
+                                            a.btn.btn-sm.btn-outline-primary(
+                                                href=`/portal/tickets/${ticket._id}`
+                                            )
+
+                                                i.bi.bi-eye.me-1
+
+                                                | Öffnen
+
+                    else
+
+                        .p-3.text-muted
+
+                            | Es sind noch keine Tickets vorhanden.

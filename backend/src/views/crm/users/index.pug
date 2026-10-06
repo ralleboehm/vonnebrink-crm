@@ -26,6 +26,7 @@ block content
                             th Benutzername
                             th Name
                             th E-Mail
+                            th Unternehmen
                             th Rolle
                             th Status
                             th Letzte Anmeldung
@@ -51,6 +52,20 @@ block content
 
                                 td
 
+                                    if user.company
+
+                                        a.text-decoration-none(
+                                            href=`/crm/companies/${user.company._id}`
+                                        )
+
+                                            | #{user.company.customerNumber} - #{user.company.companyName}
+
+                                    else
+
+                                        span.text-muted —
+
+                                td
+
                                     case user.role
 
                                         when "admin"
@@ -58,6 +73,12 @@ block content
 
                                         when "technician"
                                             span.badge.bg-primary Techniker
+
+                                        when "sales"
+                                            span.badge.bg-warning.text-dark Vertrieb
+
+                                        when "portal"
+                                            span.badge.bg-info.text-dark Portal
 
                                         default
                                             span.badge.bg-secondary Benutzer

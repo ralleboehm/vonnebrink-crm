@@ -1,3 +1,4 @@
+const authService = require("../../services/auth.service");
 const userService = require("../../services/user.service");
 
 // ----------------------------------------------------
@@ -22,33 +23,41 @@ exports.login = async (req, res, next) => {
 
         const { username, password } = req.body;
 
-        const user = await userService.getByUsername(username);
+        let user;
 
-        if (!user) {
+        try {
 
-            return res.render("auth/login", {
-                title: "Anmeldung",
-                error: "Benutzername oder Passwort ist falsch."
+            user = await authService.authenticate({
+
+                username,
+                password,
+                allowedRoles: [
+                    "admin",
+                    "technician",
+                    "sales"
+                ]
+
             });
 
-        }
+        } catch (err) {
 
-        if (!user.active) {
+            let error = "Benutzername oder Passwort ist falsch.";
+
+            switch (err.message) {
+
+                case "USER_DISABLED":
+                    error = "Benutzer ist deaktiviert.";
+                    break;
+
+                case "ACCESS_DENIED":
+                    error = "Für diesen Bereich besteht keine Berechtigung.";
+                    break;
+
+            }
 
             return res.render("auth/login", {
                 title: "Anmeldung",
-                error: "Benutzer ist deaktiviert."
-            });
-
-        }
-
-        const validPassword = await user.comparePassword(password);
-
-        if (!validPassword) {
-
-            return res.render("auth/login", {
-                title: "Anmeldung",
-                error: "Benutzername oder Passwort ist falsch."
+                error
             });
 
         }

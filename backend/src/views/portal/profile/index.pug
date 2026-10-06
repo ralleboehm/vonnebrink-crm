@@ -1,0 +1,113 @@
+extends ../layouts/main
+
+block content
+
+    .d-flex.justify-content-between.align-items-center.mb-4
+
+        h1.mb-0 Mein Profil
+
+        a.btn.btn-secondary(
+            href="/portal"
+        )
+
+            i.bi.bi-arrow-left.me-2
+
+            | Dashboard
+
+    .card.shadow-sm
+
+        .card-header
+
+            h5.mb-0
+
+                i.bi.bi-person.me-2
+
+                | Persönliche Daten
+
+        .card-body
+
+            form(method="POST" action="/portal/profile")
+
+                .row
+
+                    .col-md-6.mb-3
+
+                        label.form-label(for="firstName")
+
+                            | Vorname
+
+                        input.form-control(
+                            type="text"
+                            id="firstName"
+                            name="firstName"
+                            value=user.firstName
+                            required
+                        )
+
+                    .col-md-6.mb-3
+
+                        label.form-label(for="lastName")
+
+                            | Nachname
+
+                        input.form-control(
+                            type="text"
+                            id="lastName"
+                            name="lastName"
+                            value=user.lastName
+                            required
+                        )
+
+                .mb-3
+
+                    label.form-label(for="email")
+
+                        | E-Mail-Adresse
+
+                    input.form-control(
+                        type="email"
+                        id="email"
+                        name="email"
+                        value=user.email
+                        required
+                    )
+
+                .mb-3
+
+                    label.form-label
+
+                        | Benutzername
+
+                    input.form-control(
+                        type="text"
+                        value=user.username
+                        readonly
+                    )
+
+                .mb-3
+
+                    label.form-label
+
+                        | Rolle
+
+                    input.form-control(
+                        type="text"
+                        value=user.role
+                        readonly
+                    )
+
+                .mt-4
+
+                    button.btn.btn-primary(type="submit")
+
+                        i.bi.bi-floppy.me-2
+
+                        | Änderungen speichern
+
+                    a.btn.btn-outline-secondary.ms-2(
+                        href="/portal/profile/password"
+                    )
+
+                        i.bi.bi-key.me-2
+
+                        | Passwort ändern

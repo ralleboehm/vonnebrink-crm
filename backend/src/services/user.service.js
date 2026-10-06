@@ -5,10 +5,15 @@ class UserService {
 
     async getAll() {
 
-        return await User.find({ active: true }).sort({
-            lastName: 1,
-            firstName: 1
-        });
+        return await User.find({
+            active: true
+        })
+            .populate("company")
+            .populate("contact")
+            .sort({
+                lastName: 1,
+                firstName: 1
+            });
 
     }
 
@@ -17,7 +22,9 @@ class UserService {
         return await User.findOne({
             _id: id,
             active: true
-        });
+        })
+            .populate("company")
+            .populate("contact");
 
     }
 
@@ -25,7 +32,9 @@ class UserService {
 
         return await User.findOne({
             username: username.toLowerCase()
-        });
+        })
+            .populate("company")
+            .populate("contact");
 
     }
 
@@ -33,28 +42,52 @@ class UserService {
 
         return await User.findOne({
             email: email.toLowerCase()
-        });
+        })
+            .populate("company")
+            .populate("contact");
 
     }
 
     async create(data) {
 
-        const user = new User(data);
+        const user = new User({
+
+            username: data.username,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+            password: data.password,
+            role: data.role,
+
+            company: data.company || null,
+            contact: data.contact || null,
+
+            active: true
+
+        });
+
         return await user.save();
 
     }
 
     async update(id, data) {
 
-        const updateData = { ...data };
+        const updateData = {
 
-        if (updateData.password) {
+            username: data.username,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+            role: data.role,
 
-            updateData.password = await bcrypt.hash(updateData.password, 12);
+            company: data.company || null,
+            contact: data.contact || null
 
-        } else {
+        };
 
-            delete updateData.password;
+        if (data.password) {
+
+            updateData.password = await bcrypt.hash(data.password, 12);
 
         }
 
@@ -72,7 +105,9 @@ class UserService {
                 runValidators: true
             }
 
-        );
+        )
+            .populate("company")
+            .populate("contact");
 
     }
 

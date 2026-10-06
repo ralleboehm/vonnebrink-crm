@@ -47,9 +47,22 @@ const userSchema = new mongoose.Schema(
             enum: [
                 "admin",
                 "technician",
-                "sales"
+                "sales",
+                "portal"
             ],
             default: "technician"
+        },
+
+        company: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Company",
+            default: null
+        },
+
+        contact: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Contact",
+            default: null
         },
 
         active: {
@@ -67,7 +80,10 @@ const userSchema = new mongoose.Schema(
     }
 );
 
+// ----------------------------------------------------
 // Passwort vor dem Speichern verschlüsseln
+// ----------------------------------------------------
+
 userSchema.pre("save", async function () {
 
     if (!this.isModified("password")) {
@@ -78,7 +94,10 @@ userSchema.pre("save", async function () {
 
 });
 
+// ----------------------------------------------------
 // Passwort vergleichen
+// ----------------------------------------------------
+
 userSchema.methods.comparePassword = async function (password) {
 
     return bcrypt.compare(password, this.password);

@@ -1,4 +1,5 @@
 const userService = require("../../services/user.service");
+const companyService = require("../../services/company.service");
 
 // Alle Benutzer anzeigen
 exports.index = async (req, res, next) => {
@@ -21,11 +22,22 @@ exports.index = async (req, res, next) => {
 };
 
 // Formular für neuen Benutzer
-exports.create = (req, res) => {
+exports.create = async (req, res, next) => {
 
-    res.render("users/create", {
-        title: "Neuer Benutzer"
-    });
+    try {
+
+        const companies = await companyService.getAll();
+
+        res.render("users/create", {
+            title: "Neuer Benutzer",
+            companies
+        });
+
+    } catch (err) {
+
+        next(err);
+
+    }
 
 };
 
@@ -41,7 +53,8 @@ exports.store = async (req, res, next) => {
             lastName: req.body.lastName,
             email: req.body.email,
             password: req.body.password,
-            role: req.body.role
+            role: req.body.role,
+            company: req.body.company || null
 
         });
 
@@ -90,9 +103,12 @@ exports.edit = async (req, res, next) => {
             return res.redirect("/crm/users");
         }
 
+        const companies = await companyService.getAll();
+
         res.render("users/edit", {
             title: "Benutzer bearbeiten",
-            user
+            user,
+            companies
         });
 
     } catch (err) {
@@ -115,7 +131,8 @@ exports.update = async (req, res, next) => {
             lastName: req.body.lastName,
             email: req.body.email,
             password: req.body.password,
-            role: req.body.role
+            role: req.body.role,
+            company: req.body.company || null
 
         });
 
