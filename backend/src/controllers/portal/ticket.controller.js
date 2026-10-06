@@ -1,8 +1,11 @@
+const fs = require("fs");
+const path = require("path");
+
 const ticketService = require("../../services/ticket.service");
-
-// ----------------------------------------------------
-
 const ticketMessageService = require("../../services/ticketMessage.service");
+const attachmentService = require("../../services/attachment.service");
+const storageService = require("../../services/storage.service");
+const formatFileSize = require("../../utils/formatFileSize");
 
 // ----------------------------------------------------
 // Meine Tickets
@@ -117,9 +120,19 @@ exports.show = async (req, res, next) => {
 
         }
 
-        const messages = await ticketMessageService.getByTicket(
-            req.params.id
-        );
+        const [messages, attachments] = await Promise.all([
+
+            ticketMessageService.getByTicket(
+                req.params.id,
+                false
+            ),
+
+            attachmentService.getByTicket(
+                req.params.id,
+                false
+            )
+
+        ]);
 
         res.render("portal/tickets/show", {
 
@@ -127,7 +140,11 @@ exports.show = async (req, res, next) => {
 
             ticket,
 
-            messages: messages || []
+            messages: messages || [],
+
+            attachments: attachments || [],
+
+            formatFileSize
 
         });
 
@@ -185,6 +202,226 @@ exports.addMessage = async (req, res, next) => {
         });
 
         res.redirect(`/portal/tickets/${req.params.id}`);
+
+    } catch (err) {
+
+        next(err);
+
+    }
+
+};
+// ----------------------------------------------------
+// Dateianhang hochladen
+// ----------------------------------------------------
+
+exports.uploadAttachment = async (req, res, next) => {
+
+    try {
+
+        const ticket = await ticketService.getById(req.params.id);
+
+        if (!ticket) {
+
+            return res.redirect("/portal/tickets");
+
+        }
+
+        if (
+
+            ticket.company._id.toString() !==
+            req.session.user.company.toString()
+
+        ) {
+
+            return res.redirect("/portal/tickets");
+
+        }
+
+        if (!req.file) {
+
+            return res.redirect(`/portal/tickets/${req.params.id}`);
+
+        }
+
+        const storedFile = await storageService.storeFile({
+
+            ticketId: req.params.id,
+
+            tempFile: req.file.path,
+
+            originalName: req.file.originalname
+
+        });
+
+        await attachmentService.create({
+
+            ticket: req.params.id,
+
+            uploadedBy: req.session.user.id,
+
+            originalName: req.file.originalname,
+
+            fileName: storedFile.filename,
+
+            path: storedFile.relativePath,
+
+            mimeType: req.file.mimetype,
+
+            size: req.file.size,
+
+            isInternal: false
+
+        });
+
+        if (fs.existsSync(req.file.path)) {
+
+            fs.unlinkSync(req.file.path);
+
+        }
+
+        res.redirect(`/portal/tickets/${req.params.id}`);
+
+    } catch (err) {
+
+        next(err);
+
+    }
+
+};
+
+// ----------------------------------------------------
+// Dateianhang herunterladen
+// ----------------------------------------------------
+
+exports.downloadAttachment = async (req, res, next) => {
+
+    try {
+
+        const ticket = await ticketService.getById(
+            req.params.ticketId
+        );
+
+        if (!ticket) {
+
+            return res.redirect("/portal/tickets");
+
+        }
+
+        if (
+
+            ticket.company._id.toString() !==
+            req.session.user.company.toString()
+
+        ) {
+
+            return res.redirect("/portal/tickets");
+
+        }
+
+        const attachment = await attachmentService.getById(
+            req.params.attachmentId
+        );
+
+        if (
+
+            !attachment ||
+            attachment.ticket.toString() !== req.params.ticketId ||
+            attachment.isInternal
+
+        ) {
+
+            return res.redirect(
+                `/portal/tickets/${req.params.ticketId}`
+            );
+
+        }
+
+        const filePath = path.join(
+
+            process.cwd(),
+            "storage",
+            attachment.path
+
+        );
+
+        if (!fs.existsSync(filePath)) {
+
+            return res.redirect(
+                `/portal/tickets/${req.params.ticketId}`
+            );
+
+        }
+
+        return res.download(
+            filePath,
+            attachment.originalName
+        );
+
+    } catch (err) {
+
+        next(err);
+
+    }
+
+};
+// ----------------------------------------------------
+// Dateianhang löschen
+// ----------------------------------------------------
+
+exports.deleteAttachment = async (req, res, next) => {
+
+    try {
+
+        const ticket = await ticketService.getById(
+            req.params.ticketId
+        );
+
+        if (!ticket) {
+
+            return res.redirect("/portal/tickets");
+
+        }
+
+        if (
+
+            ticket.company._id.toString() !==
+            req.session.user.company.toString()
+
+        ) {
+
+            return res.redirect("/portal/tickets");
+
+        }
+
+        const attachment = await attachmentService.getById(
+            req.params.attachmentId
+        );
+
+        if (
+
+            !attachment ||
+            attachment.ticket.toString() !== req.params.ticketId ||
+            attachment.isInternal
+
+        ) {
+
+            return res.redirect(
+                `/portal/tickets/${req.params.ticketId}`
+            );
+
+        }
+
+        storageService.deleteFile(
+            attachment.path
+        );
+
+        await attachmentService.delete(
+            attachment._id
+        );
+
+        res.redirect(
+            `/portal/tickets/${req.params.ticketId}`
+        );
 
     } catch (err) {
 

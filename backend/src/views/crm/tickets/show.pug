@@ -41,17 +41,13 @@ block content
         .d-flex.gap-2.mt-3.mt-md-0
 
             a.btn.btn-outline-secondary(href="/crm/tickets")
-
                 i.bi.bi-arrow-left.me-2
-
                 | Zurück
 
             a.btn.btn-primary(
                 href=`/crm/tickets/${ticket._id}/edit`
             )
-
                 i.bi.bi-pencil.me-2
-
                 | Bearbeiten
 
     // =====================================================
@@ -83,7 +79,6 @@ block content
                             a.text-decoration-none(
                                 href=`/crm/companies/${ticket.company._id}`
                             )
-
                                 = ticket.company.companyName
 
                         else
@@ -142,14 +137,12 @@ block content
                                                 value=user._id
                                                 selected=ticket.assignedTo && String(ticket.assignedTo._id) === String(user._id)
                                             )
-
                                                 | #{user.firstName} #{user.lastName}
 
                                 button.btn.btn-outline-primary(type="submit")
-
                                     i.bi.bi-person-check.me-2
-
                                     | Zuweisen
+
                 .col-md-3
 
                     small.text-muted Erstellt
@@ -163,7 +156,6 @@ block content
 
                     p.mb-0
                         = ticket.updatedAt.toLocaleString("de-DE")
-
     // =====================================================
     // Beschreibung
     // =====================================================
@@ -216,7 +208,11 @@ block content
 
                 each message in messages
 
-                    .border.rounded.p-3.mb-3.bg-light
+                    .border.rounded.p-3.mb-3(
+                        class=message.isInternal
+                            ? "border-warning bg-warning-subtle"
+                            : "bg-light"
+                    )
 
                         .d-flex.justify-content-between.align-items-center.mb-2
 
@@ -233,6 +229,14 @@ block content
                                     else
 
                                         | Unbekannter Benutzer
+
+                                if message.isInternal
+
+                                    span.badge.bg-warning.text-dark.ms-2
+
+                                        i.bi.bi-eye-slash.me-1
+
+                                        | Intern
 
                             small.text-muted
 
@@ -288,6 +292,22 @@ block content
                         required
                     )
 
+                .mb-3
+
+                    .form-check
+
+                        input.form-check-input(
+                            type="checkbox"
+                            id="isInternal"
+                            name="isInternal"
+                        )
+
+                        label.form-check-label(for="isInternal")
+
+                            i.bi.bi-eye-slash.me-1
+
+                            | Interne Notiz (nur für Mitarbeiter sichtbar)
+
                 .d-flex.justify-content-end
 
                     button.btn.btn-primary(type="submit")
@@ -295,6 +315,135 @@ block content
                         i.bi.bi-send.me-2
 
                         | Nachricht hinzufügen
+    // =====================================================
+    // Dateianhänge
+    // =====================================================
+
+    .card.shadow-sm.mb-4
+
+        .card-header.bg-white
+
+            h5.mb-0
+
+                i.bi.bi-paperclip.me-2
+
+                | Dateianhänge
+
+        .card-body
+
+            form(
+                method="POST"
+                action=`/crm/tickets/${ticket._id}/attachments`
+                enctype="multipart/form-data"
+            )
+
+                .mb-3
+
+                    input.form-control(
+                        type="file"
+                        name="attachment"
+                        required
+                    )
+
+                .mb-3
+
+                    .form-check
+
+                        input.form-check-input(
+                            type="checkbox"
+                            id="attachmentInternal"
+                            name="isInternal"
+                        )
+
+                        label.form-check-label(for="attachmentInternal")
+
+                            i.bi.bi-eye-slash.me-1
+
+                            | Interner Anhang (nur für Mitarbeiter sichtbar)
+
+                .d-flex.justify-content-end.mb-4
+
+                    button.btn.btn-primary(type="submit")
+
+                        i.bi.bi-upload.me-2
+
+                        | Datei hochladen
+
+            hr.mb-4
+
+            if attachments && attachments.length
+
+                each attachment in attachments
+
+                    .border.rounded.p-3.mb-3(
+                        class=attachment.isInternal
+                            ? "border-warning bg-warning-subtle"
+                            : "bg-light"
+                    )
+
+                        .d-flex.justify-content-between.align-items-start
+
+                            .flex-grow-1
+
+                                h6.mb-1
+
+                                    i.bi.bi-paperclip.me-2
+
+                                    = attachment.originalName
+
+                                    if attachment.isInternal
+
+                                        span.badge.bg-warning.text-dark.ms-2
+
+                                            i.bi.bi-eye-slash.me-1
+
+                                            | Intern
+
+                                small.text-muted
+
+                                    if attachment.uploadedBy
+
+                                        | Hochgeladen von #{attachment.uploadedBy.firstName} #{attachment.uploadedBy.lastName}
+
+                                    else
+
+                                        | Unbekannter Benutzer
+
+                                    |  •
+                                    = " " + attachment.createdAt.toLocaleString("de-DE")
+
+                                br
+
+                                small.text-muted
+
+                                    = formatFileSize(attachment.size)
+
+                            .btn-group
+
+                                a.btn.btn-outline-primary.btn-sm(
+                                    href=`/crm/tickets/${ticket._id}/attachments/${attachment._id}`
+                                )
+
+                                    i.bi.bi-download
+
+                                form(
+                                    method="POST"
+                                    action=`/crm/tickets/${ticket._id}/attachments/${attachment._id}/delete`
+                                )
+
+                                    button.btn.btn-outline-danger.btn-sm(type="submit")
+
+                                        i.bi.bi-trash
+
+            else
+
+                .text-center.py-4
+
+                    i.bi.bi-paperclip.display-5.text-muted
+
+                    p.text-muted.mt-3.mb-0
+
+                        | Für dieses Ticket wurden noch keine Dateien hochgeladen.
     // =====================================================
     // Aktivitäten
     // =====================================================
@@ -383,11 +532,13 @@ block content
                         if activity.description
 
                             p.mb-1
+
                                 = activity.description
 
                         if activity.field
 
                             small.text-muted
+
                                 | Feld: #{activity.field}
 
                         if activity.oldValue || activity.newValue
@@ -478,8 +629,22 @@ block content
     //-
         Hier können später ohne Umbau ergänzt werden:
 
-        • Dateianhänge
-        • Interne Notizen
         • SLA-Informationen
+
         • Zeiterfassung
+
         • Verknüpfte Tickets
+
+        • Automatische Eskalationen
+
+        • Action1-Integration
+
+        • Nextcloud-Integration
+
+        • Microsoft 365-Integration
+
+        • E-Mail-Verlauf
+
+        • KI-Zusammenfassungen
+
+        • KI-Vorschläge für Antworten

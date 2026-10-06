@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const ticketMessageSchema = new mongoose.Schema(
+const attachmentSchema = new mongoose.Schema(
     {
         ticket: {
             type: mongoose.Schema.Types.ObjectId,
@@ -8,16 +8,37 @@ const ticketMessageSchema = new mongoose.Schema(
             required: true
         },
 
-        author: {
+        uploadedBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             required: true
         },
 
-        message: {
+        originalName: {
             type: String,
             required: true,
             trim: true
+        },
+
+        fileName: {
+            type: String,
+            required: true,
+            unique: true
+        },
+
+        mimeType: {
+            type: String,
+            required: true
+        },
+
+        size: {
+            type: Number,
+            required: true
+        },
+
+        path: {
+            type: String,
+            required: true
         },
 
         isInternal: {
@@ -30,4 +51,4 @@ const ticketMessageSchema = new mongoose.Schema(
     }
 );
 
-module.exports = mongoose.model("TicketMessage", ticketMessageSchema);
+module.exports = mongoose.model("Attachment", attachmentSchema);

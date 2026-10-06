@@ -1,9 +1,15 @@
+const fs = require("fs");
+const path = require("path");
+
 const ticketService = require("../../services/ticket.service");
 const ticketMessageService = require("../../services/ticketMessage.service");
+const attachmentService = require("../../services/attachment.service");
+const storageService = require("../../services/storage.service");
 const activityService = require("../../services/activity.service");
 const companyService = require("../../services/company.service");
 const contactService = require("../../services/contact.service");
 const userService = require("../../services/user.service");
+const formatFileSize = require("../../utils/formatFileSize");
 
 /**
  * Hilfsfunktion zum Erstellen des Ticket-Objekts
@@ -110,6 +116,7 @@ exports.store = async (req, res, next) => {
     }
 
 };
+
 /**
  * Ticket anzeigen
  */
@@ -127,18 +134,22 @@ exports.show = async (req, res, next) => {
 
         }
 
-        const [messages, users, activities] = await Promise.all([
-            ticketMessageService.getByTicket(req.params.id),
-            userService.getAll(),
-            activityService.getByTicket(req.params.id)
-        ]);
+        const [messages, attachments, users, activities] =
+            await Promise.all([
+                ticketMessageService.getByTicket(req.params.id),
+                attachmentService.getByTicket(req.params.id),
+                userService.getAll(),
+                activityService.getByTicket(req.params.id)
+            ]);
 
         res.render("tickets/show", {
             title: ticket.subject,
             ticket,
             messages: messages || [],
+            attachments: attachments || [],
             users: users || [],
-            activities: activities || []
+            activities: activities || [],
+            formatFileSize
         });
 
     } catch (err) {
@@ -148,7 +159,6 @@ exports.show = async (req, res, next) => {
     }
 
 };
-
 /**
  * Nachricht zu einem Ticket hinzufügen
  */
@@ -167,7 +177,8 @@ exports.addMessage = async (req, res, next) => {
         await ticketMessageService.create({
             ticket: req.params.id,
             author: req.session.user.id,
-            message
+            message,
+            isInternal: req.body.isInternal === "on"
         });
 
         await activityService.log({
@@ -178,6 +189,93 @@ exports.addMessage = async (req, res, next) => {
         });
 
         res.redirect(`/crm/tickets/${req.params.id}`);
+
+    } catch (err) {
+
+        next(err);
+
+    }
+
+};
+
+/**
+ * Dateianhang hochladen
+ */
+exports.uploadAttachment = async (req, res, next) => {
+
+    try {
+
+        if (!req.file) {
+
+            return res.redirect(`/crm/tickets/${req.params.id}`);
+
+        }
+
+        const ticket = await ticketService.getById(req.params.id);
+
+        if (!ticket) {
+
+            if (fs.existsSync(req.file.path)) {
+
+                fs.unlinkSync(req.file.path);
+
+            }
+
+            return res.redirect("/crm/tickets");
+
+        }
+
+        const ticketDirectory = storageService.getTicketDirectory(
+            ticket.ticketNumber
+        );
+
+        const destination = path.join(
+            ticketDirectory,
+            req.file.filename
+        );
+
+        fs.renameSync(
+            req.file.path,
+            destination
+        );
+
+        await attachmentService.create({
+
+            ticket: ticket._id,
+
+            uploadedBy: req.session.user.id,
+
+            originalName: req.file.originalname,
+
+            fileName: req.file.filename,
+
+            mimeType: req.file.mimetype,
+
+            size: req.file.size,
+
+            path: path.join(
+                "tickets",
+                ticket.ticketNumber,
+                req.file.filename
+            ),
+
+            isInternal: req.body.isInternal === "on"
+
+        });
+
+        await activityService.log({
+
+            ticket: ticket._id,
+
+            user: req.session.user.id,
+
+            action: "attachment_added",
+
+            description: `Datei "${req.file.originalname}" hochgeladen.`
+
+        });
+
+        res.redirect(`/crm/tickets/${ticket._id}`);
 
     } catch (err) {
 
@@ -282,16 +380,23 @@ exports.assign = async (req, res, next) => {
         );
 
         await activityService.log({
+
             ticket: req.params.id,
+
             user: req.session.user.id,
+
             action: req.body.assignedTo
                 ? "assigned"
                 : "unassigned",
+
             field: "assignedTo",
+
             newValue: req.body.assignedTo || null,
+
             description: req.body.assignedTo
                 ? "Bearbeiter geändert."
                 : "Bearbeiter entfernt."
+
         });
 
         res.redirect(`/crm/tickets/${req.params.id}`);
@@ -303,6 +408,7 @@ exports.assign = async (req, res, next) => {
     }
 
 };
+
 /**
  * Ticket löschen (Soft Delete)
  */
@@ -319,13 +425,114 @@ exports.destroy = async (req, res, next) => {
         }
 
         await activityService.log({
+
             ticket: req.params.id,
+
             user: req.session.user.id,
+
             action: "deleted",
+
             description: "Ticket gelöscht."
+
         });
 
         res.redirect("/crm/tickets");
+
+    } catch (err) {
+
+        next(err);
+
+    }
+
+};
+/**
+ * Dateianhang herunterladen
+ */
+exports.downloadAttachment = async (req, res, next) => {
+
+    try {
+
+        const attachment = await attachmentService.getById(
+            req.params.attachmentId
+        );
+
+        if (!attachment) {
+
+            return res.redirect(`/crm/tickets/${req.params.id}`);
+
+        }
+
+        const absolutePath = path.join(
+            process.cwd(),
+            "storage",
+            attachment.path
+        );
+
+        if (!fs.existsSync(absolutePath)) {
+
+            return res.redirect(`/crm/tickets/${req.params.id}`);
+
+        }
+
+        return res.download(
+            absolutePath,
+            attachment.originalName
+        );
+
+    } catch (err) {
+
+        next(err);
+
+    }
+
+};
+
+/**
+ * Dateianhang löschen
+ */
+exports.deleteAttachment = async (req, res, next) => {
+
+    try {
+
+        const attachment = await attachmentService.getById(
+            req.params.attachmentId
+        );
+
+        if (!attachment) {
+
+            return res.redirect(`/crm/tickets/${req.params.id}`);
+
+        }
+
+        const absolutePath = path.join(
+            process.cwd(),
+            "storage",
+            attachment.path
+        );
+
+        if (fs.existsSync(absolutePath)) {
+
+            fs.unlinkSync(absolutePath);
+
+        }
+
+        await attachmentService.delete(
+            attachment._id
+        );
+
+        await activityService.log({
+
+            ticket: req.params.id,
+
+            user: req.session.user.id,
+
+            action: "attachment_removed",
+
+            description: `Datei "${attachment.originalName}" gelöscht.`
+
+        });
+
+        res.redirect(`/crm/tickets/${req.params.id}`);
 
     } catch (err) {
 

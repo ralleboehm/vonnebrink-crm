@@ -16,7 +16,9 @@ block content
 
             | Zurück
 
+    // =====================================================
     // Ticketinformationen
+    // =====================================================
 
     .card.shadow-sm.mb-4
 
@@ -117,7 +119,9 @@ block content
                     else
                         p.mb-0.text-muted Keine Frist
 
+    // =====================================================
     // Beschreibung
+    // =====================================================
 
     .card.shadow-sm.mb-4
 
@@ -129,7 +133,9 @@ block content
 
             p.mb-0(style="white-space: pre-wrap;")= ticket.description
 
+    // =====================================================
     // Nachrichten
+    // =====================================================
 
     .card.shadow-sm.mb-4
 
@@ -139,7 +145,7 @@ block content
 
         .card-body
 
-            if messages.length
+            if messages && messages.length
 
                 each message in messages
 
@@ -147,7 +153,10 @@ block content
 
                         .d-flex.justify-content-between.align-items-center.mb-2
 
-                            strong #{message.author.firstName} #{message.author.lastName}
+                            if message.author
+                                strong #{message.author.firstName} #{message.author.lastName}
+                            else
+                                strong Unbekannter Benutzer
 
                             small.text-muted= message.createdAt.toLocaleString("de-DE")
 
@@ -159,9 +168,11 @@ block content
 
                     | Es wurden bisher keine Nachrichten geschrieben.
 
+    // =====================================================
     // Antwort schreiben
+    // =====================================================
 
-    .card.shadow-sm
+    .card.shadow-sm.mb-4
 
         .card-header
 
@@ -171,7 +182,7 @@ block content
 
             form(
                 method="POST"
-                action=`/portal/tickets/${ticket._id}/reply`
+                action=`/portal/tickets/${ticket._id}/messages`
             )
 
                 .mb-3
@@ -179,6 +190,7 @@ block content
                     textarea.form-control(
                         name="message"
                         rows="6"
+                        maxlength="10000"
                         required
                     )
 
@@ -187,3 +199,95 @@ block content
                     i.bi.bi-send.me-2
 
                     | Antwort senden
+
+    // =====================================================
+    // Dateianhänge
+    // =====================================================
+
+    .card.shadow-sm.mb-4
+
+        .card-header
+
+            h5.mb-0
+
+                i.bi.bi-paperclip.me-2
+
+                | Dateianhänge
+
+        .card-body
+
+            form(
+                method="POST"
+                action=`/portal/tickets/${ticket._id}/attachments`
+                enctype="multipart/form-data"
+            )
+
+                .mb-3
+
+                    input.form-control(
+                        type="file"
+                        name="attachment"
+                        required
+                    )
+
+                .d-flex.justify-content-end.mb-4
+
+                    button.btn.btn-primary(type="submit")
+
+                        i.bi.bi-upload.me-2
+
+                        | Datei hochladen
+
+            hr.mb-4
+
+            if attachments && attachments.length
+
+                each attachment in attachments
+
+                    .border.rounded.bg-light.p-3.mb-3
+
+                        .d-flex.justify-content-between.align-items-center
+
+                            div
+
+                                h6.mb-1
+
+                                    i.bi.bi-paperclip.me-2
+
+                                    = attachment.originalName
+
+                                small.text-muted
+
+                                    if attachment.uploadedBy
+
+                                        | Hochgeladen von #{attachment.uploadedBy.firstName} #{attachment.uploadedBy.lastName}
+
+                                    else
+
+                                        | Unbekannter Benutzer
+
+                                    |  • #{attachment.createdAt.toLocaleString("de-DE")}
+
+                                br
+
+                                small.text-muted
+
+                                    = formatFileSize(attachment.size)
+
+                            a.btn.btn-outline-primary.btn-sm(
+                                href=`/portal/tickets/${ticket._id}/attachments/${attachment._id}`
+                            )
+
+                                i.bi.bi-download.me-1
+
+                                | Download
+
+            else
+
+                .text-center.py-4
+
+                    i.bi.bi-paperclip.display-5.text-muted
+
+                    p.text-muted.mt-3.mb-0
+
+                        | Für dieses Ticket wurden noch keine Dateien hochgeladen.
