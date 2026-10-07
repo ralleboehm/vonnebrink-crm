@@ -1,0 +1,15 @@
+extends ../crm/layouts/guest
+
+block content
+
+    .text-center.p-4
+
+        h1.display-1.fw-bold.text-muted 404
+
+        h2.h4.mb-3 Seite nicht gefunden
+
+        p.text-muted.mb-4
+            | Die angeforderte Seite oder der Datensatz existiert nicht.
+
+        a.btn.btn-primary(href=homeUrl || "/crm")
+            | Zurück zur Startseite

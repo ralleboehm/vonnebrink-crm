@@ -1,6 +1,6 @@
 exports.requireInternal = (req, res, next) => {
     if (!req.session.user) {
-        return res.redirect("/login");
+        return res.redirect("/crm/login");
     }
 
     const internalRoles = [

@@ -8,6 +8,11 @@ module.exports = (req, res, next) => {
     // Kundenportal
     res.locals.currentPortalUser = req.session.portalUser || null;
 
+    // Ziel des "Zurück"-Links auf Fehlerseiten
+    res.locals.homeUrl = req.originalUrl.startsWith("/portal")
+        ? "/portal"
+        : "/crm";
+
     next();
 
 };
