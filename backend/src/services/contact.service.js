@@ -1,9 +1,6 @@
-const bcrypt = require("bcrypt");
-
 const Contact = require("../models/contact.model");
 const counterService = require("./counter.service");
-
-const SALT_ROUNDS = 12;
+const portalAccountService = require("./portalAccount.service");
 
 // Alle aktiven Kontakte
 exports.getAll = async () => {
@@ -58,22 +55,6 @@ exports.create = async (contactData) => {
 
     const contactNumber = await counterService.next("contact", "CON");
 
-    const portal = {
-
-        enabled: contactData.portalEnabled === true,
-        mustChangePassword: true
-
-    };
-
-    if (contactData.portalPassword) {
-
-        portal.passwordHash = await bcrypt.hash(
-            contactData.portalPassword,
-            SALT_ROUNDS
-        );
-
-    }
-
     return await Contact.create({
 
         company: contactData.company,
@@ -96,8 +77,6 @@ exports.create = async (contactData) => {
 
         status: contactData.status || "active",
 
-        portal,
-
         notes: contactData.notes,
 
         isDeleted: false
@@ -109,47 +88,7 @@ exports.create = async (contactData) => {
 // Kontakt aktualisieren
 exports.update = async (id, contactData) => {
 
-    const updateData = {
-
-        company: contactData.company,
-
-        salutation: contactData.salutation,
-
-        firstName: contactData.firstName,
-
-        lastName: contactData.lastName,
-
-        position: contactData.position,
-
-        email: contactData.email,
-
-        phone: contactData.phone,
-
-        mobile: contactData.mobile,
-
-        status: contactData.status,
-
-        notes: contactData.notes,
-
-        "portal.enabled": contactData.portalEnabled === true
-
-    };
-
-    if (contactData.portalPassword) {
-
-        updateData["portal.passwordHash"] = await bcrypt.hash(
-            contactData.portalPassword,
-            SALT_ROUNDS
-        );
-
-        updateData["portal.mustChangePassword"] = true;
-        updateData["portal.passwordChangedAt"] = null;
-        updateData["portal.failedLoginAttempts"] = 0;
-        updateData["portal.lockedUntil"] = null;
-
-    }
-
-    return await Contact.findOneAndUpdate(
+    const contact = await Contact.findOneAndUpdate(
 
         {
 
@@ -158,7 +97,29 @@ exports.update = async (id, contactData) => {
 
         },
 
-        updateData,
+        {
+
+            company: contactData.company,
+
+            salutation: contactData.salutation,
+
+            firstName: contactData.firstName,
+
+            lastName: contactData.lastName,
+
+            position: contactData.position,
+
+            email: contactData.email,
+
+            phone: contactData.phone,
+
+            mobile: contactData.mobile,
+
+            status: contactData.status,
+
+            notes: contactData.notes
+
+        },
 
         {
 
@@ -168,6 +129,17 @@ exports.update = async (id, contactData) => {
         }
 
     );
+
+    if (contact) {
+
+        await portalAccountService.updateEmail(
+            contact._id,
+            contact.email
+        ).catch(() => {});
+
+    }
+
+    return contact;
 
 };
 

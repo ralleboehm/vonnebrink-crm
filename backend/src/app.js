@@ -85,37 +85,18 @@ app.use(viewData);
 app.use("/health", require("./routes/health.routes"));
 
 // ----------------------------------------------------
-// Authentifizierung
+// CRM schützen
 // ----------------------------------------------------
 
-app.use((req, res, next) => {
+app.use("/crm", (req, res, next) => {
 
     const publicRoutes = [
-
-        "/crm/login",
-        "/crm/logout",
-
-        "/portal/login",
-        "/portal/logout"
-
+        "/login",
+        "/logout"
     ];
 
-    if (
-
-        publicRoutes.includes(req.path) ||
-
-        req.path.startsWith("/css") ||
-
-        req.path.startsWith("/js") ||
-
-        req.path.startsWith("/images") ||
-
-        req.path === "/favicon.ico"
-
-    ) {
-
+    if (publicRoutes.includes(req.path)) {
         return next();
-
     }
 
     requireAuth(req, res, next);
@@ -127,7 +108,6 @@ app.use((req, res, next) => {
 // ----------------------------------------------------
 
 app.use("/crm", crmRoutes);
-
 app.use("/portal", portalRoutes);
 
 // ----------------------------------------------------

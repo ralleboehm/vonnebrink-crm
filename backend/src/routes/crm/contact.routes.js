@@ -3,23 +3,52 @@ const express = require("express");
 const router = express.Router();
 
 const contactController = require("../../controllers/crm/contact.controller");
+const portalAccountController = require("../../controllers/crm/portalAccount.controller");
+
 const { requireAuth } = require("../../middleware/auth/crmAuth.middleware");
 
-// Kontaktübersicht
+// ----------------------------------------------------
+// Kontakte
+// ----------------------------------------------------
+
 router.get("/", requireAuth, contactController.index);
 
-// Neuer Kontakt
 router.get("/new", requireAuth, contactController.create);
 router.post("/", requireAuth, contactController.store);
 
-// Details
 router.get("/:id", requireAuth, contactController.show);
 
-// Bearbeiten
 router.get("/:id/edit", requireAuth, contactController.edit);
 router.post("/:id/update", requireAuth, contactController.update);
 
-// Löschen
 router.post("/:id/delete", requireAuth, contactController.destroy);
+
+// ----------------------------------------------------
+// Portalzugang
+// ----------------------------------------------------
+
+router.post(
+    "/:id/portal/create",
+    requireAuth,
+    portalAccountController.create
+);
+
+router.post(
+    "/:id/portal/reset-password",
+    requireAuth,
+    portalAccountController.resetPassword
+);
+
+router.post(
+    "/:id/portal/activate",
+    requireAuth,
+    portalAccountController.activate
+);
+
+router.post(
+    "/:id/portal/deactivate",
+    requireAuth,
+    portalAccountController.deactivate
+);
 
 module.exports = router;

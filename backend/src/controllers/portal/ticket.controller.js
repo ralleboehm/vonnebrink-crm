@@ -16,7 +16,7 @@ exports.index = async (req, res, next) => {
     try {
 
         const tickets = await ticketService.getByCompany(
-            req.session.user.company
+            req.session.portalUser.company
         );
 
         res.render("portal/tickets/index", {
@@ -67,9 +67,9 @@ exports.store = async (req, res, next) => {
 
         const ticket = await ticketService.create({
 
-            company: req.session.user.company,
+            company: req.session.portalUser.company,
 
-            contact: req.session.user.contact,
+            contact: req.session.portalUser.contact,
 
             subject: req.body.subject,
 
@@ -79,7 +79,7 @@ exports.store = async (req, res, next) => {
 
             priority: req.body.priority,
 
-            createdBy: req.session.user.id
+            createdBy: req.session.portalUser.id
 
         });
 
@@ -112,7 +112,7 @@ exports.show = async (req, res, next) => {
         if (
 
             ticket.company._id.toString() !==
-            req.session.user.company.toString()
+            req.session.portalUser.company.toString()
 
         ) {
 
@@ -155,7 +155,6 @@ exports.show = async (req, res, next) => {
     }
 
 };
-
 // ----------------------------------------------------
 // Antwort hinzufügen
 // ----------------------------------------------------
@@ -175,7 +174,7 @@ exports.addMessage = async (req, res, next) => {
         if (
 
             ticket.company._id.toString() !==
-            req.session.user.company.toString()
+            req.session.portalUser.company.toString()
 
         ) {
 
@@ -195,7 +194,7 @@ exports.addMessage = async (req, res, next) => {
 
             ticket: req.params.id,
 
-            author: req.session.user.id,
+            author: req.session.portalUser.id,
 
             message
 
@@ -210,6 +209,7 @@ exports.addMessage = async (req, res, next) => {
     }
 
 };
+
 // ----------------------------------------------------
 // Dateianhang hochladen
 // ----------------------------------------------------
@@ -229,7 +229,7 @@ exports.uploadAttachment = async (req, res, next) => {
         if (
 
             ticket.company._id.toString() !==
-            req.session.user.company.toString()
+            req.session.portalUser.company.toString()
 
         ) {
 
@@ -257,7 +257,7 @@ exports.uploadAttachment = async (req, res, next) => {
 
             ticket: req.params.id,
 
-            uploadedBy: req.session.user.id,
+            uploadedBy: req.session.portalUser.id,
 
             originalName: req.file.originalname,
 
@@ -288,7 +288,6 @@ exports.uploadAttachment = async (req, res, next) => {
     }
 
 };
-
 // ----------------------------------------------------
 // Dateianhang herunterladen
 // ----------------------------------------------------
@@ -310,7 +309,7 @@ exports.downloadAttachment = async (req, res, next) => {
         if (
 
             ticket.company._id.toString() !==
-            req.session.user.company.toString()
+            req.session.portalUser.company.toString()
 
         ) {
 
@@ -364,6 +363,7 @@ exports.downloadAttachment = async (req, res, next) => {
     }
 
 };
+
 // ----------------------------------------------------
 // Dateianhang löschen
 // ----------------------------------------------------
@@ -385,7 +385,7 @@ exports.deleteAttachment = async (req, res, next) => {
         if (
 
             ticket.company._id.toString() !==
-            req.session.user.company.toString()
+            req.session.portalUser.company.toString()
 
         ) {
 

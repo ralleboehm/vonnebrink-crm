@@ -44,6 +44,10 @@ router.use("/tickets", require("./ticket.routes"));
 
 router.use("/profile", require("./profile.routes"));
 
+// ----------------------------------------------------
+// Import & Export
+// ----------------------------------------------------
 
+router.use("/import", require("./import.routes"));
 
 module.exports = router;

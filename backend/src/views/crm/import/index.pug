@@ -1,0 +1,117 @@
+extends ../layouts/main
+
+block content
+
+    .d-flex.justify-content-between.align-items-center.mb-4
+
+        h1.mb-0
+
+            i.bi.bi-arrow-left-right.me-2
+
+            | Import & Export
+
+        a.btn.btn-secondary(
+            href="/crm"
+        )
+
+            i.bi.bi-arrow-left.me-2
+
+            | Dashboard
+
+    .row.g-4
+
+        .col-lg-6
+
+            .card.h-100.shadow-sm
+
+                .card-body.d-flex.flex-column
+
+                    h4
+
+                        i.bi.bi-building-add.me-2.text-primary
+
+                        | Firmen importieren
+
+                    p.text-muted.flex-grow-1
+
+                        | Firmen aus einer CSV-Datei importieren und neue Kunden automatisch anlegen.
+
+                    a.btn.btn-primary(
+                        href="/crm/import/companies"
+                    )
+
+                        i.bi.bi-upload.me-2
+
+                        | Firmen importieren
+
+        .col-lg-6
+
+            .card.h-100.shadow-sm
+
+                .card-body.d-flex.flex-column
+
+                    h4
+
+                        i.bi.bi-person-plus.me-2.text-primary
+
+                        | Kontakte importieren
+
+                    p.text-muted.flex-grow-1
+
+                        | Ansprechpartner aus einer CSV-Datei importieren und bestehenden Firmen zuordnen.
+
+                    a.btn.btn-primary(
+                        href="/crm/import/contacts"
+                    )
+
+                        i.bi.bi-upload.me-2
+
+                        | Kontakte importieren
+
+        .col-lg-6
+
+            .card.h-100.shadow-sm
+
+                .card-body.d-flex.flex-column
+
+                    h4
+
+                        i.bi.bi-download.me-2.text-success
+
+                        | Firmen exportieren
+
+                    p.text-muted.flex-grow-1
+
+                        | Alle Firmen als CSV-Datei exportieren.
+
+                    a.btn.btn-success(
+                        href="/crm/import/export/companies"
+                    )
+
+                        i.bi.bi-download.me-2
+
+                        | Firmen exportieren
+
+        .col-lg-6
+
+            .card.h-100.shadow-sm
+
+                .card-body.d-flex.flex-column
+
+                    h4
+
+                        i.bi.bi-download.me-2.text-success
+
+                        | Kontakte exportieren
+
+                    p.text-muted.flex-grow-1
+
+                        | Alle Kontakte als CSV-Datei exportieren.
+
+                    a.btn.btn-success(
+                        href="/crm/import/export/contacts"
+                    )
+
+                        i.bi.bi-download.me-2
+
+                        | Kontakte exportieren

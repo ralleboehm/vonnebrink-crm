@@ -1,4 +1,5 @@
-const userService = require("../../services/user.service");
+const contactService = require("../../services/contact.service");
+const portalAccountService = require("../../services/portalAccount.service");
 
 // ----------------------------------------------------
 // Profil anzeigen
@@ -8,15 +9,25 @@ exports.index = async (req, res, next) => {
 
     try {
 
-        const user = await userService.getById(
-            req.session.user.id
+        const contact = await contactService.getById(
+
+            req.session.portalUser.contact
+
+        );
+
+        const portalAccount = await portalAccountService.getByContact(
+
+            req.session.portalUser.contact
+
         );
 
         res.render("portal/profile/index", {
 
             title: "Mein Profil",
 
-            user
+            contact,
+
+            portalAccount
 
         });
 
@@ -36,21 +47,47 @@ exports.update = async (req, res, next) => {
 
     try {
 
-        await userService.updateProfile(
+        await contactService.update(
 
-            req.session.user.id,
+            req.session.portalUser.contact,
 
             {
+
+                company: req.body.company,
+
+                salutation: req.body.salutation,
 
                 firstName: req.body.firstName,
 
                 lastName: req.body.lastName,
 
-                email: req.body.email
+                position: req.body.position,
+
+                email: req.body.email,
+
+                phone: req.body.phone,
+
+                mobile: req.body.mobile,
+
+                status: "active",
+
+                notes: req.body.notes
 
             }
 
         );
+
+        await portalAccountService.updateEmail(
+
+            req.session.portalUser.contact,
+
+            req.body.email
+
+        );
+
+        req.session.portalUser.email = req.body.email;
+        req.session.portalUser.firstName = req.body.firstName;
+        req.session.portalUser.lastName = req.body.lastName;
 
         res.redirect("/portal/profile");
 
@@ -61,18 +98,33 @@ exports.update = async (req, res, next) => {
     }
 
 };
-
 // ----------------------------------------------------
 // Passwort-Seite
 // ----------------------------------------------------
 
-exports.password = (req, res) => {
+exports.password = async (req, res, next) => {
 
-    res.render("portal/profile/password", {
+    try {
 
-        title: "Passwort ändern"
+        const portalAccount = await portalAccountService.getByContact(
 
-    });
+            req.session.portalUser.contact
+
+        );
+
+        res.render("portal/profile/password", {
+
+            title: "Passwort ändern",
+
+            portalAccount
+
+        });
+
+    } catch (err) {
+
+        next(err);
+
+    }
 
 };
 
@@ -84,39 +136,52 @@ exports.changePassword = async (req, res, next) => {
 
     try {
 
-        if (req.body.newPassword !== req.body.confirmPassword) {
+        const {
+
+            password,
+            passwordConfirm
+
+        } = req.body;
+
+        if (!password || password.length < 8) {
 
             return res.render("portal/profile/password", {
 
                 title: "Passwort ändern",
 
-                error: "Die neuen Passwörter stimmen nicht überein."
+                error: "Das Passwort muss mindestens 8 Zeichen lang sein."
 
             });
 
         }
 
-        await userService.changePassword(
+        if (password !== passwordConfirm) {
 
-            req.session.user.id,
+            return res.render("portal/profile/password", {
 
-            req.body.currentPassword,
+                title: "Passwort ändern",
 
-            req.body.newPassword
+                error: "Die Passwörter stimmen nicht überein."
+
+            });
+
+        }
+
+        await portalAccountService.changePassword(
+
+            req.session.portalUser.id,
+
+            password
 
         );
+
+        req.session.portalUser.mustChangePassword = false;
 
         res.redirect("/portal/profile");
 
     } catch (err) {
 
-        res.render("portal/profile/password", {
-
-            title: "Passwort ändern",
-
-            error: err.message
-
-        });
+        next(err);
 
     }
 

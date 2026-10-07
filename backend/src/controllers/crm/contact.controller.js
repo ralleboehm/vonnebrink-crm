@@ -1,5 +1,6 @@
 const contactService = require("../../services/contact.service");
 const companyService = require("../../services/company.service");
+const portalAccountService = require("../../services/portalAccount.service");
 
 // Alle Kontakte anzeigen
 exports.index = async (req, res, next) => {
@@ -58,10 +59,6 @@ exports.store = async (req, res, next) => {
             phone: req.body.phone,
             mobile: req.body.mobile,
             status: req.body.status,
-
-            portalEnabled: req.body.portalEnabled === "on",
-            portalPassword: req.body.portalPassword,
-
             notes: req.body.notes
 
         });
@@ -87,10 +84,16 @@ exports.show = async (req, res, next) => {
             return res.redirect("/crm/contacts");
         }
 
+        const portalAccount = await portalAccountService.getByContact(contact._id);
+
         res.render("contacts/show", {
             title: `${contact.firstName} ${contact.lastName}`,
-            contact
+            contact,
+            portalAccount,
+            generatedPassword: req.session.generatedPortalPassword || null
         });
+
+        delete req.session.generatedPortalPassword;
 
     } catch (err) {
 
@@ -112,12 +115,17 @@ exports.edit = async (req, res, next) => {
         }
 
         const companies = await companyService.getAll();
+        const portalAccount = await portalAccountService.getByContact(contact._id);
 
         res.render("contacts/edit", {
             title: "Kontakt bearbeiten",
             contact,
-            companies
+            companies,
+            portalAccount,
+            generatedPassword: req.session.generatedPortalPassword || null
         });
+
+        delete req.session.generatedPortalPassword;
 
     } catch (err) {
 
@@ -143,10 +151,6 @@ exports.update = async (req, res, next) => {
             phone: req.body.phone,
             mobile: req.body.mobile,
             status: req.body.status,
-
-            portalEnabled: req.body.portalEnabled === "on",
-            portalPassword: req.body.portalPassword,
-
             notes: req.body.notes
 
         });

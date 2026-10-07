@@ -40,7 +40,7 @@ block content
                             type="text"
                             id="firstName"
                             name="firstName"
-                            value=user.firstName
+                            value=contact.firstName
                             required
                         )
 
@@ -54,7 +54,7 @@ block content
                             type="text"
                             id="lastName"
                             name="lastName"
-                            value=user.lastName
+                            value=contact.lastName
                             required
                         )
 
@@ -68,19 +68,45 @@ block content
                         type="email"
                         id="email"
                         name="email"
-                        value=user.email
+                        value=contact.email
                         required
                     )
 
                 .mb-3
 
-                    label.form-label
+                    label.form-label(for="phone")
 
-                        | Benutzername
+                        | Telefon
 
                     input.form-control(
                         type="text"
-                        value=user.username
+                        id="phone"
+                        name="phone"
+                        value=contact.phone
+                    )
+
+                .mb-3
+
+                    label.form-label(for="mobile")
+
+                        | Mobil
+
+                    input.form-control(
+                        type="text"
+                        id="mobile"
+                        name="mobile"
+                        value=contact.mobile
+                    )
+
+                .mb-3
+
+                    label.form-label
+
+                        | Firma
+
+                    input.form-control.vb-readonly(
+                        type="text"
+                        value=contact.company.companyName
                         readonly
                     )
 
@@ -88,13 +114,23 @@ block content
 
                     label.form-label
 
-                        | Rolle
+                        | Letzte Anmeldung
 
-                    input.form-control(
-                        type="text"
-                        value=user.role
-                        readonly
-                    )
+                    if portalAccount && portalAccount.lastLogin
+
+                        input.form-control.vb-readonly(
+                            type="text"
+                            value=portalAccount.lastLogin.toLocaleString("de-DE")
+                            readonly
+                        )
+
+                    else
+
+                        input.form-control.vb-readonly(
+                            type="text"
+                            value="Noch keine Anmeldung"
+                            readonly
+                        )
 
                 .mt-4
 

@@ -133,6 +133,26 @@ body {
 
 }
 
+/* Readonly Felder */
+
+.vb-readonly {
+
+    background-color: #f8f9fa !important;
+    color: #6c757d !important;
+    border-color: #dee2e6;
+    cursor: default;
+
+}
+
+.vb-readonly:focus {
+
+    background-color: #f8f9fa;
+    color: #6c757d;
+    border-color: #dee2e6;
+    box-shadow: none;
+
+}
+
 /* Footer */
 
 .login-footer {

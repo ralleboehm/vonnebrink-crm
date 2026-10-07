@@ -49,6 +49,8 @@ const contactSchema = new mongoose.Schema({
 
     email: {
         type: String,
+        required: true,
+        unique: true,
         trim: true,
         lowercase: true,
         maxlength: 255
@@ -73,40 +75,6 @@ const contactSchema = new mongoose.Schema({
             "inactive"
         ],
         default: "active"
-    },
-
-    portal: {
-
-        enabled: {
-            type: Boolean,
-            default: false
-        },
-
-        passwordHash: {
-            type: String
-        },
-
-        mustChangePassword: {
-            type: Boolean,
-            default: true
-        },
-
-        lastLogin: {
-            type: Date
-        },
-
-        passwordChangedAt: {
-            type: Date
-        },
-
-        passwordResetToken: {
-            type: String
-        },
-
-        passwordResetExpires: {
-            type: Date
-        }
-
     },
 
     notes: {

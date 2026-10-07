@@ -9,7 +9,7 @@ exports.index = async (req, res, next) => {
     try {
 
         const tickets = await ticketService.getByCompany(
-            req.session.user.company
+            req.session.portalUser.company
         );
 
         res.render("portal/dashboard", {

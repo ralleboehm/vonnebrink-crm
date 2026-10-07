@@ -55,12 +55,15 @@ html(lang="de")
 
                     span Kundenportal
 
-                if currentUser
+                if currentPortalUser
 
                     button.navbar-toggler(
                         type="button"
                         data-bs-toggle="collapse"
                         data-bs-target="#navbarPortal"
+                        aria-controls="navbarPortal"
+                        aria-expanded="false"
+                        aria-label="Navigation umschalten"
                     )
 
                         span.navbar-toggler-icon
@@ -73,19 +76,31 @@ html(lang="de")
 
                                 a.nav-link(
                                     href="/portal"
-                                ) Dashboard
+                                )
+
+                                    i.bi.bi-speedometer2.me-2
+
+                                    | Dashboard
 
                             li.nav-item
 
                                 a.nav-link(
                                     href="/portal/tickets"
-                                ) Meine Tickets
+                                )
+
+                                    i.bi.bi-ticket-perforated.me-2
+
+                                    | Meine Tickets
 
                             li.nav-item
 
                                 a.nav-link(
                                     href="/portal/tickets/new"
-                                ) Neues Ticket
+                                )
+
+                                    i.bi.bi-plus-circle.me-2
+
+                                    | Neues Ticket
 
                         ul.navbar-nav.ms-auto
 
@@ -95,13 +110,28 @@ html(lang="de")
                                     href="#"
                                     role="button"
                                     data-bs-toggle="dropdown"
+                                    aria-expanded="false"
                                 )
 
                                     i.bi.bi-person-circle.me-2
 
-                                    | #{currentUser.firstName}
+                                    | #{currentPortalUser.firstName} #{currentPortalUser.lastName}
 
                                 ul.dropdown-menu.dropdown-menu-end
+
+                                    li
+
+                                        h6.dropdown-header.mb-0
+
+                                            = currentPortalUser.firstName + " " + currentPortalUser.lastName
+
+                                        small.dropdown-item-text.text-muted
+
+                                            = currentPortalUser.companyName
+
+                                    li
+
+                                        hr.dropdown-divider
 
                                     li
 

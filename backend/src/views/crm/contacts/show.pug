@@ -24,6 +24,21 @@ block content
 
                 | Zurück zur Firma
 
+    if generatedPassword
+
+        .alert.alert-success
+
+            h5.mb-2
+
+                i.bi.bi-key.me-2
+
+                | Portalzugang erstellt
+
+            p.mb-2
+                | Bitte dieses Passwort sicher an den Kunden weitergeben.
+
+            code.fs-5= generatedPassword
+
     .card.shadow-sm
 
         .card-header
@@ -101,46 +116,112 @@ block content
 
                 | Kundenportal
 
-            .row
+            if portalAccount
 
-                .col-md-6
+                .row
 
-                    p
-                        strong Portalzugang:
-                        br
+                    .col-md-6
 
-                        if contact.portal && contact.portal.enabled
-                            span.badge.bg-primary
-                                i.bi.bi-person-check.me-1
-                                | Aktiv
-                        else
-                            span.badge.bg-secondary
-                                i.bi.bi-person-x.me-1
-                                | Deaktiviert
+                        p
 
-                    p
-                        strong Passwortstatus:
-                        br
+                            strong Portalzugang:
+                            br
 
-                        if contact.portal && contact.portal.passwordChangedAt
-                            span.badge.bg-success
-                                i.bi.bi-check-circle.me-1
-                                | Passwort geändert
-                        else
-                            span.badge.bg-warning.text-dark
-                                i.bi.bi-exclamation-triangle.me-1
-                                | Passwortwechsel erforderlich
+                            if portalAccount.active
 
-                .col-md-6
+                                span.badge.bg-success Aktiv
 
-                    p
-                        strong Letzte Anmeldung:
-                        br
+                            else
 
-                        if contact.portal && contact.portal.lastLogin
-                            = contact.portal.lastLogin.toLocaleString("de-DE")
-                        else
-                            span.text-muted Noch keine Anmeldung
+                                span.badge.bg-secondary Deaktiviert
+
+                        p
+
+                            strong Passwortstatus:
+                            br
+
+                            if portalAccount.mustChangePassword
+
+                                span.badge.bg-warning.text-dark
+                                    | Passwortwechsel erforderlich
+
+                            else
+
+                                span.badge.bg-success
+                                    | Passwort geändert
+
+                    .col-md-6
+
+                        p
+
+                            strong Letzte Anmeldung:
+                            br
+
+                            if portalAccount.lastLogin
+
+                                = portalAccount.lastLogin.toLocaleString("de-DE")
+
+                            else
+
+                                span.text-muted Noch keine Anmeldung
+
+                .mt-3.d-flex.gap-2
+
+                    form(
+                        method="POST"
+                        action=`/crm/contacts/${contact._id}/portal/reset-password`
+                    )
+
+                        button.btn.btn-warning(type="submit")
+
+                            i.bi.bi-key.me-2
+
+                            | Passwort zurücksetzen
+
+                    if portalAccount.active
+
+                        form(
+                            method="POST"
+                            action=`/crm/contacts/${contact._id}/portal/deactivate`
+                        )
+
+                            button.btn.btn-outline-danger(type="submit")
+
+                                i.bi.bi-person-x.me-2
+
+                                | Portalzugang deaktivieren
+
+                    else
+
+                        form(
+                            method="POST"
+                            action=`/crm/contacts/${contact._id}/portal/activate`
+                        )
+
+                            button.btn.btn-outline-success(type="submit")
+
+                                i.bi.bi-person-check.me-2
+
+                                | Portalzugang aktivieren
+
+            else
+
+                .alert.alert-secondary
+
+                    p.mb-3
+
+                        | Für diesen Ansprechpartner existiert noch kein Portalzugang.
+
+                    form(
+                        method="POST"
+                        action=`/crm/contacts/${contact._id}/portal/create`
+                    )
+
+                        button.btn.btn-primary(type="submit")
+
+                            i.bi.bi-person-plus.me-2
+
+                            | Portalzugang erstellen
 
             if contact.notes
 
@@ -149,3 +230,27 @@ block content
                 h5 Notizen
 
                 p= contact.notes
+
+    hr
+
+    .d-flex.justify-content-between
+
+        a.btn.btn-secondary(
+            href=`/crm/companies/${contact.company._id}`
+        )
+
+            i.bi.bi-arrow-left.me-2
+
+            | Zurück zur Firma
+
+        form(
+            method="POST"
+            action=`/crm/contacts/${contact._id}/delete`
+            onsubmit="return confirm('Möchtest du diesen Kontakt wirklich archivieren?');"
+        )
+
+            button.btn.btn-danger(type="submit")
+
+                i.bi.bi-archive.me-2
+
+                | Kontakt archivieren
