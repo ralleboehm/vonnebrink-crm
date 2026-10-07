@@ -14,6 +14,7 @@ A self-hosted CRM, Helpdesk and Customer Portal designed for Managed Service Pro
 - User & Role Management
 - Dashboard
 - Activity Logging
+- CSV Import & Export (Companies & Contacts)
 
 ### Customer Portal
 
@@ -70,7 +71,6 @@ Implemented features:
 ## Planned Features
 
 - Internal ticket notes
-- CSV import (Companies & Contacts)
 - File attachments
 - Action1 integration
 - Nextcloud integration
@@ -91,6 +91,17 @@ cd vonnebrink-crm/backend
 npm install
 
 npm run dev
+```
+
+---
+
+## Tests
+
+The import/export logic has tests that need no database and no extra packages:
+
+```bash
+cd backend
+node --test test/import.test.js test/import.flow.test.js
 ```
 
 ---
@@ -130,3 +141,14 @@ MIT License
 **Vonnebrink IT Operations**
 
 https://vonnebrink.com
+## Globale Suche
+
+Das Suchfeld in der Navigation durchsucht Firmen, Kontakte und Tickets gleichzeitig
+(Taste `/` springt ins Feld, Pfeiltasten wählen einen Vorschlag, Enter öffnet die
+Ergebnisseite unter `/crm/search`).
+
+- Mehrere Wörter müssen alle vorkommen („müller heilbronn").
+- „mueller" findet „Müller" und umgekehrt.
+- Eine exakte Nummer (`CUS-000012`, `CON-…`, `TIC-…`) öffnet direkt den Datensatz.
+- Gelöschte Datensätze werden nie angezeigt.
+- Tests: `node --test test/search.test.js`

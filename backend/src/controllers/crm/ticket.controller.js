@@ -3,6 +3,7 @@ const path = require("path");
 
 const ticketService = require("../../services/ticket.service");
 const ticketMessageService = require("../../services/ticketMessage.service");
+const authorService = require("../../services/author.service");
 const attachmentService = require("../../services/attachment.service");
 const storageService = require("../../services/storage.service");
 const activityService = require("../../services/activity.service");
@@ -134,17 +135,22 @@ exports.show = async (req, res, next) => {
 
         }
 
-        const [messages, attachments, users, activities] =
+        const [messages, attachments, users, activities, creatorId] =
             await Promise.all([
                 ticketMessageService.getByTicket(req.params.id),
                 attachmentService.getByTicket(req.params.id),
                 userService.getAll(),
-                activityService.getByTicket(req.params.id)
+                activityService.getByTicket(req.params.id),
+                ticketService.getCreatorId(req.params.id)
             ]);
+
+        // Ersteller kann ein CRM-Benutzer oder ein Kunde (Portal) sein
+        const createdBy = await authorService.describe(creatorId);
 
         res.render("tickets/show", {
             title: ticket.subject,
             ticket,
+            createdBy,
             messages: messages || [],
             attachments: attachments || [],
             users: users || [],

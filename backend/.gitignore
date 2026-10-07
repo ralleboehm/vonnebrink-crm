@@ -2,3 +2,8 @@ node_modules/
 .env
 logs/
 *.log
+
+# Hochgeladene Import-Dateien und temporäre Uploads
+storage/imports/
+storage/temp/
+storage/tickets/

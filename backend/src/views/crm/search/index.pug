@@ -1,0 +1,188 @@
+extends ../layouts/main
+
+//- Markiert die Suchwörter im Text (ohne HTML-Ausgabe von Benutzertext)
+mixin marked(text, tokens)
+    each part in highlight(text, tokens)
+        if part.hit
+            mark.px-0= part.text
+        else
+            = part.text
+
+mixin statusBadge(status)
+    case status
+        when "prospect"
+            span.badge.bg-warning.text-dark Interessent
+        when "active"
+            span.badge.bg-success Aktiv
+        when "inactive"
+            span.badge.bg-secondary Inaktiv
+        when "open"
+            span.badge.bg-primary Offen
+        when "in_progress"
+            span.badge.bg-warning.text-dark In Bearbeitung
+        when "waiting"
+            span.badge.bg-secondary Wartend
+        when "resolved"
+            span.badge.bg-success Gelöst
+        when "closed"
+            span.badge.bg-dark Geschlossen
+        default
+            span.badge.bg-light.text-dark -
+
+mixin more(section)
+    if section.total > section.items.length
+        .card-footer.text-muted.small
+            | Es werden die ersten #{section.items.length} von #{section.total} Treffern gezeigt. Bitte Suchbegriff genauer eingeben.
+
+block content
+
+    h1.mb-3
+        i.bi.bi-search.me-2
+        | Suche
+
+    form.mb-4(method="GET" action="/crm/search")
+        .input-group.input-group-lg
+            input.form-control(
+                type="search"
+                name="q"
+                value=searchQuery
+                placeholder="Firma, Name, E-Mail, Ort, Ticketnummer ..."
+                minlength="2"
+                maxlength="100"
+                autofocus
+            )
+            button.btn.btn-primary(type="submit") Suchen
+
+    if !searchQuery
+        p.text-muted Bitte einen Suchbegriff eingeben. Mehrere Wörter müssen alle vorkommen, zum Beispiel „müller holz" oder „heilbronn terrasse".
+
+    else if result.tooShort
+        .alert.alert-warning Bitte mindestens 2 Zeichen eingeben.
+
+    else if result.companies.total + result.contacts.total + result.tickets.total === 0
+        .alert.alert-info Keine Treffer für „#{searchQuery}".
+
+    else
+
+        p.text-muted
+            | #{result.companies.total} Firmen · #{result.contacts.total} Kontakte · #{result.tickets.total} Tickets
+
+        //- ---------------- Firmen ----------------
+        if result.companies.total
+
+            .card.shadow-sm.mb-4
+                .card-header.fw-bold
+                    i.bi.bi-buildings.me-2
+                    | Firmen (#{result.companies.total})
+
+                .table-responsive
+                    table.table.table-hover.mb-0
+                        thead
+                            tr
+                                th Nr.
+                                th Firma
+                                th Ort
+                                th Telefon
+                                th E-Mail
+                                th Status
+                        tbody
+                            each company in result.companies.items
+                                tr
+                                    td
+                                        +marked(company.customerNumber, result.tokens)
+                                    td
+                                        a.fw-bold.text-decoration-none(href=`/crm/companies/${company._id}`)
+                                            +marked(company.companyName, result.tokens)
+                                    td
+                                        if company.address
+                                            +marked([company.address.postalCode, company.address.city].filter(Boolean).join(" "), result.tokens)
+                                    td
+                                        +marked(company.phone, result.tokens)
+                                    td
+                                        +marked(company.email, result.tokens)
+                                    td
+                                        +statusBadge(company.status)
+
+                +more(result.companies)
+
+        //- ---------------- Kontakte ----------------
+        if result.contacts.total
+
+            .card.shadow-sm.mb-4
+                .card-header.fw-bold
+                    i.bi.bi-people.me-2
+                    | Kontakte (#{result.contacts.total})
+
+                .table-responsive
+                    table.table.table-hover.mb-0
+                        thead
+                            tr
+                                th Name
+                                th Firma
+                                th Position
+                                th E-Mail
+                                th Telefon
+                                th Mobil
+                        tbody
+                            each contact in result.contacts.items
+                                tr
+                                    td
+                                        a.fw-bold.text-decoration-none(href=`/crm/contacts/${contact._id}`)
+                                            +marked(contact.firstName + " " + contact.lastName, result.tokens)
+                                    td
+                                        if contact.company
+                                            a.text-decoration-none(href=`/crm/companies/${contact.company._id}`)
+                                                +marked(contact.company.companyName, result.tokens)
+                                        else
+                                            | -
+                                    td
+                                        +marked(contact.position, result.tokens)
+                                    td
+                                        +marked(contact.email, result.tokens)
+                                    td
+                                        +marked(contact.phone, result.tokens)
+                                    td
+                                        +marked(contact.mobile, result.tokens)
+
+                +more(result.contacts)
+
+        //- ---------------- Tickets ----------------
+        if result.tickets.total
+
+            .card.shadow-sm.mb-4
+                .card-header.fw-bold
+                    i.bi.bi-ticket-detailed.me-2
+                    | Tickets (#{result.tickets.total})
+
+                .table-responsive
+                    table.table.table-hover.mb-0
+                        thead
+                            tr
+                                th Nr.
+                                th Betreff
+                                th Firma
+                                th Kontakt
+                                th Status
+                        tbody
+                            each ticket in result.tickets.items
+                                tr
+                                    td
+                                        +marked(ticket.ticketNumber, result.tokens)
+                                    td
+                                        a.fw-bold.text-decoration-none(href=`/crm/tickets/${ticket._id}`)
+                                            +marked(ticket.subject, result.tokens)
+                                    td
+                                        if ticket.company
+                                            a.text-decoration-none(href=`/crm/companies/${ticket.company._id}`)
+                                                = ticket.company.companyName
+                                        else
+                                            | -
+                                    td
+                                        if ticket.contact
+                                            | #{ticket.contact.firstName} #{ticket.contact.lastName}
+                                        else
+                                            | -
+                                    td
+                                        +statusBadge(ticket.status)
+
+                +more(result.tickets)

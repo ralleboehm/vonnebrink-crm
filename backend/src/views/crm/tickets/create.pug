@@ -8,7 +8,7 @@ block content
 
         a.btn.btn-outline-secondary(href="/crm/tickets")
 
-            Zurück
+            | Zurück
 
     .card.shadow-sm
 
@@ -49,7 +49,7 @@ block content
 
                                 option(value=contact._id)
 
-                                    | #{contact.firstName} #{contact.lastName} – #{contact.company.companyName}
+                                    | #{contact.firstName} #{contact.lastName}#{contact.company ? " – " + contact.company.companyName : ""}
 
                     .col-md-8
 
@@ -111,10 +111,10 @@ block content
 
                     button.btn.btn-primary(type="submit")
 
-                        Ticket erstellen
+                        | Ticket erstellen
 
                     a.btn.btn-outline-secondary.ms-2(
                         href="/crm/tickets"
                     )
 
-                        Abbrechen
+                        | Abbrechen

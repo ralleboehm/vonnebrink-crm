@@ -4,8 +4,6 @@ const router = express.Router();
 
 const importController = require("../../controllers/crm/import.controller");
 
-const upload = require("../../config/importUpload");
-
 const {
     requireAuth,
     requireRole
@@ -27,34 +25,87 @@ router.use(
 // Startseite
 // ----------------------------------------------------
 
+router.get("/", importController.index);
+
+// ----------------------------------------------------
+// Export (muss vor den Import-Routen stehen)
+// ----------------------------------------------------
+
 router.get(
+    "/export/:entity",
+    importController.withExportDefinition,
+    importController.exportForm
+);
 
-    "/",
-
-    importController.index
-
+router.get(
+    "/export/:entity/download",
+    importController.withExportDefinition,
+    importController.exportDownload
 );
 
 // ----------------------------------------------------
-// Firmen importieren
+// Import-Assistent
+//   :entity = companies | contacts
 // ----------------------------------------------------
 
+// 1. Datei hochladen
 router.get(
-
-    "/companies",
-
-    importController.companyImportForm
-
+    "/:entity",
+    importController.withEntity,
+    importController.uploadForm
 );
 
 router.post(
+    "/:entity",
+    importController.withEntity,
+    importController.upload
+);
 
-    "/companies",
+// 2. Spalten zuordnen
+router.get(
+    "/:entity/map",
+    importController.withEntity,
+    importController.mapForm
+);
 
-    upload.single("csvFile"),
+router.post(
+    "/:entity/map",
+    importController.withEntity,
+    importController.mapSubmit
+);
 
-    importController.companyImport
+// 3. Prüfen
+router.get(
+    "/:entity/review",
+    importController.withEntity,
+    importController.review
+);
 
+// 4. Importieren
+router.post(
+    "/:entity/commit",
+    importController.withEntity,
+    importController.commit
+);
+
+// Abbrechen
+router.post(
+    "/:entity/cancel",
+    importController.withEntity,
+    importController.cancel
+);
+
+// Ergebnis
+router.get(
+    "/:entity/result",
+    importController.withEntity,
+    importController.result
+);
+
+router.get(
+    "/:entity/result/errors.csv",
+    importController.withEntity,
+    importController.errorReport
 );
 
 module.exports = router;

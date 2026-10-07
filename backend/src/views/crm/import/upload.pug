@@ -1,0 +1,96 @@
+extends ../layouts/main
+
+block content
+
+    .d-flex.justify-content-between.align-items-center.mb-4
+
+        h1.mb-0
+
+            i.bi.me-2(class=entity.icon)
+
+            | #{entity.label} importieren
+
+        a.btn.btn-secondary(href="/crm/import")
+
+            i.bi.bi-arrow-left.me-2
+
+            | Zurück
+
+    if error
+
+        .alert.alert-danger
+            = error
+
+    .card.shadow-sm
+
+        .card-header
+
+            h5.mb-0
+
+                i.bi.bi-1-circle.me-2
+
+                | Schritt 1: CSV-Datei auswählen
+
+        .card-body
+
+            p.text-muted
+
+                | Unterstützt werden CSV-Dateien aus Excel und anderen Programmen
+                | (UTF-8 oder Windows-1252, Trennzeichen ; , oder Tab).
+                | Die erste Zeile muss die Spaltenüberschriften enthalten.
+                | Maximal #{maxFileSizeMb} MB und 5000 Zeilen pro Import.
+
+            form(
+                method="POST"
+                action=`/crm/import/${entity.key}`
+                enctype="multipart/form-data"
+            )
+
+                .mb-4
+
+                    label.form-label(for="csvFile")
+
+                        | CSV-Datei
+
+                    input.form-control(
+                        type="file"
+                        id="csvFile"
+                        name="csvFile"
+                        accept=".csv,.txt"
+                        required
+                    )
+
+                .d-flex.justify-content-end
+
+                    button.btn.btn-primary(type="submit")
+
+                        i.bi.bi-upload.me-2
+
+                        | Datei hochladen und weiter
+
+    .card.mt-4.border-0.bg-light
+
+        .card-body
+
+            h5
+
+                i.bi.bi-info-circle.me-2.text-primary
+
+                | So läuft der Import ab
+
+            ol.mb-0
+
+                li Datei hochladen
+
+                li Spalten zuordnen (wird automatisch vorgeschlagen)
+
+                li Prüfen: Es wird noch nichts gespeichert, Sie sehen vorab, was passiert
+
+                li Import starten
+
+            if entity.key === "contacts"
+
+                p.mt-3.mb-0.text-muted
+
+                    | Jeder Kontakt wird über den Firmennamen einer vorhandenen Firma zugeordnet.
+                    | Importieren Sie deshalb zuerst die Firmen.

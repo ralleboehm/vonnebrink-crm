@@ -1,0 +1,127 @@
+extends ../layouts/main
+
+block content
+
+    .d-flex.justify-content-between.align-items-center.mb-4
+
+        h1.mb-0
+
+            i.bi.bi-check2-circle.me-2.text-success
+
+            | Import abgeschlossen
+
+        a.btn.btn-secondary(href="/crm/import")
+
+            i.bi.bi-arrow-left.me-2
+
+            | Import & Export
+
+    p.text-muted
+
+        | #{entity.label} aus der Datei #{result.fileName}
+
+    .row.g-3.mb-4
+
+        .col-md-3
+
+            .card.shadow-sm.border-success
+
+                .card-body.text-center
+
+                    .display-6.text-success= result.counts.create
+
+                    div Neu angelegt
+
+        .col-md-3
+
+            .card.shadow-sm.border-primary
+
+                .card-body.text-center
+
+                    .display-6.text-primary= result.counts.update
+
+                    div Aktualisiert
+
+        .col-md-3
+
+            .card.shadow-sm
+
+                .card-body.text-center
+
+                    .display-6.text-secondary= result.counts.skip
+
+                    div Übersprungen
+
+        .col-md-3
+
+            .card.shadow-sm.border-danger
+
+                .card-body.text-center
+
+                    .display-6.text-danger= result.counts.error
+
+                    div Fehlerhaft
+
+    if result.errors.length
+
+        .card.shadow-sm.mb-4.border-danger
+
+            .card-header.bg-danger.text-white.d-flex.justify-content-between.align-items-center
+
+                h5.mb-0 Nicht importierte Zeilen
+
+                a.btn.btn-light.btn-sm(href=`/crm/import/${entity.key}/result/errors.csv`)
+
+                    i.bi.bi-download.me-2
+
+                    | Als CSV herunterladen
+
+            .card-body
+
+                p.text-muted
+
+                    | Die CSV enthält die fehlerhaften Zeilen und eine Spalte mit der Fehlermeldung.
+                    | Korrigieren Sie die Zeilen und importieren Sie die Datei erneut.
+
+                table.table.table-sm.align-middle
+
+                    thead
+
+                        tr
+
+                            th(style="width:80px") Zeile
+                            th(style="width:30%") Eintrag
+                            th Problem
+
+                    tbody
+
+                        each error in result.errors.slice(0, 200)
+
+                            tr
+
+                                td= error.line
+
+                                td= error.label
+
+                                td
+
+                                    each message in error.messages
+
+                                        div= message
+
+                if result.errors.length > 200 || result.errorsHidden > 0
+
+                    p.text-muted.mb-0
+
+                        | Es werden nur die ersten 200 Zeilen angezeigt.
+                        | Die CSV enthält bis zu 1000 fehlerhafte Zeilen.
+
+    .d-flex.gap-2
+
+        a.btn.btn-primary(href=`/crm/${entity.key}`)
+
+            | Zu den #{entity.label}
+
+        a.btn.btn-outline-primary(href=`/crm/import/${entity.key}`)
+
+            | Weitere Datei importieren

@@ -1,0 +1,79 @@
+extends ../layouts/main
+
+block content
+
+    .d-flex.justify-content-between.align-items-center.mb-4
+
+        h1.mb-0
+
+            i.bi.bi-download.me-2
+
+            | #{definition.label} exportieren
+
+        a.btn.btn-secondary(href="/crm/import")
+
+            i.bi.bi-arrow-left.me-2
+
+            | Zurück
+
+    form(
+        method="GET"
+        action=`/crm/import/export/${definition.key}/download`
+    )
+
+        .card.shadow-sm.mb-4
+
+            .card-header
+
+                h5.mb-0 Welche Datensätze?
+
+            .card-body
+
+                label.form-label(for="status") Status
+
+                select.form-select(id="status" name="status" style="max-width:300px")
+
+                    option(value="") Alle (außer gelöschte)
+
+                    each status in definition.statuses
+
+                        option(value=status.value)= status.label
+
+        .card.shadow-sm.mb-4
+
+            .card-header
+
+                h5.mb-0 Welche Spalten?
+
+            .card-body
+
+                .row
+
+                    each column in definition.columns
+
+                        .col-md-4.col-sm-6
+
+                            .form-check.mb-2
+
+                                input.form-check-input(
+                                    type="checkbox"
+                                    name="columns"
+                                    id=`col_${column.key}`
+                                    value=column.key
+                                    checked
+                                )
+
+                                label.form-check-label(for=`col_${column.key}`)= column.label
+
+                p.small.text-muted.mb-0
+
+                    | Die Datei verwendet das Trennzeichen Semikolon und UTF-8,
+                    | sie lässt sich direkt in Excel öffnen und später wieder importieren.
+
+        .d-flex.justify-content-end
+
+            button.btn.btn-success(type="submit")
+
+                i.bi.bi-download.me-2
+
+                | CSV herunterladen

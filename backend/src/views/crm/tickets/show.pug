@@ -226,6 +226,10 @@ block content
 
                                         | #{message.author.firstName} #{message.author.lastName}
 
+                                        if message.author.kind === "customer"
+
+                                            span.badge.bg-info.text-dark.ms-2 Kunde
+
                                     else
 
                                         | Unbekannter Benutzer
@@ -404,6 +408,8 @@ block content
                                     if attachment.uploadedBy
 
                                         | Hochgeladen von #{attachment.uploadedBy.firstName} #{attachment.uploadedBy.lastName}
+                                        if attachment.uploadedBy.kind === "customer"
+                                            |  (Kunde)
 
                                     else
 
@@ -594,11 +600,15 @@ block content
 
                     p.mb-0.mt-1
 
-                        if ticket.createdBy
+                        if createdBy
 
                             strong
 
-                                | #{ticket.createdBy.firstName} #{ticket.createdBy.lastName}
+                                | #{createdBy.firstName} #{createdBy.lastName}
+
+                            if createdBy.kind === "customer"
+
+                                span.badge.bg-info.text-dark.ms-2 Kunde
 
                         else
 

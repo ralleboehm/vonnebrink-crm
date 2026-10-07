@@ -1,5 +1,6 @@
 const Ticket = require("../models/ticket.model");
 const counterService = require("./counter.service");
+const { escapeRegex } = require("./search.service");
 
 class TicketService {
 
@@ -30,21 +31,21 @@ class TicketService {
 
                 {
                     ticketNumber: {
-                        $regex: filters.search,
+                        $regex: escapeRegex(filters.search),
                         $options: "i"
                     }
                 },
 
                 {
                     subject: {
-                        $regex: filters.search,
+                        $regex: escapeRegex(filters.search),
                         $options: "i"
                     }
                 },
 
                 {
                     description: {
-                        $regex: filters.search,
+                        $regex: escapeRegex(filters.search),
                         $options: "i"
                     }
                 }
@@ -78,6 +79,17 @@ class TicketService {
             .populate("contact")
             .populate("assignedTo")
             .populate("createdBy");
+
+    }
+
+    /**
+     * ID des Erstellers (CRM-Benutzer oder Portalzugang), unaufgelöst
+     */
+    async getCreatorId(id) {
+
+        const ticket = await Ticket.findOne({ _id: id, isDeleted: false }, "createdBy").lean();
+
+        return ticket ? ticket.createdBy : null;
 
     }
 

@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 
 const multer = require("multer");
 
@@ -8,23 +9,13 @@ const multer = require("multer");
 // ----------------------------------------------------
 
 const uploadDirectory = path.join(
-
     process.cwd(),
-
     "storage",
-
     "imports"
-
 );
 
 if (!fs.existsSync(uploadDirectory)) {
-
-    fs.mkdirSync(uploadDirectory, {
-
-        recursive: true
-
-    });
-
+    fs.mkdirSync(uploadDirectory, { recursive: true });
 }
 
 // ----------------------------------------------------
@@ -34,25 +25,12 @@ if (!fs.existsSync(uploadDirectory)) {
 const storage = multer.diskStorage({
 
     destination: (req, file, cb) => {
-
         cb(null, uploadDirectory);
-
     },
 
+    // Zufälliger Name: keine Kollisionen, kein Dateiname vom Benutzer
     filename: (req, file, cb) => {
-
-        const timestamp = Date.now();
-
-        const extension = path.extname(file.originalname);
-
-        cb(
-
-            null,
-
-            `import-${timestamp}${extension}`
-
-        );
-
+        cb(null, `import-${crypto.randomUUID()}.csv`);
     }
 
 });
@@ -63,50 +41,30 @@ const storage = multer.diskStorage({
 
 const fileFilter = (req, file, cb) => {
 
-    const extension = path.extname(
+    const extension = path.extname(file.originalname).toLowerCase();
 
-        file.originalname
-
-    ).toLowerCase();
-
-    if (
-
-        extension === ".csv" ||
-
-        extension === ".txt"
-
-    ) {
-
+    if (extension === ".csv" || extension === ".txt") {
         return cb(null, true);
-
     }
 
-    cb(
-
-        new Error(
-
-            "Nur CSV-Dateien sind erlaubt."
-
-        )
-
-    );
+    cb(new Error("Nur CSV-Dateien (.csv oder .txt) sind erlaubt."));
 
 };
 
-// ----------------------------------------------------
-// Export
-// ----------------------------------------------------
+const MAX_FILE_SIZE_MB = 25;
 
-module.exports = multer({
+const upload = multer({
 
     storage,
 
     fileFilter,
 
     limits: {
-
-        fileSize: 25 * 1024 * 1024
-
+        fileSize: MAX_FILE_SIZE_MB * 1024 * 1024
     }
 
 });
+
+module.exports = upload;
+module.exports.uploadDirectory = uploadDirectory;
+module.exports.MAX_FILE_SIZE_MB = MAX_FILE_SIZE_MB;

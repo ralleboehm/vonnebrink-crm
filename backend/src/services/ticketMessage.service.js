@@ -1,5 +1,6 @@
 const TicketMessage = require("../models/ticketMessage.model");
 const Ticket = require("../models/ticket.model");
+const authorService = require("./author.service");
 
 class TicketMessageService {
 
@@ -22,9 +23,12 @@ class TicketMessageService {
             query.isInternal = false;
         }
 
-        return await TicketMessage.find(query)
-            .populate("author")
-            .sort({ createdAt: 1 });
+        const messages = await TicketMessage.find(query)
+            .sort({ createdAt: 1 })
+            .lean();
+
+        // Autor ist ein CRM-Benutzer oder ein Portalzugang
+        return await authorService.attach(messages, "author");
 
     }
 

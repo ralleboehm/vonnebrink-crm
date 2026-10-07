@@ -1,0 +1,200 @@
+extends ../layouts/main
+
+block content
+
+    .d-flex.justify-content-between.align-items-center.mb-4
+
+        h1.mb-0
+
+            i.bi.me-2(class=entity.icon)
+
+            | #{entity.label} importieren
+
+        form(method="POST" action=`/crm/import/${entity.key}/cancel`)
+
+            button.btn.btn-outline-secondary(type="submit")
+
+                i.bi.bi-x-circle.me-2
+
+                | Abbrechen
+
+    if errors && errors.length
+
+        .alert.alert-danger
+
+            strong Bitte korrigieren Sie die Zuordnung:
+
+            ul.mb-0
+
+                each message in errors
+
+                    li= message
+
+    .card.shadow-sm.mb-4
+
+        .card-body
+
+            .row
+
+                .col-md-4
+
+                    strong Datei
+
+                    p.mb-0= job.originalName
+
+                .col-md-2
+
+                    strong Datenzeilen
+
+                    p.mb-0= job.totalRows
+
+                .col-md-3
+
+                    strong Trennzeichen
+
+                    p.mb-0= job.delimiter === "\t" ? "Tabulator" : job.delimiter
+
+                .col-md-3
+
+                    strong Zeichensatz
+
+                    p.mb-0= job.encoding
+
+    form(method="POST" action=`/crm/import/${entity.key}/map`)
+
+        .card.shadow-sm.mb-4
+
+            .card-header
+
+                h5.mb-0
+
+                    i.bi.bi-2-circle.me-2
+
+                    | Schritt 2: Spalten zuordnen
+
+            .card-body
+
+                p.text-muted
+
+                    | Die Zuordnung wurde automatisch vorgeschlagen. Bitte prüfen Sie sie
+                    | und ändern Sie sie bei Bedarf. Spalten ohne Zuordnung werden nicht importiert.
+
+                if entity.key === "companies"
+
+                    p.small.text-muted
+
+                        | Pflicht: Firma. Steht Straße und Hausnummer in einer Spalte,
+                        | wird sie automatisch getrennt.
+
+                else
+
+                    p.small.text-muted
+
+                        | Pflicht: Firma, E-Mail sowie Vorname und Nachname
+                        | (oder eine Spalte mit dem vollständigen Namen).
+
+                p.small.text-muted
+
+                    i.bi.bi-info-circle.me-1
+
+                    | Kunden- und Kontaktnummern vergibt immer das CRM. Nummern aus der Datei
+                    | werden nicht übernommen (die Spalte einfach nicht zuordnen).
+
+                table.table.table-striped.align-middle
+
+                    thead
+
+                        tr
+
+                            th(style="width:25%") CSV-Spalte
+                            th(style="width:35%") Beispielwerte
+                            th(style="width:40%") CRM-Feld
+
+                    tbody
+
+                        each header, index in parsed.headers
+
+                            tr
+
+                                td
+
+                                    strong= header
+
+                                td.small.text-muted
+
+                                    = samples[index].join("  |  ")
+
+                                td
+
+                                    select.form-select(name="map_" + index)
+
+                                        option(value="") -- nicht importieren --
+
+                                        each field in entity.fields
+
+                                            option(
+                                                value=field.key
+                                                selected=(mapping[index] === field.key)
+                                            )= field.label
+
+        .card.shadow-sm.mb-4
+
+            .card-header
+
+                h5.mb-0 Bereits vorhandene Einträge
+
+            .card-body
+
+                p.text-muted.mb-3
+
+                    if entity.key === "companies"
+
+                        | Eine Firma gilt als vorhanden, wenn der Firmenname übereinstimmt (Groß-/Kleinschreibung egal).
+
+                    else
+
+                        | Ein Kontakt gilt als vorhanden, wenn die E-Mail-Adresse übereinstimmt.
+
+                .form-check.mb-2
+
+                    input.form-check-input(
+                        type="radio"
+                        name="duplicates"
+                        id="dupSkip"
+                        value="skip"
+                        checked=(duplicates !== "update")
+                    )
+
+                    label.form-check-label(for="dupSkip")
+
+                        strong Überspringen
+                        |  - vorhandene Einträge bleiben unverändert
+
+                .form-check
+
+                    input.form-check-input(
+                        type="radio"
+                        name="duplicates"
+                        id="dupUpdate"
+                        value="update"
+                        checked=(duplicates === "update")
+                    )
+
+                    label.form-check-label(for="dupUpdate")
+
+                        strong Aktualisieren
+                        |  - Felder mit Wert in der Datei überschreiben die vorhandenen. Leere Zellen löschen nichts.
+
+        .d-flex.justify-content-between
+
+            a.btn.btn-outline-secondary(href=`/crm/import/${entity.key}`)
+
+                i.bi.bi-arrow-left.me-2
+
+                | Andere Datei
+
+            button.btn.btn-primary(type="submit")
+
+                | Weiter zur Prüfung
+
+                i.bi.bi-arrow-right.ms-2

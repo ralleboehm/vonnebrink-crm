@@ -1,0 +1,177 @@
+extends ../layouts/main
+
+block content
+
+    .d-flex.justify-content-between.align-items-center.mb-4
+
+        h1.mb-0
+
+            i.bi.me-2(class=entity.icon)
+
+            | #{entity.label} importieren
+
+        form(method="POST" action=`/crm/import/${entity.key}/cancel`)
+
+            button.btn.btn-outline-secondary(type="submit")
+
+                i.bi.bi-x-circle.me-2
+
+                | Abbrechen
+
+    .alert.alert-info
+
+        i.bi.bi-shield-check.me-2
+
+        strong Das ist nur eine Vorschau.
+
+        |  Es wurde noch nichts gespeichert. Datei: #{job.originalName}
+
+    .row.g-3.mb-4
+
+        .col-md-3
+
+            .card.shadow-sm.border-success
+
+                .card-body.text-center
+
+                    .display-6.text-success= counts.create
+
+                    div Neu anlegen
+
+        .col-md-3
+
+            .card.shadow-sm.border-primary
+
+                .card-body.text-center
+
+                    .display-6.text-primary= counts.update
+
+                    div Aktualisieren
+
+        .col-md-3
+
+            .card.shadow-sm
+
+                .card-body.text-center
+
+                    .display-6.text-secondary= counts.skip
+
+                    div Überspringen
+
+        .col-md-3
+
+            .card.shadow-sm.border-danger
+
+                .card-body.text-center
+
+                    .display-6.text-danger= counts.error
+
+                    div Fehlerhaft
+
+    if problems.length
+
+        .card.shadow-sm.mb-4.border-danger
+
+            .card-header.bg-danger.text-white
+
+                h5.mb-0
+
+                    i.bi.bi-exclamation-triangle.me-2
+
+                    | Zeilen mit Fehlern (werden nicht importiert)
+
+            .card-body
+
+                table.table.table-sm.align-middle
+
+                    thead
+
+                        tr
+
+                            th(style="width:80px") Zeile
+                            th(style="width:30%") Eintrag
+                            th Problem
+
+                    tbody
+
+                        each item in problems
+
+                            tr
+
+                                td= item.line
+
+                                td= item.label
+
+                                td
+
+                                    each message in item.messages
+
+                                        div= message
+
+                if problemsHidden > 0
+
+                    p.text-muted.mb-0
+
+                        | … und #{problemsHidden} weitere fehlerhafte Zeilen.
+                        | Nach dem Import können Sie alle als CSV herunterladen.
+
+    if samples.length
+
+        .card.shadow-sm.mb-4
+
+            .card-header
+
+                h5.mb-0 Beispiel: die ersten Zeilen
+
+            .card-body
+
+                table.table.table-sm.align-middle
+
+                    thead
+
+                        tr
+
+                            th(style="width:80px") Zeile
+                            th Eintrag
+                            th(style="width:160px") Aktion
+                            th Hinweis
+
+                    tbody
+
+                        each item in samples
+
+                            tr
+
+                                td= item.line
+
+                                td= item.label
+
+                                td
+
+                                    span.badge(class=actionMeta[item.action].class)= actionMeta[item.action].text
+
+                                td.small.text-muted
+
+                                    = item.messages.join(" ")
+
+    .d-flex.justify-content-between.align-items-center
+
+        a.btn.btn-outline-secondary(href=`/crm/import/${entity.key}/map`)
+
+            i.bi.bi-arrow-left.me-2
+
+            | Zuordnung ändern
+
+        if importable > 0
+
+            form(method="POST" action=`/crm/import/${entity.key}/commit`)
+
+                button.btn.btn-success.btn-lg(type="submit")
+
+                    i.bi.bi-check-circle.me-2
+
+                    | Import starten (#{importable} Einträge)
+
+        else
+
+            span.text-muted Es gibt nichts zu importieren.
