@@ -3,6 +3,7 @@ const express = require("express");
 const router = express.Router();
 
 const authController = require("../../controllers/crm/auth.controller");
+const { crmLoginLimiter } = require("../../middleware/rateLimit.middleware");
 
 // ----------------------------------------------------
 // Login
@@ -10,7 +11,7 @@ const authController = require("../../controllers/crm/auth.controller");
 
 router.get("/login", authController.loginPage);
 
-router.post("/login", authController.login);
+router.post("/login", crmLoginLimiter, authController.login);
 
 // ----------------------------------------------------
 // Logout

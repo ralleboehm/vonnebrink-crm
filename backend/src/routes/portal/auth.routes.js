@@ -3,6 +3,7 @@ const express = require("express");
 const router = express.Router();
 
 const portalAuthController = require("../../controllers/portal/auth.controller");
+const { portalLoginLimiter } = require("../../middleware/rateLimit.middleware");
 
 // ----------------------------------------------------
 // Login
@@ -15,6 +16,7 @@ router.get(
 
 router.post(
     "/login",
+    portalLoginLimiter,
     portalAuthController.authenticate
 );
 
