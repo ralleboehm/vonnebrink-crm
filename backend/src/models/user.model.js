@@ -47,22 +47,9 @@ const userSchema = new mongoose.Schema(
             enum: [
                 "admin",
                 "technician",
-                "sales",
-                "portal"
+                "sales"
             ],
             default: "technician"
-        },
-
-        company: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Company",
-            default: null
-        },
-
-        contact: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Contact",
-            default: null
         },
 
         active: {

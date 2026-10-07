@@ -78,10 +78,6 @@ exports.login = async (req, res, next) => {
                 role: user.role
             };
 
-            console.log("========== LOGIN OK ==========");
-            console.log(req.session.user);
-            console.log("==============================");
-
             res.redirect("/crm");
 
         });

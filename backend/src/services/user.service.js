@@ -7,13 +7,10 @@ class UserService {
 
         return await User.find({
             active: true
-        })
-            .populate("company")
-            .populate("contact")
-            .sort({
-                lastName: 1,
-                firstName: 1
-            });
+        }).sort({
+            lastName: 1,
+            firstName: 1
+        });
 
     }
 
@@ -22,9 +19,7 @@ class UserService {
         return await User.findOne({
             _id: id,
             active: true
-        })
-            .populate("company")
-            .populate("contact");
+        });
 
     }
 
@@ -32,9 +27,7 @@ class UserService {
 
         return await User.findOne({
             username: username.toLowerCase()
-        })
-            .populate("company")
-            .populate("contact");
+        });
 
     }
 
@@ -42,9 +35,7 @@ class UserService {
 
         return await User.findOne({
             email: email.toLowerCase()
-        })
-            .populate("company")
-            .populate("contact");
+        });
 
     }
 
@@ -58,9 +49,6 @@ class UserService {
             email: data.email,
             password: data.password,
             role: data.role,
-
-            company: data.company || null,
-            contact: data.contact || null,
 
             active: true
 
@@ -78,10 +66,7 @@ class UserService {
             firstName: data.firstName,
             lastName: data.lastName,
             email: data.email,
-            role: data.role,
-
-            company: data.company || null,
-            contact: data.contact || null
+            role: data.role
 
         };
 
@@ -101,13 +86,11 @@ class UserService {
             updateData,
 
             {
-                new: true,
+                returnDocument: "after",
                 runValidators: true
             }
 
-        )
-            .populate("company")
-            .populate("contact");
+        );
 
     }
 
@@ -125,7 +108,7 @@ class UserService {
             },
 
             {
-                new: true
+                returnDocument: "after"
             }
 
         );
@@ -146,7 +129,7 @@ class UserService {
             },
 
             {
-                new: true
+                returnDocument: "after"
             }
 
         );
@@ -173,7 +156,7 @@ class UserService {
             },
 
             {
-                new: true,
+                returnDocument: "after",
                 runValidators: true
             }
 

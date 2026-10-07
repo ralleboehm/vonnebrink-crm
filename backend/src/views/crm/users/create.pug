@@ -111,28 +111,6 @@ block content
                             option(value="technician") Techniker
                             option(value="sales") Vertrieb
                             option(value="admin") Administrator
-                            option(value="portal") Portal-Benutzer
-
-                .mb-3
-
-                    label.form-label(for="company")
-
-                        | Unternehmen
-
-                    select.form-select(
-                        id="company"
-                        name="company"
-                    )
-
-                        option(value="")
-
-                            | -- Kein Unternehmen --
-
-                        each company in companies
-
-                            option(value=company._id)
-
-                                | #{company.customerNumber} - #{company.companyName}
 
                 .mt-4
 

@@ -6,6 +6,7 @@ class PortalAuthService {
 
         const portalAccount = await PortalAccount.findOne({
 
+            email: email.toLowerCase(),
             active: true
 
         }).populate({
@@ -20,12 +21,7 @@ class PortalAuthService {
 
         });
 
-        if (
-            !portalAccount ||
-            !portalAccount.contact ||
-            !portalAccount.contact.email ||
-            portalAccount.contact.email.toLowerCase() !== email.toLowerCase()
-        ) {
+        if (!portalAccount) {
 
             throw new Error("INVALID_CREDENTIALS");
 
