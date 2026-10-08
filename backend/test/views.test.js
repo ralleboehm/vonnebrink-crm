@@ -199,6 +199,7 @@ test("Action1-Seite (eingerichtet, nicht eingerichtet, Sync läuft)", { skip: !p
         companies: [company],
         companyByOrg: { o1: company },
         orphaned: [],
+        deviceCounts: { o1: 4 },
         runs: [{
             startedAt: new Date(), finishedAt: new Date(), trigger: "schedule", ok: false,
             stats: { endpoints: 3, created: 1, updated: 2, linked: 0, missing: 0 },
@@ -217,5 +218,41 @@ test("Action1-Seite (eingerichtet, nicht eingerichtet, Sync läuft)", { skip: !p
 
     assert.match(render("crm/integrations/action1.pug", { ...base, configured: false }), /ACTION1_CLIENT_ID/);
     assert.match(render("crm/integrations/action1.pug", { ...base, configured: true, running: true }), /window\.location\.reload/);
+
+});
+
+test("Dashboard mit Assets und Action1-Abdeckung", { skip: !pug && "pug nicht installiert" }, () => {
+
+    const { coverageFrom } = require("../src/utils/action1Coverage");
+
+    const base = {
+        companyCount: 3,
+        contactCount: 5,
+        userCount: 1,
+        openTicketCount: 2,
+        inProgressTicketCount: 1,
+        recentCompanies: [{ ...company, status: "active" }],
+        recentContacts: [{ _id: "p1", firstName: "Anna", lastName: "Jung", company }],
+        recentTickets: [{ _id: "t1", ticketNumber: "TIC-000001", subject: "Drucker", status: "open", company }],
+        assetSummary: { total: 3, active: 2, workstations: 1, servers: 1, online: 1, offline: 1, criticalUpdates: 1, rebootRequired: 0, warrantyExpired: 1 },
+        attentionAssets: [action1Asset],
+        lastRun: null,
+        labels
+    };
+
+    const coverage = coverageFrom({
+        startedAt: new Date(),
+        stats: { endpoints: 1, action1Total: 2 },
+        organizations: [{ id: "o2", name: "Org ohne Firma", endpoints: 1, mapped: false }]
+    });
+
+    const html = render("crm/dashboard/index.pug", { ...base, coverage });
+
+    assert.match(html, /Verwaltete Assets/);
+    assert.match(html, /von 2 einer Firma zugeordnet/);
+    assert.match(html, /Org ohne Firma/);
+    assert.match(html, /PC-EMPFANG/);
+
+    assert.match(render("crm/dashboard/index.pug", { ...base, coverage: null }), /Noch kein Sync gelaufen/);
 
 });

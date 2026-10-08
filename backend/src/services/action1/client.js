@@ -284,6 +284,22 @@ function createClient(options = {}) {
          */
         listEndpoints(organizationId) {
             return getAll(`/endpoints/managed/${encodeURIComponent(organizationId)}`, { fields: "*" });
+        },
+
+        /**
+         * Nur die Anzahl der Endpoints einer Organisation (eine Anfrage)
+         */
+        async countEndpoints(organizationId) {
+
+            const data = await get(`/endpoints/managed/${encodeURIComponent(organizationId)}`, { from: 0, limit: 1 });
+
+            const total = Number(data && data.total_items);
+
+            if (Number.isFinite(total)) return total;
+
+            // Ohne total_items: vollständig laden und zählen
+            return (await getAll(`/endpoints/managed/${encodeURIComponent(organizationId)}`)).length;
+
         }
 
     };

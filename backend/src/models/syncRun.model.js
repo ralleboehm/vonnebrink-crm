@@ -45,8 +45,23 @@ const syncRunSchema = new mongoose.Schema(
             updated: { type: Number, default: 0 },
             linked: { type: Number, default: 0 },
             missing: { type: Number, default: 0 },
-            skipped: { type: Number, default: 0 }
+            skipped: { type: Number, default: 0 },
+
+            // Alle Geräte in Action1 (auch in Organisationen ohne Firma)
+            action1Total: { type: Number, default: null },
+            unmapped: { type: Number, default: null }
         },
+
+        // Geräte je Action1-Organisation zum Zeitpunkt des Syncs
+        organizations: [
+            {
+                _id: false,
+                id: String,
+                name: String,
+                endpoints: Number,
+                mapped: Boolean
+            }
+        ],
 
         // Fehler je Organisation (ein Fehler stoppt den Lauf nicht)
         failures: [

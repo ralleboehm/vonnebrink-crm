@@ -77,6 +77,14 @@ exports.action1 = async (req, res, next) => {
         const orgIds = new Set(organizations.map((o) => o.id));
         const orphaned = apiError || running ? [] : mapped.filter((c) => !orgIds.has(c.action1.organizationId));
 
+        // Geräte je Organisation aus dem letzten Sync
+        const countRun = runs.find((run) => run.organizations && run.organizations.length);
+        const deviceCounts = {};
+
+        for (const org of (countRun ? countRun.organizations : [])) {
+            deviceCounts[org.id] = org.endpoints;
+        }
+
         res.render("integrations/action1", {
             title: "Action1",
             configured,
@@ -87,6 +95,7 @@ exports.action1 = async (req, res, next) => {
             companies,
             companyByOrg,
             orphaned,
+            deviceCounts,
             runs,
             summary,
             running,

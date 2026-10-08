@@ -214,6 +214,8 @@ block content
 
                                         th Action1-Organisation
 
+                                        th.text-end Geräte
+
                                         th(style="width: 45%") CRM-Firma
 
                                 tbody
@@ -235,6 +237,10 @@ block content
                                                     small.text-muted= org.description
 
                                                 input(type="hidden" name=`orgName[o_${org.id}]` value=org.name)
+
+                                            td.text-end.text-muted
+
+                                                = deviceCounts[org.id] !== undefined ? deviceCounts[org.id] : "–"
 
                                             td
 

@@ -149,10 +149,69 @@ function buildNewAsset(mapped, companyId) {
 
 }
 
+/**
+ * Zählt die Geräte in Action1-Organisationen ohne Firmenzuordnung, damit
+ * das Dashboard "gesamt / davon zugeordnet" zeigen kann.
+ */
+async function countUnmapped({ client, mappedOrgIds, perOrg, failures }) {
+
+    if (typeof client.listOrganizations !== "function" || typeof client.countEndpoints !== "function") {
+        return null;
+    }
+
+    let organizations;
+
+    try {
+        organizations = await client.listOrganizations();
+    } catch (err) {
+        failures.push({ organizationId: null, company: null, message: `Organisationen nicht abrufbar: ${err.message}` });
+        return null;
+    }
+
+    let unmapped = 0;
+    const names = new Map();
+
+    for (const org of organizations) {
+
+        if (!org || !org.id) continue;
+
+        const id = String(org.id);
+
+        names.set(id, org.name || id);
+
+        if (mappedOrgIds.has(id)) continue;
+
+        try {
+
+            const count = await client.countEndpoints(id);
+
+            unmapped += count;
+            perOrg.push({ id, name: org.name || id, endpoints: count, mapped: false });
+
+        } catch (err) {
+
+            failures.push({ organizationId: id, company: null, message: `Geräte nicht zählbar (${org.name || id}): ${err.message}` });
+            return null;
+
+        }
+
+    }
+
+    // Namen für die zugeordneten Organisationen nachtragen
+    for (const entry of perOrg) {
+        if (entry.mapped && names.has(entry.id)) entry.name = names.get(entry.id);
+    }
+
+    return unmapped;
+
+}
+
 async function syncCompany({ client, repo, company, stats, now }) {
 
     const organizationId = company.action1.organizationId;
     const endpoints = await client.listEndpoints(organizationId);
+
+    const before = stats.endpoints;
 
     const seen = [];
 
@@ -210,6 +269,8 @@ async function syncCompany({ client, repo, company, stats, now }) {
 
     stats.missing += await repo.markMissing(organizationId, seen, company._id);
 
+    return stats.endpoints - before;
+
 }
 
 // ----------------------------------------------------
@@ -255,10 +316,13 @@ async function runSync(options = {}) {
         updated: 0,
         linked: 0,
         missing: 0,
-        skipped: 0
+        skipped: 0,
+        action1Total: null,
+        unmapped: null
     };
 
     const failures = [];
+    const perOrg = [];
 
     let run = null;
 
@@ -278,8 +342,16 @@ async function runSync(options = {}) {
 
             try {
 
-                await syncCompany({ client, repo, company, stats, now });
+                const count = await syncCompany({ client, repo, company, stats, now });
+
                 stats.organizations++;
+
+                perOrg.push({
+                    id: company.action1.organizationId,
+                    name: company.action1.organizationName || company.companyName,
+                    endpoints: count,
+                    mapped: true
+                });
 
             } catch (err) {
 
@@ -291,6 +363,15 @@ async function runSync(options = {}) {
 
             }
 
+        }
+
+        const mappedOrgIds = new Set(companies.map((c) => String(c.action1.organizationId)));
+        const unmapped = await countUnmapped({ client, mappedOrgIds, perOrg, failures });
+
+        // Gesamtzahl nur, wenn alle Organisationen gezählt werden konnten
+        if (unmapped !== null && perOrg.filter((o) => o.mapped).length === companies.length) {
+            stats.unmapped = unmapped;
+            stats.action1Total = stats.endpoints + unmapped;
         }
 
     } catch (err) {
@@ -307,7 +388,8 @@ async function runSync(options = {}) {
         finishedAt: new Date(),
         ok: failures.length === 0,
         stats,
-        failures
+        failures,
+        organizations: perOrg
     };
 
     if (run) {

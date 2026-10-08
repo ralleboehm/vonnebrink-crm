@@ -564,3 +564,115 @@ test("assetLabels: Zeitangaben und Garantie", () => {
     assert.equal(labels.dateInputValue(new Date("2026-03-05T00:00:00Z")), "2026-03-05");
 
 });
+
+// ----------------------------------------------------
+// Gesamtzahl / nicht zugeordnete Organisationen
+// ----------------------------------------------------
+
+function clientWithOrgs(byOrg, orgs, failCount = null) {
+
+    return {
+        ...fakeClient(byOrg),
+        async listOrganizations() { return orgs; },
+        async countEndpoints(id) {
+            if (id === failCount) throw new Error("HTTP 500");
+            return (byOrg[id] || []).length;
+        }
+    };
+
+}
+
+test("Sync zählt Geräte in Organisationen ohne Firma mit", async () => {
+
+    const repo = memoryRepo({
+        companies: [{ _id: "c1", companyName: "Kunde A", action1: { organizationId: "org-1", organizationName: "Org A" } }]
+    });
+
+    const result = await sync.runSync({
+        repo,
+        client: clientWithOrgs(
+            {
+                "org-1": [sampleEndpoint()],
+                "org-2": [sampleEndpoint({ id: "x1" }), sampleEndpoint({ id: "x2" })]
+            },
+            [{ id: "org-1", name: "Org A" }, { id: "org-2", name: "Org B" }]
+        )
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(result.stats.endpoints, 1);
+    assert.equal(result.stats.unmapped, 2);
+    assert.equal(result.stats.action1Total, 3);
+    assert.deepEqual(result.organizations, [
+        { id: "org-1", name: "Org A", endpoints: 1, mapped: true },
+        { id: "org-2", name: "Org B", endpoints: 2, mapped: false }
+    ]);
+    assert.equal(repo.runs[0].stats.action1Total, 3);
+
+});
+
+test("Ohne vollständige Zählung gibt es keine Gesamtzahl", async () => {
+
+    const repo = memoryRepo({
+        companies: [{ _id: "c1", companyName: "Kunde A", action1: { organizationId: "org-1" } }]
+    });
+
+    const result = await sync.runSync({
+        repo,
+        client: clientWithOrgs(
+            { "org-1": [sampleEndpoint()] },
+            [{ id: "org-1" }, { id: "org-2", name: "Org B" }],
+            "org-2"
+        )
+    });
+
+    assert.equal(result.ok, false);
+    assert.equal(result.stats.action1Total, null);
+    assert.equal(result.stats.created, 1, "die Geräte der zugeordneten Firma werden trotzdem übernommen");
+    assert.match(result.failures[0].message, /Org B/);
+
+});
+
+test("Client: countEndpoints nutzt total_items mit nur einer Anfrage", async () => {
+
+    const endpoints = Array.from({ length: 7 }, (_, i) => ({ id: `e${i}` }));
+    const api = fakeApi({ endpoints });
+
+    const c = client.createClient({ clientId: "id", clientSecret: "s", fetch: api.fetch, minIntervalMs: 0 });
+
+    assert.equal(await c.countEndpoints("org-1"), 7);
+
+    const gets = api.calls.filter((call) => call.method === "GET");
+
+    assert.equal(gets.length, 1);
+    assert.equal(gets[0].query.limit, "1");
+
+});
+
+test("coverageFrom: gesamt und zugeordnet", () => {
+
+    const { coverageFrom } = require("../src/utils/action1Coverage");
+
+    assert.equal(coverageFrom(null), null);
+    assert.equal(coverageFrom({ stats: { endpoints: 3, action1Total: null } }), null);
+
+    const c = coverageFrom({
+        startedAt: new Date(),
+        stats: { endpoints: 3, action1Total: 4 },
+        organizations: [
+            { id: "a", name: "A", endpoints: 3, mapped: true },
+            { id: "b", name: "Leer", endpoints: 0, mapped: false },
+            { id: "c", name: "C", endpoints: 1, mapped: false }
+        ]
+    });
+
+    assert.equal(c.total, 4);
+    assert.equal(c.assigned, 3);
+    assert.equal(c.unassigned, 1);
+    assert.equal(c.percent, 75);
+    assert.deepEqual(c.unmappedOrgs.map((o) => o.name), ["C"]);
+
+    assert.equal(coverageFrom({ stats: { endpoints: 0, action1Total: 0 } }).percent, 100);
+
+});
+

@@ -1,144 +1,443 @@
 extends ../layouts/main
 
+include ../assets/_mixins
+
+//- Kennzahl-Kachel; die ganze Kachel ist ein Link
+mixin kpi(label, value, icon, href, tone)
+    a.card.shadow-sm.h-100.text-decoration-none.text-reset(href=href)
+        .card-body.d-flex.align-items-center
+            .rounded-3.d-flex.align-items-center.justify-content-center.me-3.flex-shrink-0(
+                class=`bg-${tone || "primary"}-subtle text-${tone || "primary"}`
+                style="width: 48px; height: 48px;"
+            )
+                i.bi.fs-4(class=icon)
+            div
+                .text-muted.small= label
+                .fs-3.fw-semibold.lh-1= value
+
+//- Kleine Zahl mit Beschriftung im Asset-Block
+mixin stat(label, value, href, tone)
+    a.d-block.text-decoration-none.text-reset.border.rounded-3.p-3.h-100(href=href)
+        .text-muted.small= label
+        .fs-4.fw-semibold(class=tone ? `text-${tone}` : null)= value
+
 block content
-    h1.mb-4 Dashboard
 
-    .row.g-4.mb-4
-        .col-md-3
-            .card.shadow-sm
-                .card-body.text-center
-                    h6.text-muted Firmen
-                    h2.display-5.mb-0= companyCount
+    .d-flex.justify-content-between.align-items-center.mb-4
 
-        .col-md-3
-            .card.shadow-sm
-                .card-body.text-center
-                    h6.text-muted Kontakte
-                    h2.display-5.mb-0= contactCount
+        h1.mb-0 Dashboard
 
-        .col-md-3
-            .card.shadow-sm
-                .card-body.text-center
-                    h6.text-muted Offene Tickets
-                    h2.display-5.mb-0= openTicketCount
+        small.text-muted= labels.formatDateTime(new Date())
 
-        .col-md-3
-            .card.shadow-sm
-                .card-body.text-center
-                    h6.text-muted In Bearbeitung
-                    h2.display-5.mb-0= inProgressTicketCount
+    // =====================================================
+    // Kennzahlen
+    // =====================================================
 
-    .row.g-4
+    .row.g-3.mb-4
+
+        .col-xl-3.col-md-6
+            +kpi("Firmen", companyCount, "bi-buildings", "/crm/companies", "primary")
+
+        .col-xl-3.col-md-6
+            +kpi("Kontakte", contactCount, "bi-people", "/crm/contacts", "info")
+
+        .col-xl-3.col-md-6
+            +kpi("Offene Tickets", openTicketCount, "bi-ticket-detailed", "/crm/tickets?status=open", openTicketCount ? "danger" : "success")
+
+        .col-xl-3.col-md-6
+            +kpi("In Bearbeitung", inProgressTicketCount, "bi-hourglass-split", "/crm/tickets?status=in_progress", "warning")
+
+    // =====================================================
+    // Assets & Action1
+    // =====================================================
+
+    .row.g-3.mb-4
+
+        // ------------------ Verwaltete Assets ------------------
+
+        .col-lg-7
+
+            .card.shadow-sm.h-100
+
+                .card-header.d-flex.justify-content-between.align-items-center
+
+                    h5.mb-0
+
+                        i.bi.bi-pc-display.me-2
+
+                        | Verwaltete Assets
+
+                    a.btn.btn-sm.btn-outline-primary(href="/crm/assets") Alle Assets
+
+                .card-body
+
+                    .d-flex.align-items-baseline.mb-3
+
+                        span.display-5.fw-semibold.me-2= assetSummary.total
+
+                        span.text-muted
+
+                            | Assets gesamt · #{assetSummary.active} in Betrieb
+
+                    .row.g-2
+
+                        .col-6.col-md-3
+                            +stat("Arbeitsplätze", assetSummary.workstations, "/crm/assets?status=active")
+
+                        .col-6.col-md-3
+                            +stat("Server & VMs", assetSummary.servers, "/crm/assets?status=active")
+
+                        .col-6.col-md-3
+                            +stat("Online", assetSummary.online, "/crm/assets?online=online", "success")
+
+                        .col-6.col-md-3
+                            +stat("Offline", assetSummary.offline, "/crm/assets?online=offline", assetSummary.offline ? "secondary" : null)
+
+                    if assetSummary.criticalUpdates || assetSummary.rebootRequired || assetSummary.warrantyExpired
+
+                        .d-flex.flex-wrap.gap-2.mt-3
+
+                            if assetSummary.criticalUpdates
+
+                                a.badge.bg-danger.text-decoration-none.fs-6.fw-normal(href="/crm/assets?updates=critical")
+
+                                    i.bi.bi-shield-exclamation.me-1
+
+                                    | #{assetSummary.criticalUpdates} mit fehlenden kritischen Updates
+
+                            if assetSummary.rebootRequired
+
+                                span.badge.bg-info.text-dark.fs-6.fw-normal
+
+                                    i.bi.bi-bootstrap-reboot.me-1
+
+                                    | #{assetSummary.rebootRequired} Neustart erforderlich
+
+                            if assetSummary.warrantyExpired
+
+                                span.badge.bg-warning.text-dark.fs-6.fw-normal
+
+                                    i.bi.bi-calendar-x.me-1
+
+                                    | #{assetSummary.warrantyExpired} Garantie abgelaufen
+
+        // ------------------ Action1-Abdeckung ------------------
+
+        .col-lg-5
+
+            .card.shadow-sm.h-100
+
+                .card-header.d-flex.justify-content-between.align-items-center
+
+                    h5.mb-0
+
+                        i.bi.bi-arrow-repeat.me-2
+
+                        | Action1-Geräte
+
+                    if currentUser && currentUser.role === "admin"
+
+                        a.btn.btn-sm.btn-outline-secondary(href="/crm/integrations/action1") Zuordnung
+
+                .card-body
+
+                    if coverage
+
+                        .d-flex.align-items-baseline.mb-1
+
+                            span.display-5.fw-semibold.me-2= coverage.assigned
+
+                            span.text-muted von #{coverage.total} einer Firma zugeordnet
+
+                        .progress.mb-2(
+                            role="progressbar"
+                            aria-label="Anteil zugeordneter Action1-Geräte"
+                            aria-valuenow=coverage.percent
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                            style="height: 10px;"
+                        )
+
+                            .progress-bar(
+                                class=coverage.unassigned ? "bg-warning" : "bg-success"
+                                style=`width: ${coverage.percent}%`
+                            )
+
+                        if coverage.unassigned
+
+                            p.small.mb-2
+
+                                strong= coverage.unassigned
+
+                                |  #{coverage.unassigned === 1 ? "Gerät liegt" : "Geräte liegen"} in Organisationen ohne Firma:
+
+                            ul.list-unstyled.small.mb-2
+
+                                each org in coverage.unmappedOrgs.slice(0, 5)
+
+                                    li.d-flex.justify-content-between.border-bottom.py-1
+
+                                        span= org.name
+
+                                        span.text-muted #{org.endpoints} #{org.endpoints === 1 ? "Gerät" : "Geräte"}
+
+                        else
+
+                            p.small.text-success.mb-2
+
+                                i.bi.bi-check-circle.me-1
+
+                                | Alle Geräte sind einer Firma zugeordnet.
+
+                        small.text-muted Stand: letzter Sync #{labels.timeAgo(coverage.at)}
+
+                    else if lastRun
+
+                        p.text-muted.mb-0
+
+                            | Beim letzten Sync konnten nicht alle Organisationen gezählt werden.
+                            | Details auf der Action1-Seite.
+
+                    else
+
+                        p.text-muted.mb-0
+
+                            | Noch kein Sync gelaufen. Nach der ersten Synchronisation sehen Sie hier,
+                            | wie viele Action1-Geräte einer Firma zugeordnet sind.
+
+    // =====================================================
+    // Tickets & Handlungsbedarf
+    // =====================================================
+
+    .row.g-3.mb-4
+
+        .col-lg-7
+
+            .card.shadow-sm.h-100
+
+                .card-header.d-flex.justify-content-between.align-items-center
+
+                    h5.mb-0
+
+                        i.bi.bi-ticket-detailed.me-2
+
+                        | Letzte Tickets
+
+                    a.btn.btn-sm.btn-outline-primary(href="/crm/tickets") Alle Tickets
+
+                .card-body.p-0
+
+                    if recentTickets.length
+
+                        .table-responsive
+
+                            table.table.table-hover.align-middle.mb-0
+
+                                thead.table-light
+
+                                    tr
+                                        th Ticket
+                                        th Betreff
+                                        th Firma
+                                        th Status
+
+                                tbody
+
+                                    each ticket in recentTickets
+
+                                        tr
+
+                                            td.text-nowrap
+
+                                                a.text-decoration-none(href=`/crm/tickets/${ticket._id}`)= ticket.ticketNumber
+
+                                            td
+
+                                                = ticket.subject
+
+                                                if ticket.assignedTo
+
+                                                    br
+
+                                                    small.text-muted #{ticket.assignedTo.firstName} #{ticket.assignedTo.lastName}
+
+                                            td
+
+                                                if ticket.company
+
+                                                    = ticket.company.companyName
+
+                                                else
+
+                                                    | -
+
+                                            td
+
+                                                if ticket.status === "open"
+                                                    span.badge.bg-primary Offen
+                                                else if ticket.status === "in_progress"
+                                                    span.badge.bg-warning.text-dark In Bearbeitung
+                                                else if ticket.status === "waiting"
+                                                    span.badge.bg-secondary Wartend
+                                                else if ticket.status === "resolved"
+                                                    span.badge.bg-success Gelöst
+                                                else
+                                                    span.badge.bg-dark Geschlossen
+
+                    else
+
+                        .p-3.text-muted Noch keine Tickets vorhanden.
+
+        .col-lg-5
+
+            .card.shadow-sm.h-100
+
+                .card-header.d-flex.justify-content-between.align-items-center
+
+                    h5.mb-0
+
+                        i.bi.bi-shield-exclamation.me-2
+
+                        | Handlungsbedarf
+
+                    if attentionAssets.length
+
+                        a.btn.btn-sm.btn-outline-danger(href="/crm/assets?updates=critical") Alle
+
+                .card-body.p-0
+
+                    if attentionAssets.length
+
+                        ul.list-group.list-group-flush
+
+                            each asset in attentionAssets
+
+                                li.list-group-item.d-flex.justify-content-between.align-items-center
+
+                                    div
+
+                                        +onlineDot(asset)
+
+                                        a.ms-2.text-decoration-none(href=`/crm/assets/${asset._id}`)= asset.name
+
+                                        if asset.company
+
+                                            br
+
+                                            small.text-muted.ms-4= asset.company.companyName
+
+                                    span.badge.bg-danger(title="Fehlende kritische Updates")
+
+                                        | #{asset.action1.missingCriticalUpdates} kritisch
+
+                    else
+
+                        .p-4.text-center.text-muted
+
+                            i.bi.bi-shield-check.fs-2.d-block.mb-2.text-success
+
+                            | Keine Geräte mit fehlenden kritischen Updates.
+
+    // =====================================================
+    // Zuletzt angelegt
+    // =====================================================
+
+    .row.g-3
+
         .col-lg-6
-            .card.shadow-sm
+
+            .card.shadow-sm.h-100
+
                 .card-header
+
                     h5.mb-0 Letzte Firmen
 
                 .card-body.p-0
+
                     if recentCompanies.length
+
                         .table-responsive
+
                             table.table.table-hover.mb-0
+
                                 thead.table-light
+
                                     tr
                                         th Kundennr.
                                         th Firma
                                         th Status
 
                                 tbody
+
                                     each company in recentCompanies
+
                                         tr
+
                                             td= company.customerNumber
+
                                             td
-                                                a.text-decoration-none(
-                                                    href=`/crm/companies/${company._id}`
-                                                )
-                                                    = company.companyName
-                                            td= company.status
+
+                                                a.text-decoration-none(href=`/crm/companies/${company._id}`)= company.companyName
+
+                                            td
+
+                                                case company.status
+                                                    when "prospect"
+                                                        span.badge.bg-warning.text-dark Interessent
+                                                    when "active"
+                                                        span.badge.bg-success Aktiv
+                                                    when "inactive"
+                                                        span.badge.bg-secondary Inaktiv
+                                                    default
+                                                        span.badge.bg-light.text-dark -
+
                     else
-                        .p-3.text-muted
-                            | Noch keine Firmen vorhanden.
+
+                        .p-3.text-muted Noch keine Firmen vorhanden.
 
         .col-lg-6
-            .card.shadow-sm
+
+            .card.shadow-sm.h-100
+
                 .card-header
+
                     h5.mb-0 Letzte Kontakte
 
                 .card-body.p-0
+
                     if recentContacts.length
+
                         .table-responsive
+
                             table.table.table-hover.mb-0
+
                                 thead.table-light
+
                                     tr
                                         th Name
                                         th Firma
 
                                 tbody
+
                                     each contact in recentContacts
+
                                         tr
+
                                             td
-                                                a.text-decoration-none(
-                                                    href=`/crm/contacts/${contact._id}`
-                                                )
+
+                                                a.text-decoration-none(href=`/crm/contacts/${contact._id}`)
                                                     | #{contact.firstName} #{contact.lastName}
+
                                             td
+
                                                 if contact.company
+
                                                     = contact.company.companyName
+
                                                 else
+
                                                     | -
+
                     else
-                        .p-3.text-muted
-                            | Noch keine Kontakte vorhanden.
 
-    .card.shadow-sm.mt-4
-        .card-header
-            h5.mb-0 Letzte Tickets
-
-        .card-body.p-0
-            if recentTickets.length
-                .table-responsive
-                    table.table.table-hover.mb-0
-                        thead.table-light
-                            tr
-                                th Ticket
-                                th Beschreibung
-                                th Firma
-                                th Status
-                                th Bearbeiter
-
-                        tbody
-                            each ticket in recentTickets
-                                tr
-                                    td
-                                        a.text-decoration-none(
-                                            href=`/crm/tickets/${ticket._id}`
-                                        )
-                                            = ticket.ticketNumber
-
-                                    td= ticket.description
-
-                                    td
-                                        if ticket.company
-                                            = ticket.company.companyName
-                                        else
-                                            | -
-
-                                    td
-                                        if ticket.status === "open"
-                                            span.badge.bg-primary Offen
-                                        else if ticket.status === "in_progress"
-                                            span.badge.bg-warning.text-dark In Bearbeitung
-                                        else if ticket.status === "waiting"
-                                            span.badge.bg-secondary Wartend
-                                        else if ticket.status === "resolved"
-                                            span.badge.bg-success Gelöst
-                                        else
-                                            span.badge.bg-dark Geschlossen
-
-                                    td
-                                        if ticket.assignedTo
-                                            | #{ticket.assignedTo.firstName} #{ticket.assignedTo.lastName}
-                                        else
-                                            | Nicht zugewiesen
-            else
-                .p-3.text-muted
-                    | Noch keine Tickets vorhanden.
+                        .p-3.text-muted Noch keine Kontakte vorhanden.
