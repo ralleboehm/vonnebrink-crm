@@ -1,7 +1,7 @@
 "use strict";
 
 // ----------------------------------------------------
-// Globale Suche (Firmen, Kontakte, Tickets)
+// Globale Suche (Firmen, Kontakte, Tickets, Assets)
 // ----------------------------------------------------
 //
 // Ablauf:
@@ -205,7 +205,8 @@ function defaultModels() {
     return {
         Company: require("../models/company.model"),
         Contact: require("../models/contact.model"),
-        Ticket: require("../models/ticket.model")
+        Ticket: require("../models/ticket.model"),
+        Asset: require("../models/asset.model")
     };
 
 }
@@ -238,6 +239,19 @@ const TICKET_FIELDS = [
     "ticketNumber",
     "subject",
     "description"
+];
+
+const ASSET_FIELDS = [
+    "assetNumber",
+    "name",
+    "serialNumber",
+    "assetTag",
+    "manufacturer",
+    "model",
+    "operatingSystem",
+    "ipAddress",
+    "macAddress",
+    "lastUser"
 ];
 
 /**
@@ -288,11 +302,11 @@ async function searchAll(rawQuery, options = {}, models = defaultModels()) {
 
     if (query.length < MIN_QUERY_LENGTH) {
 
-        return { query, tokens, tooShort: query.length > 0, companies: empty, contacts: empty, tickets: empty };
+        return { query, tokens, tooShort: query.length > 0, companies: empty, contacts: empty, tickets: empty, assets: empty };
 
     }
 
-    const { Company, Contact, Ticket } = models;
+    const { Company, Contact, Ticket, Asset } = models;
 
     const fetchSize = Math.min(limit * 4, FETCH_CAP);
 
@@ -322,7 +336,25 @@ async function searchAll(rawQuery, options = {}, models = defaultModels()) {
         ])
     };
 
-    const [companies, companyTotal, contacts, contactTotal, tickets, ticketTotal] =
+    const assetFilter = {
+        isDeleted: false,
+        ...buildTextFilter(tokens, ASSET_FIELDS, (token) => [
+            { company: { $in: companyIds.get(token) } }
+        ])
+    };
+
+    // Assets sind optional (ältere Tests übergeben kein Asset-Modell)
+    const assetSearch = Asset
+        ? Promise.all([
+            Asset.find(
+                assetFilter,
+                "assetNumber name type serialNumber operatingSystem lastUser company"
+            ).populate("company", "companyName").sort({ name: 1 }).limit(fetchSize).lean(),
+            Asset.countDocuments(assetFilter)
+        ])
+        : Promise.resolve([[], 0]);
+
+    const [companies, companyTotal, contacts, contactTotal, tickets, ticketTotal, [assets, assetTotal]] =
         await Promise.all([
 
             Company.find(
@@ -349,7 +381,9 @@ async function searchAll(rawQuery, options = {}, models = defaultModels()) {
                 .limit(fetchSize)
                 .lean(),
 
-            Ticket.countDocuments(ticketFilter)
+            Ticket.countDocuments(ticketFilter),
+
+            assetSearch
 
         ]);
 
@@ -372,6 +406,11 @@ async function searchAll(rawQuery, options = {}, models = defaultModels()) {
         tickets: {
             items: tickets.slice(0, limit),
             total: ticketTotal
+        },
+
+        assets: {
+            items: rank(assets, (a) => a.name, tokens).slice(0, limit),
+            total: assetTotal
         }
 
     };
@@ -392,15 +431,17 @@ async function findByNumber(rawQuery, models = defaultModels()) {
 
     const number = query.toUpperCase();
 
-    const [company, contact, ticket] = await Promise.all([
+    const [company, contact, ticket, asset] = await Promise.all([
         models.Company.findOne({ customerNumber: number, isDeleted: false }, "_id").lean(),
         models.Contact.findOne({ contactNumber: number, isDeleted: false }, "_id").lean(),
-        models.Ticket.findOne({ ticketNumber: number, isDeleted: false }, "_id").lean()
+        models.Ticket.findOne({ ticketNumber: number, isDeleted: false }, "_id").lean(),
+        models.Asset ? models.Asset.findOne({ assetNumber: number, isDeleted: false }, "_id").lean() : null
     ]);
 
     if (company) return `/crm/companies/${company._id}`;
     if (contact) return `/crm/contacts/${contact._id}`;
     if (ticket) return `/crm/tickets/${ticket._id}`;
+    if (asset) return `/crm/assets/${asset._id}`;
 
     return null;
 

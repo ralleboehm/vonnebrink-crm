@@ -47,3 +47,10 @@
 # Sprint 7
 
 - AI Agent
+
+---
+
+# Sprint 8
+
+- Asset Management
+- Action1 Sync (Organisationen → Firmen, Endpoints → Assets)

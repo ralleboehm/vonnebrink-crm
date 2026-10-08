@@ -14,7 +14,8 @@
     var SECTIONS = [
         { key: "companies", label: "Firmen", icon: "bi-buildings" },
         { key: "contacts", label: "Kontakte", icon: "bi-people" },
-        { key: "tickets", label: "Tickets", icon: "bi-ticket-detailed" }
+        { key: "tickets", label: "Tickets", icon: "bi-ticket-detailed" },
+        { key: "assets", label: "Assets", icon: "bi-pc-display" }
     ];
 
     var timer = null;

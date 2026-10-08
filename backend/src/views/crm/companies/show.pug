@@ -1,5 +1,7 @@
 extends ../layouts/main
 
+include ../assets/_mixins
+
 block content
 
     .d-flex.justify-content-between.align-items-center.mb-4
@@ -138,6 +140,22 @@ block content
 
                             | -
 
+                    p
+
+                        strong Action1:
+
+                        br
+
+                        if company.action1 && company.action1.organizationId
+
+                            i.bi.bi-link-45deg.me-1
+
+                            = company.action1.organizationName || company.action1.organizationId
+
+                        else
+
+                            span.text-muted Nicht verknüpft
+
     // =====================================================
     // Ansprechpartner
     // =====================================================
@@ -225,6 +243,131 @@ block content
             i.bi.bi-info-circle.me-2
 
             | Für diese Firma sind noch keine Ansprechpartner vorhanden.
+
+    // =====================================================
+    // Assets
+    // =====================================================
+
+    .card.shadow-sm.mb-4
+
+        .card-header.d-flex.justify-content-between.align-items-center.flex-wrap.gap-2
+
+            div
+
+                h5.mb-0
+
+                    i.bi.bi-pc-display.me-2
+
+                    | Assets
+
+                small.text-muted
+
+                    | #{assetSummary.active} in Betrieb · #{assetSummary.workstations} Arbeitsplätze · #{assetSummary.servers} Server
+                    if assetSummary.criticalUpdates
+
+                        |  · 
+
+                        span.text-danger #{assetSummary.criticalUpdates} mit fehlenden kritischen Updates
+
+            div
+
+                a.btn.btn-sm.btn-outline-primary.me-2(href=`/crm/assets?company=${company._id}`)
+
+                    i.bi.bi-list.me-2
+
+                    | Alle anzeigen
+
+                a.btn.btn-sm.btn-primary(href=`/crm/assets/new?company=${company._id}`)
+
+                    i.bi.bi-plus-circle.me-2
+
+                    | Neues Asset
+
+        .card-body.p-0
+
+            if assets.length
+
+                .table-responsive
+
+                    table.table.table-hover.align-middle.mb-0
+
+                        thead.table-light
+
+                            tr
+
+                                th(style="width: 1%")
+                                th Gerät
+                                th Typ
+                                th Betriebssystem
+                                th Benutzer
+                                th Status
+                                th Hinweise
+
+                        tbody
+
+                            each asset in assets
+
+                                tr
+
+                                    td
+
+                                        +onlineDot(asset)
+
+                                    td
+
+                                        a.text-decoration-none(href=`/crm/assets/${asset._id}`)
+
+                                            strong= asset.name
+
+                                        if asset.serialNumber
+
+                                            br
+
+                                            small.text-muted SN #{asset.serialNumber}
+
+                                    td.text-nowrap
+
+                                        +typeLabel(asset.type)
+
+                                    td
+
+                                        small= asset.operatingSystem || "-"
+
+                                    td
+
+                                        if asset.contact
+
+                                            | #{asset.contact.firstName} #{asset.contact.lastName}
+
+                                        else if asset.lastUser
+
+                                            small.text-muted= asset.lastUser
+
+                                        else
+
+                                            | -
+
+                                    td
+
+                                        +statusBadge(asset.status)
+
+                                    td.text-nowrap
+
+                                        +action1Flags(asset)
+
+            else
+
+                .p-4.text-center.text-muted
+
+                    i.bi.bi-pc-display.display-6.d-block.mb-2
+
+                    | Für diese Firma sind noch keine Assets erfasst.
+
+                    if !(company.action1 && company.action1.organizationId)
+
+                        br
+
+                        small Verknüpfen Sie die Firma unter „Action1“ mit einer Organisation, um Geräte automatisch zu übernehmen.
 
     // =====================================================
     // Letzte Tickets

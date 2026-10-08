@@ -12,7 +12,7 @@ exports.index = async (req, res, next) => {
 
         const query = searchService.normalizeQuery(req.query.q);
 
-        // Exakte Nummer (CUS-000012, CON-..., TIC-...) -> direkt öffnen
+        // Exakte Nummer (CUS-000012, CON-..., TIC-..., AST-...) -> direkt öffnen
         const target = await searchService.findByNumber(query);
 
         if (target) {
@@ -78,6 +78,16 @@ exports.suggest = async (req, res) => {
                     url: `/crm/tickets/${t._id}`,
                     title: `${text(t.ticketNumber)} – ${text(t.subject)}`,
                     detail: [t.company && t.company.companyName].filter(Boolean).join(" · ")
+                }))
+            },
+
+            assets: {
+                total: result.assets.total,
+                items: result.assets.items.map((a) => ({
+                    url: `/crm/assets/${a._id}`,
+                    title: text(a.name),
+                    detail: [a.company && a.company.companyName, a.serialNumber && `SN ${a.serialNumber}`, a.lastUser]
+                        .filter(Boolean).join(" · ")
                 }))
             }
 

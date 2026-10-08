@@ -1,0 +1,241 @@
+extends ../layouts/main
+
+include _mixins
+
+block content
+
+    .d-flex.justify-content-between.align-items-center.mb-4
+
+        h1.mb-0 Assets
+
+        div
+
+            if currentUser && currentUser.role === "admin"
+
+                a.btn.btn-outline-secondary.me-2(href="/crm/integrations/action1")
+
+                    i.bi.bi-arrow-repeat.me-2
+
+                    | Action1
+
+            a.btn.btn-primary(href=filters.company ? `/crm/assets/new?company=${filters.company}` : "/crm/assets/new")
+
+                i.bi.bi-plus-circle.me-2
+
+                | Neues Asset
+
+    // =====================================================
+    // Filter
+    // =====================================================
+
+    form.card.shadow-sm.mb-4(method="GET" action="/crm/assets")
+
+        .card-body
+
+            .row.g-2.align-items-end
+
+                .col-lg-3.col-md-6
+
+                    label.form-label.small.text-muted(for="search") Suche
+
+                    input.form-control(
+                        type="search"
+                        id="search"
+                        name="search"
+                        value=filters.search
+                        placeholder="Name, Seriennummer, IP, Benutzer …"
+                        maxlength="100"
+                    )
+
+                .col-lg-3.col-md-6
+
+                    label.form-label.small.text-muted(for="company") Firma
+
+                    select.form-select(id="company" name="company")
+
+                        option(value="") Alle Firmen
+
+                        each company in companies
+
+                            option(value=company._id selected=String(company._id) === filters.company)= company.companyName
+
+                .col-lg-2.col-md-4
+
+                    label.form-label.small.text-muted(for="type") Typ
+
+                    select.form-select(id="type" name="type")
+
+                        option(value="") Alle Typen
+
+                        each type in assetTypes
+
+                            option(value=type selected=type === filters.type)= labels.TYPE_LABELS[type]
+
+                .col-lg-2.col-md-4
+
+                    label.form-label.small.text-muted(for="status") Status
+
+                    select.form-select(id="status" name="status")
+
+                        option(value="") Alle
+
+                        each status in assetStatuses
+
+                            option(value=status selected=status === filters.status)= labels.STATUS_LABELS[status]
+
+                .col-lg-2.col-md-4
+
+                    label.form-label.small.text-muted(for="online") Action1
+
+                    select.form-select(id="online" name="online")
+
+                        option(value="") Alle
+
+                        option(value="online" selected=filters.online === "online") Online
+
+                        option(value="offline" selected=filters.online === "offline") Offline
+
+                .col-12.d-flex.flex-wrap.gap-3.align-items-center.mt-2
+
+                    .form-check
+
+                        input.form-check-input(
+                            type="checkbox"
+                            id="updates"
+                            name="updates"
+                            value="critical"
+                            checked=filters.updates === "critical"
+                        )
+
+                        label.form-check-label(for="updates") Nur mit fehlenden kritischen Updates
+
+                    .ms-auto
+
+                        a.btn.btn-outline-secondary.me-2(href="/crm/assets") Zurücksetzen
+
+                        button.btn.btn-primary(type="submit")
+
+                            i.bi.bi-funnel.me-2
+
+                            | Filtern
+
+    // =====================================================
+    // Liste
+    // =====================================================
+
+    if assets.length
+
+        p.text-muted.small.mb-2
+
+            | #{assets.length} #{assets.length === 1 ? "Asset" : "Assets"}
+
+        .card.shadow-sm
+
+            .card-body.p-0
+
+                .table-responsive
+
+                    table.table.table-hover.table-striped.align-middle.mb-0
+
+                        thead.table-dark
+
+                            tr
+                                th(style="width: 1%")
+                                th Asset
+                                th Firma
+                                th Typ
+                                th Betriebssystem
+                                th Benutzer
+                                th Status
+                                th Hinweise
+                                th Zuletzt gesehen
+
+                        tbody
+
+                            each asset in assets
+
+                                tr
+
+                                    td
+
+                                        +onlineDot(asset)
+
+                                    td
+
+                                        a.text-decoration-none(href=`/crm/assets/${asset._id}`)
+
+                                            strong= asset.name
+
+                                        br
+
+                                        small.text-muted
+
+                                            = asset.assetNumber
+
+                                            if asset.serialNumber
+
+                                                |  · SN #{asset.serialNumber}
+
+                                    td
+
+                                        if asset.company
+
+                                            a.text-decoration-none(href=`/crm/companies/${asset.company._id}`)= asset.company.companyName
+
+                                        else
+
+                                            | -
+
+                                    td.text-nowrap
+
+                                        +typeLabel(asset.type)
+
+                                    td
+
+                                        small= asset.operatingSystem || "-"
+
+                                    td
+
+                                        if asset.contact
+
+                                            | #{asset.contact.firstName} #{asset.contact.lastName}
+
+                                        else if asset.lastUser
+
+                                            small.text-muted= asset.lastUser
+
+                                        else
+
+                                            | -
+
+                                    td
+
+                                        +statusBadge(asset.status)
+
+                                    td.text-nowrap
+
+                                        +action1Flags(asset)
+
+                                    td.text-nowrap
+
+                                        if asset.action1 && asset.action1.lastSeen
+
+                                            small(title=labels.formatDateTime(asset.action1.lastSeen))= labels.timeAgo(asset.action1.lastSeen)
+
+                                        else
+
+                                            small.text-muted -
+
+    else
+
+        .alert.alert-info
+
+            i.bi.bi-info-circle.me-2
+
+            if filters.search || filters.company || filters.type || filters.status || filters.online || filters.updates
+
+                | Keine Assets gefunden, die zu den Filtern passen.
+
+            else
+
+                | Es sind noch keine Assets vorhanden. Legen Sie Geräte von Hand an oder verknüpfen Sie Ihre Kunden mit Action1.

@@ -1,0 +1,368 @@
+extends ../layouts/main
+
+block content
+
+    if running
+
+        //- Während ein Sync läuft, Seite alle 5 Sekunden neu laden
+        script.
+            setTimeout(function () { window.location.reload(); }, 5000);
+
+    .d-flex.justify-content-between.align-items-center.mb-4.flex-wrap.gap-2
+
+        div
+
+            h1.mb-0
+
+                i.bi.bi-arrow-repeat.me-2
+
+                | Action1
+
+            small.text-muted Geräte aus dem Action1 RMM als Assets ins CRM übernehmen
+
+        div
+
+            a.btn.btn-outline-secondary.me-2(href="/crm/assets")
+
+                i.bi.bi-pc-display.me-2
+
+                | Zu den Assets
+
+            if configured
+
+                form.d-inline(method="POST" action="/crm/integrations/action1/sync")
+
+                    button.btn.btn-primary(type="submit" disabled=running)
+
+                        if running
+
+                            span.spinner-border.spinner-border-sm.me-2
+
+                            | Synchronisiert …
+
+                        else
+
+                            i.bi.bi-play-fill.me-2
+
+                            | Jetzt synchronisieren
+
+    if flash
+
+        .alert(class=`alert-${flash.type}`)= flash.text
+
+    // =====================================================
+    // Nicht konfiguriert
+    // =====================================================
+
+    if !configured
+
+        .card.shadow-sm.mb-4
+
+            .card-body
+
+                h5
+
+                    i.bi.bi-gear.me-2
+
+                    | Einrichtung
+
+                ol.mb-3
+
+                    li
+                        | In Action1 unter
+                        strong  Configuration → API Credentials
+                        |  einen API-Schlüssel anlegen. Lesender Zugriff auf Organisationen und Endpoints genügt.
+
+                    li
+                        | In der
+                        code.mx-1 .env
+                        | des Backends eintragen:
+
+                pre.bg-light.p-3.rounded.border.small.mb-3
+                    | ACTION1_CLIENT_ID=api-key-…
+                    | ACTION1_CLIENT_SECRET=…
+                    |
+                    | # Adresse, unter der Sie sich bei Action1 anmelden
+                    | ACTION1_BASE_URL=https://app.action1.com
+                    |
+                    | # Optional: automatischer Sync (Minuten, mindestens 15)
+                    | ACTION1_SYNC_INTERVAL_MINUTES=60
+
+                p.mb-0.text-muted
+
+                    | Danach den Server neu starten.
+
+    else
+
+        // =================================================
+        // Übersicht
+        // =================================================
+
+        .row.g-3.mb-4
+
+            .col-md-3.col-6
+
+                .card.shadow-sm.h-100
+
+                    .card-body
+
+                        .text-muted.small Assets gesamt
+
+                        .fs-3.fw-semibold= summary.total
+
+            .col-md-3.col-6
+
+                .card.shadow-sm.h-100
+
+                    .card-body
+
+                        .text-muted.small Online / Offline
+
+                        .fs-3.fw-semibold
+
+                            span.text-success= summary.online
+
+                            span.text-muted.mx-1 /
+
+                            span.text-secondary= summary.offline
+
+            .col-md-3.col-6
+
+                a.text-decoration-none(href="/crm/assets?updates=critical")
+
+                    .card.shadow-sm.h-100
+
+                        .card-body
+
+                            .text-muted.small Kritische Updates fehlen
+
+                            .fs-3.fw-semibold(class=summary.criticalUpdates ? "text-danger" : "text-success")= summary.criticalUpdates
+
+            .col-md-3.col-6
+
+                .card.shadow-sm.h-100
+
+                    .card-body
+
+                        .text-muted.small Neustart erforderlich
+
+                        .fs-3.fw-semibold= summary.rebootRequired
+
+        p.small.text-muted
+
+            | API:
+            code= baseUrl
+            if syncInterval
+                |  · Automatischer Sync alle #{Math.max(syncInterval, 15)} Minuten
+            else
+                |  · Kein automatischer Sync (ACTION1_SYNC_INTERVAL_MINUTES)
+
+        // =================================================
+        // Zuordnung
+        // =================================================
+
+        .card.shadow-sm.mb-4
+
+            .card-header
+
+                h5.mb-0
+
+                    i.bi.bi-diagram-3.me-2
+
+                    | Organisationen zuordnen
+
+            .card-body
+
+                if running
+
+                    .alert.alert-info.mb-0
+
+                        span.spinner-border.spinner-border-sm.me-2
+
+                        | Die Zuordnung kann nach Abschluss der Synchronisation bearbeitet werden.
+
+                else if apiError
+
+                    .alert.alert-danger.mb-0
+
+                        i.bi.bi-exclamation-triangle.me-2
+
+                        = apiError
+
+                else if !organizations.length
+
+                    .alert.alert-info.mb-0
+
+                        | Action1 hat keine Organisationen geliefert. Prüfen Sie die Berechtigungen des API-Schlüssels.
+
+                else
+
+                    p.text-muted
+
+                        | Ordnen Sie jede Action1-Organisation der passenden Firma zu. Nur zugeordnete
+                        | Organisationen werden synchronisiert.
+
+                    form(method="POST" action="/crm/integrations/action1/mapping")
+
+                        .table-responsive
+
+                            table.table.align-middle
+
+                                thead
+
+                                    tr
+
+                                        th Action1-Organisation
+
+                                        th(style="width: 45%") CRM-Firma
+
+                                tbody
+
+                                    each org in organizations
+
+                                        - const current = companyByOrg[org.id]
+
+                                        tr
+
+                                            td
+
+                                                strong= org.name
+
+                                                if org.description
+
+                                                    br
+
+                                                    small.text-muted= org.description
+
+                                                input(type="hidden" name=`orgName[o_${org.id}]` value=org.name)
+
+                                            td
+
+                                                select.form-select(name=`mapping[o_${org.id}]`)
+
+                                                    option(value="") – nicht synchronisieren –
+
+                                                    each company in companies
+
+                                                        option(
+                                                            value=company._id
+                                                            selected=current && String(current._id) === String(company._id)
+                                                        )= company.companyName
+
+                        button.btn.btn-primary(type="submit")
+
+                            i.bi.bi-check-lg.me-2
+
+                            | Zuordnung speichern
+
+                if orphaned.length
+
+                    .alert.alert-warning.mt-3.mb-0
+
+                        strong Verknüpfungen ohne Organisation in Action1:
+
+                        ul.mb-0
+
+                            each company in orphaned
+
+                                li #{company.companyName} (#{company.action1.organizationName || company.action1.organizationId})
+
+        // =================================================
+        // Protokoll
+        // =================================================
+
+        .card.shadow-sm.mb-5
+
+            .card-header
+
+                h5.mb-0
+
+                    i.bi.bi-clock-history.me-2
+
+                    | Letzte Synchronisationen
+
+            .card-body.p-0
+
+                if runs.length
+
+                    .table-responsive
+
+                        table.table.table-sm.align-middle.mb-0
+
+                            thead.table-light
+
+                                tr
+
+                                    th Start
+
+                                    th Auslöser
+
+                                    th Ergebnis
+
+                                    th.text-end Geräte
+
+                                    th.text-end Neu
+
+                                    th.text-end Aktualisiert
+
+                                    th.text-end Nicht mehr da
+
+                            tbody
+
+                                each run in runs
+
+                                    tr
+
+                                        td.text-nowrap= labels.formatDateTime(run.startedAt)
+
+                                        td
+
+                                            if run.trigger === "schedule"
+
+                                                | Automatisch
+
+                                            else if run.startedBy
+
+                                                | #{run.startedBy.firstName} #{run.startedBy.lastName}
+
+                                            else
+
+                                                | Manuell
+
+                                        td
+
+                                            if !run.finishedAt
+
+                                                span.badge.bg-info.text-dark Läuft
+
+                                            else if run.ok
+
+                                                span.badge.bg-success OK
+
+                                            else
+
+                                                span.badge.bg-danger Fehler
+
+                                            each failure in (run.failures || [])
+
+                                                .small.text-danger.mt-1
+
+                                                    if failure.company
+
+                                                        strong #{failure.company}:
+
+                                                    = failure.message
+
+                                        td.text-end= run.stats ? run.stats.endpoints : 0
+
+                                        td.text-end= run.stats ? run.stats.created : 0
+
+                                        td.text-end= run.stats ? run.stats.updated + run.stats.linked : 0
+
+                                        td.text-end= run.stats ? run.stats.missing : 0
+
+                else
+
+                    .p-4.text-center.text-muted
+
+                        | Noch keine Synchronisation durchgeführt.

@@ -1,0 +1,38 @@
+//- Gemeinsame Bausteine für Asset-Ansichten
+
+mixin typeLabel(type)
+    i.bi.me-1(class=labels.TYPE_ICONS[type] || "bi-box")
+    = labels.TYPE_LABELS[type] || type
+
+mixin statusBadge(status)
+    span.badge(class=labels.STATUS_BADGES[status] || "bg-light text-dark")
+        = labels.STATUS_LABELS[status] || status
+
+//- Online/Offline aus Action1
+mixin onlineDot(asset)
+    if asset.action1 && asset.action1.online === true
+        span.text-success(title=`Online (${asset.action1.status || ""})`)
+            i.bi.bi-circle-fill.small
+    else if asset.action1 && asset.action1.online === false
+        span.text-secondary(title=`Offline (${asset.action1.status || ""})`)
+            i.bi.bi-circle-fill.small
+    else
+        span.text-muted(title="Kein Action1-Status")
+            i.bi.bi-circle.small
+
+//- Hinweise aus Action1: fehlende Updates, Neustart, nicht mehr vorhanden
+mixin action1Flags(asset)
+    if asset.action1
+        if asset.action1.missing
+            span.badge.bg-dark.me-1(title="Beim letzten Sync nicht mehr in Action1") Nicht in Action1
+        if asset.action1.missingCriticalUpdates > 0
+            span.badge.bg-danger.me-1(title="Fehlende kritische Updates")
+                i.bi.bi-shield-exclamation.me-1
+                = asset.action1.missingCriticalUpdates
+        if asset.action1.missingOtherUpdates > 0
+            span.badge.bg-warning.text-dark.me-1(title="Weitere fehlende Updates")
+                i.bi.bi-arrow-repeat.me-1
+                = asset.action1.missingOtherUpdates
+        if asset.action1.rebootRequired === true
+            span.badge.bg-info.text-dark.me-1(title="Neustart erforderlich")
+                i.bi.bi-bootstrap-reboot

@@ -1,6 +1,8 @@
 const companyService = require("../../services/company.service");
 const contactService = require("../../services/contact.service");
 const ticketService = require("../../services/ticket.service");
+const assetService = require("../../services/asset.service");
+const assetLabels = require("../../utils/assetLabels");
 
 // Alle Firmen anzeigen
 exports.index = async (req, res, next) => {
@@ -70,16 +72,20 @@ exports.show = async (req, res, next) => {
 
         const contacts = await contactService.getByCompany(company._id);
 
-        const recentTickets = await ticketService.getRecentByCompany(
-            company._id,
-            5
-        );
+        const [recentTickets, assets, assetSummary] = await Promise.all([
+            ticketService.getRecentByCompany(company._id, 5),
+            assetService.getByCompany(company._id),
+            assetService.summary(company._id)
+        ]);
 
         res.render("companies/show", {
             title: company.companyName,
             company,
             contacts,
-            recentTickets
+            recentTickets,
+            assets,
+            assetSummary,
+            labels: assetLabels
         });
 
     } catch (err) {

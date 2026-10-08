@@ -39,6 +39,18 @@ router.use("/users", require("./user.routes"));
 router.use("/tickets", require("./ticket.routes"));
 
 // ----------------------------------------------------
+// Assets
+// ----------------------------------------------------
+
+router.use("/assets", require("./asset.routes"));
+
+// ----------------------------------------------------
+// Integrationen (Action1)
+// ----------------------------------------------------
+
+router.use("/integrations", require("./integration.routes"));
+
+// ----------------------------------------------------
 // Globale Suche
 // ----------------------------------------------------
 

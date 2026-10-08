@@ -82,6 +82,24 @@ const companySchema = new mongoose.Schema(
             trim: true
         },
 
+        // Verknüpfung mit einer Organisation in Action1 (RMM).
+        // Wird auf der Seite "Action1" (nur Admins) gepflegt.
+        action1: {
+            organizationId: {
+                type: String,
+                trim: true,
+                maxlength: 100,
+                default: null
+            },
+
+            organizationName: {
+                type: String,
+                trim: true,
+                maxlength: 255,
+                default: null
+            }
+        },
+
         isDeleted: {
             type: Boolean,
             default: false

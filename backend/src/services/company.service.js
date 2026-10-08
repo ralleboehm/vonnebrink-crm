@@ -122,3 +122,65 @@ exports.softDelete = async (id) => {
     );
 
 };
+
+// ----------------------------------------------------
+// Action1-Verknüpfung
+// ----------------------------------------------------
+
+// Firmen mit Action1-Organisation
+exports.getAction1Mapped = async () => {
+
+    return await Company.find({
+
+        isDeleted: false,
+        "action1.organizationId": { $type: "string", $ne: "" }
+
+    }).sort({
+
+        companyName: 1
+
+    });
+
+};
+
+/**
+ * Speichert die Zuordnung Action1-Organisation -> Firma.
+ *
+ * @param {Array<{organizationId: string, organizationName: string, companyId: string|null}>} entries
+ */
+exports.saveAction1Mapping = async (entries) => {
+
+    const empty = { organizationId: null, organizationName: null };
+
+    // Erst alle betroffenen Organisationen lösen ...
+    await Company.updateMany(
+
+        { "action1.organizationId": { $in: entries.map((e) => e.organizationId) } },
+
+        { $set: { action1: empty } }
+
+    );
+
+    // ... dann neu zuordnen
+    for (const entry of entries) {
+
+        if (!entry.companyId) continue;
+
+        await Company.updateOne(
+
+            { _id: entry.companyId, isDeleted: false },
+
+            {
+                $set: {
+                    action1: {
+                        organizationId: entry.organizationId,
+                        organizationName: entry.organizationName || null
+                    }
+                }
+            }
+
+        );
+
+    }
+
+};

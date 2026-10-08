@@ -1,0 +1,297 @@
+extends ../layouts/main
+
+include _mixins
+
+mixin row(label, value)
+    tr
+        th.text-muted.fw-normal(style="width: 40%")= label
+        td
+            if value !== undefined && value !== null && value !== ""
+                = value
+            else
+                span.text-muted -
+
+block content
+
+    - const a1 = asset.action1
+    - const warranty = labels.warrantyState(asset.warrantyUntil)
+
+    .d-flex.justify-content-between.align-items-start.mb-4.flex-wrap.gap-2
+
+        div
+
+            h1.mb-1
+
+                +onlineDot(asset)
+
+                span.ms-2= asset.name
+
+            .text-muted
+
+                | #{asset.assetNumber} ·
+
+                +typeLabel(asset.type)
+
+                |  ·
+
+                if asset.company
+
+                    a.text-decoration-none(href=`/crm/companies/${asset.company._id}`)= asset.company.companyName
+
+            .mt-2
+
+                +statusBadge(asset.status)
+
+                if asset.source === "action1"
+
+                    span.badge.bg-light.text-dark.border.ms-1
+
+                        i.bi.bi-arrow-repeat.me-1
+
+                        | Action1
+
+                else
+
+                    span.badge.bg-light.text-dark.border.ms-1 Manuell
+
+                span.ms-2
+
+                    +action1Flags(asset)
+
+        div
+
+            a.btn.btn-outline-primary.me-2(
+                href=`/crm/tickets/new?company=${asset.company ? asset.company._id : ""}`
+            )
+
+                i.bi.bi-ticket-detailed.me-2
+
+                | Ticket erstellen
+
+            a.btn.btn-outline-secondary.me-2(href=`/crm/assets/${asset._id}/edit`)
+
+                i.bi.bi-pencil.me-2
+
+                | Bearbeiten
+
+            a.btn.btn-secondary(href="/crm/assets")
+
+                i.bi.bi-arrow-left.me-2
+
+                | Zurück
+
+    if a1 && a1.missing
+
+        .alert.alert-warning
+
+            i.bi.bi-exclamation-triangle.me-2
+
+            | Dieses Gerät war beim letzten Sync nicht mehr in Action1 vorhanden (Agent deinstalliert oder Gerät entfernt).
+            | Wenn es ausgemustert ist, setzen Sie den Status auf „Ausgemustert“.
+
+    .row.g-4
+
+        // =================================================
+        // Linke Spalte
+        // =================================================
+
+        .col-lg-6
+
+            .card.shadow-sm.mb-4
+
+                .card-header
+
+                    h5.mb-0
+
+                        i.bi.bi-cpu.me-2
+
+                        | Hardware
+
+                .card-body.p-0
+
+                    table.table.mb-0
+
+                        tbody
+
+                            +row("Hersteller", asset.manufacturer)
+                            +row("Modell", asset.model)
+                            +row("Seriennummer", asset.serialNumber)
+                            +row("Inventarnummer", asset.assetTag)
+                            +row("Prozessor", asset.cpu)
+                            +row("Arbeitsspeicher", asset.ram)
+                            +row("Datenträger", asset.disk)
+
+            .card.shadow-sm.mb-4
+
+                .card-header
+
+                    h5.mb-0
+
+                        i.bi.bi-hdd-network.me-2
+
+                        | System & Netzwerk
+
+                .card-body.p-0
+
+                    table.table.mb-0
+
+                        tbody
+
+                            +row("Betriebssystem", asset.operatingSystem)
+                            +row("IP-Adresse", asset.ipAddress)
+                            +row("Externe IP", asset.externalIp)
+                            +row("MAC-Adresse", asset.macAddress)
+                            +row("Letzter Benutzer", asset.lastUser)
+
+        // =================================================
+        // Rechte Spalte
+        // =================================================
+
+        .col-lg-6
+
+            if a1
+
+                .card.shadow-sm.mb-4
+
+                    .card-header
+
+                        h5.mb-0
+
+                            i.bi.bi-arrow-repeat.me-2
+
+                            | Action1
+
+                    .card-body.p-0
+
+                        table.table.mb-0
+
+                            tbody
+
+                                tr
+                                    th.text-muted.fw-normal(style="width: 40%") Verbindung
+                                    td
+                                        if a1.online === true
+                                            span.badge.bg-success Online
+                                        else if a1.online === false
+                                            span.badge.bg-secondary Offline
+                                        else
+                                            span.text-muted= a1.status || "-"
+
+                                tr
+                                    th.text-muted.fw-normal Zuletzt gesehen
+                                    td
+                                        if a1.lastSeen
+                                            | #{labels.formatDateTime(a1.lastSeen)}
+                                            small.text-muted.ms-2 (#{labels.timeAgo(a1.lastSeen)})
+                                        else
+                                            span.text-muted -
+
+                                tr
+                                    th.text-muted.fw-normal Kritische Updates
+                                    td
+                                        if a1.missingCriticalUpdates > 0
+                                            span.badge.bg-danger #{a1.missingCriticalUpdates} fehlen
+                                        else if a1.missingCriticalUpdates === 0
+                                            span.badge.bg-success Aktuell
+                                        else
+                                            span.text-muted -
+
+                                tr
+                                    th.text-muted.fw-normal Weitere Updates
+                                    td
+                                        if a1.missingOtherUpdates > 0
+                                            span.badge.bg-warning.text-dark #{a1.missingOtherUpdates} fehlen
+                                        else if a1.missingOtherUpdates === 0
+                                            span.badge.bg-success Aktuell
+                                        else
+                                            span.text-muted -
+
+                                tr
+                                    th.text-muted.fw-normal Neustart erforderlich
+                                    td
+                                        if a1.rebootRequired === true
+                                            span.badge.bg-info.text-dark Ja
+                                        else if a1.rebootRequired === false
+                                            | Nein
+                                        else
+                                            span.text-muted -
+
+                                +row("Letzter Start", a1.lastBootTime ? labels.formatDateTime(a1.lastBootTime) : null)
+                                +row("Agent-Version", a1.agentVersion)
+                                +row("Plattform", a1.platform)
+                                +row("Kommentar in Action1", a1.comment)
+                                +row("Letzter Sync", a1.lastSyncedAt ? labels.formatDateTime(a1.lastSyncedAt) : null)
+
+            .card.shadow-sm.mb-4
+
+                .card-header
+
+                    h5.mb-0
+
+                        i.bi.bi-calendar-check.me-2
+
+                        | Zuordnung & Lebenszyklus
+
+                .card-body.p-0
+
+                    table.table.mb-0
+
+                        tbody
+
+                            tr
+                                th.text-muted.fw-normal(style="width: 40%") Ansprechpartner
+                                td
+                                    if asset.contact
+                                        a.text-decoration-none(href=`/crm/contacts/${asset.contact._id}`)
+                                            | #{asset.contact.firstName} #{asset.contact.lastName}
+                                    else
+                                        span.text-muted -
+
+                            +row("Kaufdatum", asset.purchaseDate ? labels.formatDate(asset.purchaseDate) : null)
+
+                            tr
+                                th.text-muted.fw-normal Garantie bis
+                                td
+                                    if asset.warrantyUntil
+                                        | #{labels.formatDate(asset.warrantyUntil)}
+                                        if warranty === "expired"
+                                            span.badge.bg-danger.ms-2 Abgelaufen
+                                        else if warranty === "soon"
+                                            span.badge.bg-warning.text-dark.ms-2 Läuft bald ab
+                                    else
+                                        span.text-muted -
+
+                            +row("Angelegt", labels.formatDateTime(asset.createdAt))
+                            +row("Geändert", labels.formatDateTime(asset.updatedAt))
+
+            .card.shadow-sm.mb-4
+
+                .card-header
+
+                    h5.mb-0
+
+                        i.bi.bi-journal-text.me-2
+
+                        | Notizen
+
+                .card-body
+
+                    if asset.notes
+
+                        p.mb-0(style="white-space: pre-wrap;")= asset.notes
+
+                    else
+
+                        span.text-muted Keine Notizen.
+
+    form.mt-2.mb-5(
+        action=`/crm/assets/${asset._id}/delete`
+        method="POST"
+        onsubmit="return confirm('Asset wirklich löschen? Ein Action1-Gerät wird danach auch beim Sync nicht wieder angelegt.');"
+    )
+
+        button.btn.btn-outline-danger.btn-sm(type="submit")
+
+            i.bi.bi-trash.me-2
+
+            | Asset löschen

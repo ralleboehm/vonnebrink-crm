@@ -271,3 +271,34 @@ test("Controller suggest: liefert JSON ohne Rohdaten und ohne Caching", async ()
         Module._load = original;
     }
 });
+
+// ----------------------------------------------------
+// Assets
+// ----------------------------------------------------
+
+const assets = [
+    { _id: "a1", assetNumber: "AST-000001", name: "PC-EMPFANG", serialNumber: "5CG1234XYZ", lastUser: "anna", company: "c1", isDeleted: false },
+    { _id: "a2", assetNumber: "AST-000002", name: "SRV-DC01", serialNumber: "VMW-77", company: "c2", isDeleted: false },
+    { _id: "a3", assetNumber: "AST-000003", name: "PC-ALT", serialNumber: "5CG0000", company: "c1", isDeleted: true }
+];
+
+const modelsWithAssets = {
+    ...models,
+    Asset: fakeModel(assets, { company: (r) => companies.find((c) => c._id === r.company) })
+};
+
+test("Assets: Suche nach Seriennummer, Gerätename und Firma", async () => {
+    let r = await search.searchAll("5cg", {}, modelsWithAssets);
+    assert.deepEqual(ids(r.assets), ["a1"]);   // gelöschtes Asset fehlt
+
+    r = await search.searchAll("srv-dc01", {}, modelsWithAssets);
+    assert.deepEqual(ids(r.assets), ["a2"]);
+
+    r = await search.searchAll("heilbronn", {}, modelsWithAssets);
+    assert.deepEqual(ids(r.assets), ["a1"]);   // über die Firma
+});
+
+test("Assets: findByNumber springt zum Asset", async () => {
+    assert.equal(await search.findByNumber("AST-000002", modelsWithAssets), "/crm/assets/a2");
+    assert.equal(await search.findByNumber("AST-000003", modelsWithAssets), null);
+});

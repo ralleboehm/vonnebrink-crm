@@ -84,6 +84,11 @@ html(lang="de")
                                 i.bi.bi-ticket-detailed.me-1
                                 | Tickets
 
+                        li.nav-item
+                            a.nav-link(href="/crm/assets")
+                                i.bi.bi-pc-display.me-1
+                                | Assets
+
                         if session && session.user && session.user.role === "admin"
 
                             li.nav-item
@@ -101,6 +106,14 @@ html(lang="de")
                                     i.bi.bi-upload.me-1
 
                                     | Import & Export
+
+                            li.nav-item
+
+                                a.nav-link(href="/crm/integrations/action1")
+
+                                    i.bi.bi-arrow-repeat.me-1
+
+                                    | Action1
 
                     if session && session.user
 
@@ -122,7 +135,7 @@ html(lang="de")
                                     placeholder="Suchen ( / )"
                                     autocomplete="off"
                                     maxlength="100"
-                                    aria-label="Suche in Firmen, Kontakten und Tickets"
+                                    aria-label="Suche in Firmen, Kontakten, Tickets und Assets"
                                     style="min-width: 240px;"
                                 )
 

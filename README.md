@@ -15,6 +15,8 @@ A self-hosted CRM, Helpdesk and Customer Portal designed for Managed Service Pro
 - Dashboard
 - Activity Logging
 - CSV Import & Export (Companies & Contacts)
+- Asset Management (Geräte je Kunde)
+- Action1 RMM Sync (Geräte, Online-Status, fehlende Updates)
 
 ### Customer Portal
 
@@ -72,12 +74,10 @@ Implemented features:
 
 - Internal ticket notes
 - File attachments
-- Action1 integration
 - Nextcloud integration
 - Microsoft 365 integration
 - Google Workspace integration
 - Reporting
-- Asset Management
 
 ---
 
@@ -101,8 +101,11 @@ The import/export logic has tests that need no database and no extra packages:
 
 ```bash
 cd backend
-node --test test/import.test.js test/import.flow.test.js
+npm test
 ```
+
+`test/views.test.js` braucht die installierten Pakete (`npm install`); alle
+anderen Tests laufen auch ohne.
 
 ---
 
@@ -152,3 +155,33 @@ Ergebnisseite unter `/crm/search`).
 - Eine exakte Nummer (`CUS-000012`, `CON-…`, `TIC-…`) öffnet direkt den Datensatz.
 - Gelöschte Datensätze werden nie angezeigt.
 - Tests: `node --test test/search.test.js`
+
+## Assets & Action1
+
+Unter **Assets** (`/crm/assets`) werden die Geräte der Kunden gepflegt: von Hand
+oder automatisch aus Action1. Jede Firma zeigt ihre Geräte auf der Firmenseite;
+die globale Suche findet Assets auch über Seriennummer, IP und Benutzer, und
+`AST-000001` öffnet das Asset direkt.
+
+### Action1 einrichten
+
+1. In Action1 unter *Configuration → API Credentials* einen API-Schlüssel anlegen.
+2. In der `.env` `ACTION1_CLIENT_ID`, `ACTION1_CLIENT_SECRET` und `ACTION1_BASE_URL`
+   setzen (siehe `.env.example`) und den Server neu starten.
+3. Als Admin unter **Action1** (`/crm/integrations/action1`) jede Action1-Organisation
+   der passenden Firma zuordnen und **Jetzt synchronisieren** klicken.
+4. Optional `ACTION1_SYNC_INTERVAL_MINUTES=60` für einen automatischen Sync.
+
+### Was der Sync macht
+
+- Übernimmt je Gerät: Name, Betriebssystem, Hersteller, Seriennummer, CPU, RAM,
+  Datenträger, IP/MAC, letzter Benutzer, Online-Status, zuletzt gesehen,
+  fehlende kritische/sonstige Updates, Agent-Version.
+- Typ, Status, Ansprechpartner, Kaufdatum, Garantie, Inventarnummer und Notizen
+  pflegen Sie im CRM; der Sync überschreibt sie nie.
+- Ein von Hand angelegtes Asset mit gleicher Seriennummer wird mit dem
+  Action1-Gerät verknüpft statt doppelt angelegt.
+- Geräte, die aus Action1 verschwinden, werden markiert („Nicht in Action1“),
+  nicht gelöscht.
+- Im CRM gelöschte Assets werden vom Sync nicht wieder angelegt.
+- Hält das Action1-Limit (< 30 Anfragen pro Minute) ein.

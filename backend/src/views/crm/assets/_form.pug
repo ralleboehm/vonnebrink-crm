@@ -1,0 +1,245 @@
+//- Formular für Neu & Bearbeiten
+//- Erwartet: asset, companies, contacts, labels, assetTypes, assetStatuses, action1Fields, error
+
+- const idOf = (value) => (value ? String(value._id || value) : "")
+- const fromAction1 = asset.source === "action1"
+- const locked = (field) => fromAction1 && action1Fields.includes(field)
+- const selectedCompany = idOf(asset.company)
+- const selectedContact = idOf(asset.contact)
+
+mixin textField(field, label, opts)
+    - opts = opts || {}
+    div(class=opts.col || "col-md-6")
+        label.form-label(for=field)
+            = label
+            if locked(field)
+                i.bi.bi-lock.ms-1.text-muted(title="Wird von Action1 geliefert")
+        input.form-control(
+            type=opts.type || "text"
+            id=field
+            name=locked(field) ? null : field
+            value=asset[field] || ""
+            maxlength=opts.max || 255
+            placeholder=opts.placeholder
+            required=opts.required && !locked(field)
+            readonly=locked(field)
+            disabled=locked(field)
+        )
+
+if error
+
+    .alert.alert-danger
+
+        i.bi.bi-exclamation-triangle.me-2
+
+        = error
+
+if fromAction1
+
+    .alert.alert-secondary.small
+
+        i.bi.bi-info-circle.me-2
+
+        | Dieses Gerät wird aus Action1 synchronisiert. Felder mit
+        i.bi.bi-lock.mx-1
+        | werden beim nächsten Sync aus Action1 übernommen und sind hier gesperrt.
+
+.card.shadow-sm.mb-4
+
+    .card-header
+
+        h5.mb-0
+
+            i.bi.bi-info-square.me-2
+
+            | Allgemein
+
+    .card-body
+
+        .row.g-3
+
+            .col-md-6
+
+                label.form-label(for="company") Firma
+
+                if fromAction1
+
+                    input.form-control(
+                        type="text"
+                        id="company"
+                        data-id=selectedCompany
+                        value=asset.company && asset.company.companyName
+                        disabled
+                    )
+
+                    .form-text Die Firma ergibt sich aus der Action1-Organisation.
+
+                else
+
+                    select.form-select(id="company" name="company" required)
+
+                        option(value="") Bitte auswählen
+
+                        each company in companies
+
+                            option(value=company._id selected=String(company._id) === selectedCompany)= company.companyName
+
+            .col-md-6
+
+                label.form-label(for="contact") Ansprechpartner / Hauptnutzer
+
+                select.form-select(id="contact" name="contact")
+
+                    option(value="") Keiner
+
+                    each contact in contacts
+
+                        - const contactCompany = idOf(contact.company)
+
+                        option(
+                            value=contact._id
+                            data-company=contactCompany
+                            selected=String(contact._id) === selectedContact
+                        )
+
+                            | #{contact.firstName} #{contact.lastName}#{contact.company && contact.company.companyName ? " – " + contact.company.companyName : ""}
+
+            +textField("name", "Gerätename", { required: true, placeholder: "z. B. PC-EMPFANG-01" })
+
+            .col-md-3
+
+                label.form-label(for="type") Typ
+
+                select.form-select(id="type" name="type")
+
+                    each type in assetTypes
+
+                        option(value=type selected=type === asset.type)= labels.TYPE_LABELS[type]
+
+            .col-md-3
+
+                label.form-label(for="status") Status
+
+                select.form-select(id="status" name="status")
+
+                    each status in assetStatuses
+
+                        option(value=status selected=status === asset.status)= labels.STATUS_LABELS[status]
+
+.card.shadow-sm.mb-4
+
+    .card-header
+
+        h5.mb-0
+
+            i.bi.bi-cpu.me-2
+
+            | Hardware
+
+    .card-body
+
+        .row.g-3
+
+            +textField("manufacturer", "Hersteller", { col: "col-md-4", max: 100 })
+
+            +textField("model", "Modell", { col: "col-md-4", max: 100 })
+
+            +textField("serialNumber", "Seriennummer", { col: "col-md-4", max: 100 })
+
+            +textField("cpu", "Prozessor", { col: "col-md-4" })
+
+            +textField("ram", "Arbeitsspeicher", { col: "col-md-4", max: 100 })
+
+            +textField("disk", "Datenträger", { col: "col-md-4" })
+
+            +textField("assetTag", "Inventarnummer", { col: "col-md-4", max: 100, placeholder: "Eigene Kennzeichnung" })
+
+.card.shadow-sm.mb-4
+
+    .card-header
+
+        h5.mb-0
+
+            i.bi.bi-hdd-network.me-2
+
+            | System & Netzwerk
+
+    .card-body
+
+        .row.g-3
+
+            +textField("operatingSystem", "Betriebssystem", { col: "col-md-6" })
+
+            +textField("lastUser", "Letzter angemeldeter Benutzer", { col: "col-md-6" })
+
+            +textField("ipAddress", "IP-Adresse", { col: "col-md-6" })
+
+            +textField("macAddress", "MAC-Adresse", { col: "col-md-6" })
+
+.card.shadow-sm.mb-4
+
+    .card-header
+
+        h5.mb-0
+
+            i.bi.bi-calendar-check.me-2
+
+            | Lebenszyklus & Notizen
+
+    .card-body
+
+        .row.g-3
+
+            .col-md-3
+
+                label.form-label(for="purchaseDate") Kaufdatum
+
+                input.form-control(
+                    type="date"
+                    id="purchaseDate"
+                    name="purchaseDate"
+                    value=labels.dateInputValue(asset.purchaseDate)
+                )
+
+            .col-md-3
+
+                label.form-label(for="warrantyUntil") Garantie bis
+
+                input.form-control(
+                    type="date"
+                    id="warrantyUntil"
+                    name="warrantyUntil"
+                    value=labels.dateInputValue(asset.warrantyUntil)
+                )
+
+            .col-12
+
+                label.form-label(for="notes") Notizen
+
+                textarea.form-control(
+                    id="notes"
+                    name="notes"
+                    rows="5"
+                    maxlength="10000"
+                )= asset.notes || ""
+
+//- Nur Ansprechpartner der gewählten Firma anzeigen
+script.
+    (function () {
+        var company = document.getElementById("company");
+        var contact = document.getElementById("contact");
+        if (!company || !contact) return;
+        var isSelect = company.tagName === "SELECT";
+        function filter() {
+            var selected = isSelect ? company.value : company.dataset.id;
+            Array.prototype.forEach.call(contact.options, function (option) {
+                if (!option.value) return;
+                var match = !selected || option.dataset.company === selected;
+                option.hidden = !match;
+                option.disabled = !match;
+                if (!match && option.selected) contact.value = "";
+            });
+        }
+        if (isSelect) company.addEventListener("change", filter);
+        filter();
+    })();

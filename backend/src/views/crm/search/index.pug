@@ -46,7 +46,7 @@ block content
                 type="search"
                 name="q"
                 value=searchQuery
-                placeholder="Firma, Name, E-Mail, Ort, Ticketnummer ..."
+                placeholder="Firma, Name, E-Mail, Ort, Ticketnummer, Seriennummer ..."
                 minlength="2"
                 maxlength="100"
                 autofocus
@@ -59,13 +59,13 @@ block content
     else if result.tooShort
         .alert.alert-warning Bitte mindestens 2 Zeichen eingeben.
 
-    else if result.companies.total + result.contacts.total + result.tickets.total === 0
+    else if result.companies.total + result.contacts.total + result.tickets.total + result.assets.total === 0
         .alert.alert-info Keine Treffer für „#{searchQuery}".
 
     else
 
         p.text-muted
-            | #{result.companies.total} Firmen · #{result.contacts.total} Kontakte · #{result.tickets.total} Tickets
+            | #{result.companies.total} Firmen · #{result.contacts.total} Kontakte · #{result.tickets.total} Tickets · #{result.assets.total} Assets
 
         //- ---------------- Firmen ----------------
         if result.companies.total
@@ -186,3 +186,44 @@ block content
                                         +statusBadge(ticket.status)
 
                 +more(result.tickets)
+
+        //- ---------------- Assets ----------------
+        if result.assets.total
+
+            .card.shadow-sm.mb-4
+                .card-header.fw-bold
+                    i.bi.bi-pc-display.me-2
+                    | Assets (#{result.assets.total})
+
+                .table-responsive
+                    table.table.table-hover.mb-0
+                        thead
+                            tr
+                                th Nr.
+                                th Gerät
+                                th Firma
+                                th Seriennummer
+                                th Betriebssystem
+                                th Benutzer
+                        tbody
+                            each asset in result.assets.items
+                                tr
+                                    td
+                                        +marked(asset.assetNumber, result.tokens)
+                                    td
+                                        a.fw-bold.text-decoration-none(href=`/crm/assets/${asset._id}`)
+                                            +marked(asset.name, result.tokens)
+                                    td
+                                        if asset.company
+                                            a.text-decoration-none(href=`/crm/companies/${asset.company._id}`)
+                                                = asset.company.companyName
+                                        else
+                                            | -
+                                    td
+                                        +marked(asset.serialNumber, result.tokens)
+                                    td
+                                        +marked(asset.operatingSystem, result.tokens)
+                                    td
+                                        +marked(asset.lastUser, result.tokens)
+
+                +more(result.assets)
