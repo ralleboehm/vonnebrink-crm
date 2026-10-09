@@ -80,6 +80,9 @@ function confirmReset() {
         console.log(" • Anhänge");
         console.log(" • Aktivitäten");
         console.log(" • Assets");
+        console.log(" • Kampagnen");
+        console.log(" • Verkaufschancen");
+        console.log(" • Kundenumfragen (NPS)");
         console.log(" • Benachrichtigungen");
         console.log(" • Action1-Syncprotokolle");
         console.log(" • Counter");
