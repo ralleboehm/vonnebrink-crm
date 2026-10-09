@@ -91,6 +91,9 @@ app.use(viewData);
 
 app.use("/health", require("./routes/health.routes"));
 
+// Links aus E-Mails: Abmelden, Double-Opt-In bestätigen (ohne Anmeldung)
+app.use("/email", require("./routes/public/email.routes"));
+
 // ----------------------------------------------------
 // CRM schützen
 // ----------------------------------------------------

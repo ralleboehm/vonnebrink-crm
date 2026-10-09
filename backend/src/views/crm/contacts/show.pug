@@ -291,6 +291,27 @@ block content
 
                                 | Nein – #{marketing.reason}
 
+            if marketing.unsubscribeUrl && consent.status === "granted"
+
+                p.small.mb-2
+
+                    span.text-muted Persönlicher Abmeldelink (für Serienmails):
+
+                    br
+
+                    code.user-select-all= marketing.unsubscribeUrl
+
+            if marketing.doiPending
+
+                p.small.text-muted.mb-2
+
+                    i.bi.bi-hourglass-split.me-1
+
+                    | Bestätigungs-E-Mail verschickt am #{format.formatDateTime(marketing.doiPending.requestedAt)}
+                    if marketing.doiPending.requestedBy
+                        |  von #{marketing.doiPending.requestedBy}
+                    |  – noch nicht bestätigt.
+
             if can("marketing.manage")
 
                 if consent.status === "granted"
@@ -307,27 +328,51 @@ block content
 
                             | Widerrufen
 
-                else if marketing.staffMayGrant
-
-                    form.d-flex.gap-2.align-items-start.mb-3(method="POST" action=`/crm/contacts/${contact._id}/marketing`)
-
-                        input(type="hidden" name="consent" value="granted")
-
-                        input.form-control.form-control-sm(type="text" name="note" maxlength="500" required minlength="3" placeholder="Nachweis, z. B. schriftlich am 09.10.2026")
-
-                        button.btn.btn-sm.btn-outline-success.text-nowrap(type="submit")
-
-                            i.bi.bi-envelope-check.me-1
-
-                            | Einwilligung erfassen
-
                 else
 
-                    p.small.text-muted
+                    if marketing.staffMayGrant
 
-                        i.bi.bi-lock.me-1
+                        form.row.g-2.align-items-start.mb-2(method="POST" action=`/crm/contacts/${contact._id}/marketing`)
 
-                        | Der Kontakt hat sich selbst im Kundenportal abgemeldet. Nur er selbst kann sich dort wieder anmelden.
+                            input(type="hidden" name="consent" value="granted")
+
+                            .col-md-4
+
+                                select.form-select.form-select-sm(name="source" aria-label="Art der Einwilligung")
+
+                                    option(value="crm") Einwilligung mit Nachweis
+
+                                    option(value="customer" disabled=!marketing.companyActive) Bestandskunde (§ 7 Abs. 3 UWG)#{marketing.companyActive ? "" : " – nur aktive Kunden"}
+
+                            .col-md-6
+
+                                input.form-control.form-control-sm(type="text" name="note" maxlength="500" required minlength="3" placeholder="Nachweis, z. B. „schriftlich am 09.10.2026“ oder „Hinweis im Vertrag vom …“")
+
+                            .col-md-2
+
+                                button.btn.btn-sm.btn-outline-success.w-100(type="submit")
+
+                                    i.bi.bi-envelope-check.me-1
+
+                                    | Erfassen
+
+                    else
+
+                        p.small.text-muted.mb-2
+
+                            i.bi.bi-lock.me-1
+
+                            | Der Kontakt hat sich selbst abgemeldet (#{marketing.sourceLabels[consent.source]}). Nur er selbst kann sich wieder anmelden – im Kundenportal oder über eine Bestätigungs-E-Mail, die Sie auf seinen Wunsch schicken.
+
+                    form.mb-3(method="POST" action=`/crm/contacts/${contact._id}/marketing/double-opt-in`)
+
+                        button.btn.btn-sm.btn-outline-primary(type="submit" disabled=!contact.email)
+
+                            i.bi.bi-send.me-1
+
+                            | Bestätigungs-E-Mail senden (Double-Opt-In)
+
+                        .form-text Nur auf Wunsch des Kontakts, z. B. Haken „Informationen per E-Mail“ im Kontaktformular der Website.
 
             if consent.history.length
 

@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { SOURCES } = require("../utils/marketingConsent");
 
 const contactSchema = new mongoose.Schema({
 
@@ -98,11 +99,26 @@ const contactSchema = new mongoose.Schema({
             default: null
         },
 
-        // "portal" = vom Kontakt selbst im Kundenportal, "crm" = von einem Mitarbeiter erfasst
+        // Wie zuletzt geändert (siehe utils/marketingConsent.js):
+        // portal, double_opt_in, link = vom Kontakt selbst
+        // crm (mit Nachweis), customer (Bestandskunde, § 7 Abs. 3 UWG) = Mitarbeiter
         source: {
             type: String,
-            enum: ["portal", "crm", null],
+            enum: [...SOURCES, null],
             default: null
+        },
+
+        // Persönlicher Abmeldelink (/email/abmelden/<token>), entsteht mit der Einwilligung
+        unsubscribeToken: {
+            type: String,
+            index: true
+        },
+
+        // Offene Double-Opt-In-Anfrage (/email/bestaetigen/<token>)
+        doi: {
+            token: { type: String, index: true },
+            requestedAt: { type: Date },
+            requestedBy: { type: String, trim: true, maxlength: 200 }
         },
 
         history: [
@@ -110,7 +126,7 @@ const contactSchema = new mongoose.Schema({
                 _id: false,
                 status: { type: String, enum: ["granted", "revoked"] },
                 at: { type: Date },
-                source: { type: String, enum: ["portal", "crm"] },
+                source: { type: String, enum: SOURCES },
                 by: { type: String, trim: true, maxlength: 200 },
                 note: { type: String, trim: true, maxlength: 500 }
             }

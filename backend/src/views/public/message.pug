@@ -1,0 +1,19 @@
+extends ../crm/layouts/guest
+
+block content
+
+    .card.shadow-sm(style="max-width: 520px; width: 100%;")
+
+        .card-body.p-4.text-center
+
+            img.mb-4(src="/images/logo-only.png" alt="Vonnebrink IT Operations" height="48")
+
+            h1.h4.mb-3(class=`text-${tone || "primary"}`)= heading
+
+            p.text-muted.mb-4= text
+
+            if action
+
+                form(method="POST" action=action)
+
+                    button.btn.btn-primary(type="submit")= button

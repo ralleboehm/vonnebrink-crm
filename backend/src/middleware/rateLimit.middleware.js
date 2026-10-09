@@ -55,3 +55,25 @@ exports.portalLoginLimiter = createLoginLimiter({
     view: "portal/login",
     title: "Kundenportal"
 });
+
+// ----------------------------------------------------
+// Öffentliche E-Mail-Links (Abmelden, Double-Opt-In)
+// ----------------------------------------------------
+//
+// Die Links enthalten zufällige Schlüssel; die Begrenzung bremst nur
+// automatisiertes Durchprobieren.
+
+exports.emailLinkLimiter = rateLimit({
+    windowMs: WINDOW_MS,
+    limit: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler(req, res) {
+        res.status(429).render("public/message", {
+            title: "Zu viele Anfragen",
+            heading: "Zu viele Anfragen",
+            text: "Bitte versuchen Sie es in einigen Minuten erneut.",
+            tone: "warning"
+        });
+    }
+});

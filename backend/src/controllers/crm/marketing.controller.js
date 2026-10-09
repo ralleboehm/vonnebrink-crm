@@ -42,7 +42,8 @@ exports.recipients = async (req, res, next) => {
             rows: filters.show === "all" ? rows : rows.filter((r) => r.eligible),
             summary: marketingService.summarize(rows),
             tagStats,
-            statusLabels: marketingService.STATUS_LABELS
+            statusLabels: marketingService.STATUS_LABELS,
+            sourceLabels: marketingService.SOURCE_LABELS
         });
 
     } catch (err) {
@@ -184,16 +185,23 @@ exports.setContactConsent = async (req, res, next) => {
         }
 
         const granted = req.body.consent === "granted";
+        const source = req.body.source === "customer" ? "customer" : "crm";
 
         try {
 
             await marketingService.setConsent(contact._id, granted, {
-                source: "crm",
+                source,
                 by: staffName(req),
                 note: req.body.note
             });
 
-            setFlash(req, "success", granted ? "Einwilligung erfasst." : "Einwilligung widerrufen – der Kontakt erhält keine Kampagnen mehr.");
+            setFlash(
+                req,
+                "success",
+                granted
+                    ? (source === "customer" ? "Als Bestandskunde für Informationen eingetragen." : "Einwilligung erfasst.")
+                    : "Einwilligung widerrufen – der Kontakt erhält keine Kampagnen mehr."
+            );
 
         } catch (err) {
 
@@ -210,5 +218,31 @@ exports.setContactConsent = async (req, res, next) => {
         next(err);
 
     }
+
+};
+
+/**
+ * Bestätigungs-E-Mail (Double-Opt-In) an den Kontakt schicken
+ */
+exports.requestDoubleOptIn = async (req, res) => {
+
+    try {
+
+        const { contact, result } = await marketingService.requestDoubleOptIn(req.params.id, { by: staffName(req) });
+
+        if (result.sent) {
+            setFlash(req, "success", `Bestätigungs-E-Mail an ${contact.email} verschickt. Der Link gilt ${marketingService.DOI_VALID_DAYS} Tage.`);
+        } else {
+            setFlash(req, "warning", `Bestätigungs-E-Mail nicht verschickt: ${result.skipped || "unbekannter Grund"}.`);
+        }
+
+    } catch (err) {
+
+        // Fachliche Gründe (bereits eingewilligt, keine Adresse) oder Mailserver-Fehler
+        setFlash(req, "danger", err.status ? err.message : `Bestätigungs-E-Mail fehlgeschlagen: ${err.message}`);
+
+    }
+
+    res.redirect(`/crm/contacts/${req.params.id}`);
 
 };

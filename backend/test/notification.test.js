@@ -78,11 +78,12 @@ test("Vorlagen: Kopf mit Betreff wird erkannt", () => {
 
 });
 
-test("Vorlagen: alle sechs Vorlagen lassen sich rendern", async () => {
+test("Vorlagen: alle sieben Vorlagen lassen sich rendern", async () => {
 
     const names = await templates.list();
 
     assert.deepEqual(names, [
+        "marketing-confirm",
         "password-reset",
         "portal-welcome",
         "ticket-assigned",
@@ -100,7 +101,8 @@ test("Vorlagen: alle sechs Vorlagen lassen sich rendern", async () => {
         priority: "Hoch",
         ticketLink: "https://crm.example.de/crm/tickets/1",
         email: "hans@example.de",
-        temporaryPassword: "Abc123xyz"
+        temporaryPassword: "Abc123xyz",
+        confirmLink: "https://crm.example.de/email/bestaetigen/abc"
     };
 
     for (const name of names) {

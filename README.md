@@ -235,21 +235,26 @@ Menü **Marketing** (Rollen: Admin und Vertrieb).
 
 ### Wer ist erreichbar?
 
-Nur Kontakte, die
-
-1. einen **aktiven Portalzugang** haben (dort können sie sich jederzeit selbst abmelden),
-2. **eingewilligt** haben und
-3. aktiv und nicht archiviert sind.
+Kontakte, die aktiv sind, eine gültige E-Mail-Adresse haben und **eingewilligt** haben.
+Ein Portalzugang ist nicht nötig – jede Kampagnen-Mail enthält einen persönlichen **Abmeldelink**.
 
 ### Einwilligung
 
-- Der Kontakt selbst: Kundenportal → *Mein Profil* → „Informationen per E-Mail“.
-- Im CRM beim Kontakt (Abschnitt *Marketing*): nur mit Nachweis (z. B. „schriftlich am …“).
-- Hat sich ein Kontakt **selbst im Portal abgemeldet**, kann ihn kein Mitarbeiter wieder eintragen –
-  nur er selbst.
-- Jede Änderung steht im Verlauf (wann, wer, wie, Notiz).
+| Art | Wer | Wie |
+|---|---|---|
+| Kundenportal | Kontakt selbst | *Mein Profil* → „Informationen per E-Mail“ |
+| Double-Opt-In | Kontakt selbst | Beim Kontakt „Bestätigungs-E-Mail senden“ (nur auf Wunsch, z. B. Haken im Website-Formular); der Kontakt bestätigt per Link (30 Tage gültig) |
+| Nachweis | Mitarbeiter | Beim Kontakt mit Notiz, z. B. „schriftlich am …“ |
+| Bestandskunde (§ 7 Abs. 3 UWG) | Mitarbeiter | Nur für Firmen mit Status „Aktiv“; Notiz, wo auf das Widerspruchsrecht hingewiesen wurde. Wird die Firma inaktiv, ist der Kontakt nicht mehr erreichbar |
 
-Ticket-E-Mails sind davon nicht betroffen.
+- Abmelden: im Portal oder über den Abmeldelink `/email/abmelden/<schlüssel>` (ohne Anmeldung,
+  auch Ein-Klick-Abmeldung per `List-Unsubscribe-Post`).
+- Hat sich ein Kontakt **selbst abgemeldet** (Portal oder Link), kann ihn kein Mitarbeiter wieder
+  eintragen – nur er selbst (Portal oder Bestätigungs-E-Mail).
+- Der CSV-Export der Empfänger enthält den Abmeldelink (z. B. für Serienmails).
+- Jede Änderung steht im Verlauf (wann, wer, wie, Notiz). Ticket-E-Mails sind davon nicht betroffen.
+
+Rechtlicher Hinweis: Das CRM hilft beim Nachweis, ersetzt aber keine Rechtsberatung (DSGVO, UWG).
 
 ## Rollen
 

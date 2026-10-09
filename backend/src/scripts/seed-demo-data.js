@@ -117,15 +117,21 @@ async function seed(options = {}) {
                 portalAccounts[person.key] = portalAccount;
                 summary.portalAccounts.push(contact.email);
 
-                // Marketing-Einwilligung, wie vom Kontakt selbst im Portal gesetzt
-                if (person.marketing) {
-                    await marketingService.setConsent(contact._id, person.marketing === "granted", {
-                        source: "portal",
-                        by: `${contact.firstName} ${contact.lastName}`,
-                        note: "Beispieldaten"
-                    });
-                    summary.marketing[person.marketing]++;
-                }
+            }
+
+            // Marketing: "granted"/"revoked" wie vom Kontakt im Portal gesetzt,
+            // "customer" = Bestandskunde (§ 7 Abs. 3 UWG), von uns erfasst
+            if (person.marketing) {
+
+                const customer = person.marketing === "customer";
+
+                await marketingService.setConsent(contact._id, person.marketing !== "revoked", {
+                    source: customer ? "customer" : "portal",
+                    by: customer ? `${staff.firstName} ${staff.lastName}` : `${contact.firstName} ${contact.lastName}`,
+                    note: customer ? "Hinweis auf Widerspruchsrecht im Wartungsvertrag (Beispieldaten)" : "Beispieldaten"
+                });
+
+                summary.marketing[customer ? "granted" : person.marketing]++;
 
             }
 

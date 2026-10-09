@@ -14,7 +14,7 @@ block content
 
                 | Empfänger
 
-            small.text-muted Für Kampagnen erreichbar sind nur Kontakte mit aktivem Portalzugang und Einwilligung.
+            small.text-muted Erreichbar: aktive Kontakte mit Einwilligung (Portal, Double-Opt-In, Nachweis oder Bestandskunde). Jede Mail enthält einen Abmeldelink.
 
         div.d-flex.gap-2
 
@@ -142,6 +142,12 @@ block content
 
                                         span.badge.bg-success= statusLabels.granted
 
+                                        if row.consent.source
+
+                                            br
+
+                                            small.text-muted= sourceLabels[row.consent.source]
+
                                     else if row.consent.status === "revoked"
 
                                         span.badge.bg-danger= statusLabels.revoked
@@ -178,5 +184,5 @@ block content
 
                 else
 
-                    | Noch niemand erreichbar. Kontakte brauchen einen aktiven Portalzugang und müssen im Portal
-                    | (Mein Profil) eingewilligt haben – oder Sie erfassen eine nachweisbare Einwilligung beim Kontakt.
+                    | Noch niemand erreichbar. Einwilligungen entstehen im Kundenportal (Mein Profil), über eine
+                    | Bestätigungs-E-Mail (Double-Opt-In) oder beim Kontakt im CRM (Nachweis oder Bestandskunde).

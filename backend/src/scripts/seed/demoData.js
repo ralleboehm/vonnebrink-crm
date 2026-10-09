@@ -144,7 +144,7 @@ const COMPANIES = [
         address: { street: "Rathausstraße", houseNumber: "3", postalCode: "68519", city: "Viernheim", country: "Deutschland" },
 
         contacts: [
-            { key: "lindner", salutation: "mrs", firstName: "Anna", lastName: "Lindner", position: "Ärztin, Inhaberin", email: "a.lindner@dr-lindner.example", phone: "06204 555-401" },
+            { key: "lindner", salutation: "mrs", firstName: "Anna", lastName: "Lindner", position: "Ärztin, Inhaberin", email: "a.lindner@dr-lindner.example", phone: "06204 555-401", marketing: "customer" },
             { key: "meyer", salutation: "mr", firstName: "Jonas", lastName: "Meyer", position: "Praxismanager", email: "j.meyer@dr-lindner.example", phone: "06204 555-402", portal: true, marketing: "granted" }
         ],
 

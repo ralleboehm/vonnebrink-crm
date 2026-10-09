@@ -96,8 +96,13 @@ exports.show = async (req, res, next) => {
             generatedPassword: req.session.generatedPortalPassword || null,
             marketing: {
                 consent: marketingService.consentOf(contact),
-                reason: marketingService.ineligibleReason(contact, portalAccount),
+                reason: marketingService.ineligibleReason(contact, contact.company),
                 staffMayGrant: marketingService.staffMayGrant(contact),
+                companyActive: Boolean(contact.company && contact.company.status === "active"),
+                unsubscribeUrl: marketingService.unsubscribeUrl(contact),
+                doiPending: contact.marketing && contact.marketing.doi && contact.marketing.doi.requestedAt
+                    ? contact.marketing.doi
+                    : null,
                 statusLabels: marketingService.STATUS_LABELS,
                 sourceLabels: marketingService.SOURCE_LABELS
             },

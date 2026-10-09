@@ -493,12 +493,16 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         assert.equal(marketing.history.length, 1);
         assert.equal(marketing.history[0].by, "Smoke Admin");
         assert.equal(marketing.history[0].note, "schriftlich am 01.10.");
+        assert.ok(marketing.unsubscribeToken, "Abmeldelink entsteht mit der Einwilligung");
+
+        const page = await crm.get(`/crm/contacts/${contact._id}`);
+        assert.match(page.text, new RegExp(`/email/abmelden/${marketing.unsubscribeToken}`), "Abmeldelink im Kontakt");
 
         // Gleicher Status: kein doppelter Verlauf
         assertRedirect(await crm.post(url, { consent: "granted", note: "nochmal" }), "doppelt");
         assert.equal((await status()).history.length, 1);
 
-        // Hans hat Portalzugang + Einwilligung -> erreichbar; Fritz ohne Portal nicht
+        // Hans erreichbar, Fritz (keine Einwilligung) nicht
         const eligible = await crm.get("/crm/marketing");
         assertPage(eligible, "/crm/marketing");
         assert.match(eligible.text, /hans@smoke\.test/);
@@ -506,19 +510,28 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
 
         const all = await crm.get("/crm/marketing?show=all");
         assert.match(all.text, /fritz@smoke\.test/);
-        assert.match(all.text, /Kein Portalzugang/);
+        assert.match(all.text, /Keine Einwilligung/);
 
-        // Auch mit Notiz kann Fritz eingetragen werden, bleibt aber unerreichbar
-        assertRedirect(await crm.post(`/crm/contacts/${otherContact._id}/marketing`, { consent: "granted", note: "telefonisch" }), "Fritz");
-        assert.equal((await status(otherContact._id)).status, "granted");
-        assert.doesNotMatch((await crm.get("/crm/marketing")).text, /fritz@smoke\.test/, "ohne Portalzugang nicht erreichbar");
+        // Bestandskunde (§ 7 Abs. 3 UWG): ohne Portalzugang, nur solange die Firma aktiv ist
+        const fritzUrl = `/crm/contacts/${otherContact._id}/marketing`;
+        assertRedirect(await crm.post(fritzUrl, { consent: "granted", source: "customer", note: "" }), "Bestandskunde ohne Notiz");
+        assert.equal((await status(otherContact._id)).status, "none");
+
+        assertRedirect(await crm.post(fritzUrl, { consent: "granted", source: "customer", note: "Hinweis im Vertrag vom 01.01." }), "Bestandskunde");
+        assert.equal((await status(otherContact._id)).source, "customer");
+        assert.match((await crm.get("/crm/marketing")).text, /fritz@smoke\.test/, "Bestandskunde ohne Portal erreichbar");
+
+        await Company.updateOne({ _id: otherCompany._id }, { $set: { status: "inactive" } });
+        assert.doesNotMatch((await crm.get("/crm/marketing")).text, /fritz@smoke\.test/, "inaktive Firma: Ausnahme gilt nicht");
+        assert.match((await crm.get("/crm/marketing?show=all")).text, /Kein aktiver Kunde/);
+        await Company.updateOne({ _id: otherCompany._id }, { $set: { status: "active" } });
 
         const csv = await crm.get("/crm/marketing/export");
         assert.equal(csv.status, 200, "Empfänger-Export");
         assert.match(csv.contentType, /text\/csv/);
         assert.match(csv.text, /hans@smoke\.test/);
-        assert.doesNotMatch(csv.text, /fritz@smoke\.test/);
-        assert.match((await crm.get("/crm/marketing/export?show=all")).text, /Kein Portalzugang/);
+        assert.match(csv.text, /\/email\/abmelden\//, "Export mit Abmeldelink");
+        assert.match(csv.text, /Bestandskunde/);
 
         // Widerruf im CRM
         assertRedirect(await crm.post(url, { consent: "revoked" }), "Widerruf");
@@ -531,7 +544,84 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         assertRedirect(await crm.post(url, { consent: "granted", note: "erneut schriftlich" }), "erneut");
         assert.equal((await status()).status, "granted");
 
-        assertPage(await crm.get(`/crm/contacts/${contact._id}`), "Kontakt mit Marketing-Verlauf");
+        // Bereits eingewilligt: keine Bestätigungs-E-Mail
+        assertRedirect(await crm.post(`${url}/double-opt-in`, {}), "DOI bei Einwilligung");
+        assert.match((await crm.get(`/crm/contacts/${contact._id}`)).text, /bereits eingewilligt/);
+
+    });
+
+    await t.test("Marketing: Double-Opt-In und Abmeldelink (ohne Anmeldung)", async () => {
+
+        const doris = await Contact.create({ company: company._id, contactNumber: "CON-900003", salutation: "mrs", firstName: "Doris", lastName: "Doi", email: "doris@smoke.test" });
+        const status = async () => (await Contact.findById(doris._id)).marketing;
+        const visitor = createClient(baseUrl);
+
+        // Bestätigungs-E-Mail anfordern (ohne SMTP: protokolliert, nicht verschickt)
+        assertRedirect(await crm.post(`/crm/contacts/${doris._id}/marketing/double-opt-in`, {}), "DOI anfordern", `/crm/contacts/${doris._id}`);
+
+        const log = await EmailLog.findOne({ to: "doris@smoke.test" }).sort({ createdAt: -1 });
+        assert.ok(log, "Bestätigungs-E-Mail protokolliert");
+        assert.equal(log.template, "marketing-confirm");
+
+        const doiToken = (await status()).doi.token;
+        assert.ok(doiToken, "DOI-Schlüssel gespeichert");
+        assert.match((await crm.get(`/crm/contacts/${doris._id}`)).text, /noch nicht bestätigt/);
+
+        // GET ändert nichts (Virenscanner öffnen Links vorab)
+        const confirmPage = await visitor.get(`/email/bestaetigen/${doiToken}`);
+        assertPage(confirmPage, "Bestätigungsseite");
+        assert.match(confirmPage.text, /Anmeldung bestätigen/);
+        assert.equal((await status()).status, "none");
+
+        // Bestätigen
+        assertPage(await visitor.post(`/email/bestaetigen/${doiToken}`, {}), "Bestätigen");
+        let marketing = await status();
+        assert.equal(marketing.status, "granted");
+        assert.equal(marketing.source, "double_opt_in");
+        assert.equal(marketing.history.at(-1).by, "doris@smoke.test");
+        assert.match(marketing.history.at(-1).note, /Angefordert .* von Smoke Admin, bestätigt/);
+        assert.ok(!marketing.doi || !marketing.doi.token, "DOI-Schlüssel verbraucht");
+        assert.ok(marketing.unsubscribeToken);
+
+        assert.equal((await visitor.get(`/email/bestaetigen/${doiToken}`)).status, 404, "Link nur einmal gültig");
+        assert.match((await crm.get("/crm/marketing")).text, /doris@smoke\.test/, "per Double-Opt-In erreichbar (ohne Portal)");
+
+        // Abmeldelink: GET zeigt nur die Seite
+        const unsubscribeUrl = `/email/abmelden/${marketing.unsubscribeToken}`;
+        const unsubscribePage = await visitor.get(unsubscribeUrl);
+        assertPage(unsubscribePage, "Abmeldeseite");
+        assert.match(unsubscribePage.text, /abbestellen/);
+        assert.equal((await status()).status, "granted");
+
+        // Ein-Klick-Abmeldung (List-Unsubscribe-Post)
+        assertPage(await visitor.post(unsubscribeUrl, { "List-Unsubscribe": "One-Click" }), "Abmelden");
+        marketing = await status();
+        assert.equal(marketing.status, "revoked");
+        assert.equal(marketing.source, "link");
+        assert.match((await visitor.get(unsubscribeUrl)).text, /Sie sind abgemeldet/);
+        assert.doesNotMatch((await crm.get("/crm/marketing")).text, /doris@smoke\.test/);
+
+        // Selbst abgemeldet: Mitarbeiter darf nicht wieder eintragen
+        assertRedirect(await crm.post(`/crm/contacts/${doris._id}/marketing`, { consent: "granted", note: "telefonisch zugesagt" }), "CRM nach Link-Abmeldung");
+        assert.equal((await status()).status, "revoked");
+        assert.match((await crm.get(`/crm/contacts/${doris._id}`)).text, /selbst abgemeldet/);
+
+        // ... aber sie selbst per neuer Bestätigungs-E-Mail
+        assertRedirect(await crm.post(`/crm/contacts/${doris._id}/marketing/double-opt-in`, {}), "DOI erneut");
+        const secondToken = (await status()).doi.token;
+
+        // abgelaufen
+        await Contact.updateOne({ _id: doris._id }, { $set: { "marketing.doi.requestedAt": new Date(Date.now() - 40 * 24 * 60 * 60 * 1000) } });
+        assert.equal((await visitor.get(`/email/bestaetigen/${secondToken}`)).status, 410, "abgelaufener Link");
+        assert.equal((await visitor.post(`/email/bestaetigen/${secondToken}`, {})).status, 404);
+        assert.equal((await status()).status, "revoked");
+
+        // Ungültige Links
+        for (const url of ["/email/abmelden/gibtesnichtgibtesnichtgibtesnicht", "/email/abmelden/x", "/email/bestaetigen/gibtesnichtgibtesnichtgibtesnicht"]) {
+            assert.equal((await visitor.get(url)).status, 404, url);
+        }
+
+        assert.equal((await visitor.post("/email/abmelden/gibtesnichtgibtesnichtgibtesnicht", {})).status, 404);
 
     });
 
@@ -700,7 +790,7 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         // Mitarbeiter darf ihn jetzt NICHT wieder eintragen
         assertRedirect(await crm.post(`/crm/contacts/${contact._id}/marketing`, { consent: "granted", note: "telefonisch zugesagt" }), "CRM nach Portal-Abmeldung");
         assert.equal((await Contact.findById(contact._id)).marketing.status, "revoked", "Portal-Abmeldung bleibt bestehen");
-        assert.match((await crm.get(`/crm/contacts/${contact._id}`)).text, /selbst im Kundenportal abgemeldet/);
+        assert.match((await crm.get(`/crm/contacts/${contact._id}`)).text, /selbst abgemeldet/);
 
         // Der Kontakt selbst darf sich wieder anmelden
         assertRedirect(await portal.post("/portal/profile/marketing", { marketing: "yes" }), "Portal anmelden", "/portal/profile");
@@ -709,11 +799,6 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         assert.equal(marketing.source, "portal");
         assert.match((await crm.get("/crm/marketing")).text, /hans@smoke\.test/);
 
-        // Portalzugang deaktiviert -> nicht mehr erreichbar
-        await PortalAccount.updateOne({ contact: contact._id }, { $set: { active: false } });
-        assert.doesNotMatch((await crm.get("/crm/marketing")).text, /hans@smoke\.test/, "deaktivierter Zugang");
-        assert.match((await crm.get("/crm/marketing?show=all")).text, /Portalzugang deaktiviert/);
-        await PortalAccount.updateOne({ contact: contact._id }, { $set: { active: true } });
 
     });
 
@@ -816,9 +901,10 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         assert.match(companyList, /Branche \/ Gruppe/, "Schlagwort-Filter mit Beispieldaten");
 
         // Marketing mit Beispieldaten
-        const expectedMarketing = (value) => COMPANIES.flatMap((c) => c.contacts).filter((p) => p.portal && p.marketing === value).length;
-        assert.equal(summary.marketing.granted, expectedMarketing("granted"));
+        const expectedMarketing = (value) => COMPANIES.flatMap((c) => c.contacts).filter((p) => p.marketing === value).length;
+        assert.equal(summary.marketing.granted, expectedMarketing("granted") + expectedMarketing("customer"));
         assert.equal(await Contact.countDocuments({ "marketing.status": "granted", "marketing.source": "portal" }), expectedMarketing("granted"));
+        assert.equal(await Contact.countDocuments({ "marketing.status": "granted", "marketing.source": "customer" }), expectedMarketing("customer"));
         assert.equal(await Contact.countDocuments({ "marketing.status": "revoked" }), expectedMarketing("revoked"));
 
         for (const url of ["/crm/marketing", "/crm/marketing?show=all", "/crm/marketing/groups"]) {

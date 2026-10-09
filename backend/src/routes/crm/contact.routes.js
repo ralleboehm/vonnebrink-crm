@@ -63,4 +63,11 @@ router.post(
     marketingController.setContactConsent
 );
 
+// Bestätigungs-E-Mail (Double-Opt-In)
+router.post(
+    "/:id/marketing/double-opt-in",
+    requirePermission(PERMISSIONS.MARKETING_MANAGE),
+    marketingController.requestDoubleOptIn
+);
+
 module.exports = router;
