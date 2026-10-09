@@ -1,0 +1,17 @@
+mixin campaignStatus(status)
+
+    - const colors = { draft: "secondary", sending: "warning", sent: "success" }
+
+    span.badge(class=`text-bg-${colors[status] || "secondary"}`)= statusLabels[status] || status
+
+mixin audienceLabel(tags)
+
+    if tags && tags.length
+
+        each tag in tags
+
+            span.badge.rounded-pill.text-bg-light.border.fw-normal.me-1= tag
+
+    else
+
+        span.text-muted Alle erreichbaren Kontakte

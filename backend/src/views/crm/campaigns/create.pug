@@ -1,0 +1,22 @@
+extends ../layouts/main
+
+block content
+
+    .mb-4
+
+        a.text-decoration-none.small(href="/crm/marketing/campaigns")
+
+            i.bi.bi-arrow-left.me-1
+
+            | Kampagnen
+
+        h1.mb-0.mt-1
+
+            i.bi.bi-envelope-plus.me-2
+
+            | Neue Kampagne
+
+    - const action = "/crm/marketing/campaigns"
+    - const cancelUrl = "/crm/marketing/campaigns"
+
+    include _form

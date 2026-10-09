@@ -15,6 +15,7 @@ const TicketMessage = require("../models/ticketMessage.model");
 const Attachment = require("../models/attachment.model");
 const Counter = require("../models/counter.model");
 const Asset = require("../models/asset.model");
+const Campaign = require("../models/campaign.model");
 const Activity = require("../models/activity.model");
 const Notification = require("../models/notification.model");
 const SyncRun = require("../models/syncRun.model");
@@ -212,6 +213,14 @@ async function resetBusinessData() {
 
     console.log(
         `✔ Assets: ${assets.deletedCount}`
+    );
+
+    // Kampagnen verweisen auf Kontakte
+    const campaigns =
+        await Campaign.deleteMany({});
+
+    console.log(
+        `✔ Kampagnen: ${campaigns.deletedCount}`
     );
 
     const notifications =

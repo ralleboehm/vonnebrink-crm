@@ -151,6 +151,7 @@ function normalizeRecipients(to) {
  * @param {string} [message.html]
  * @param {string} [message.text]
  * @param {string} [message.replyTo]
+ * @param {object} [message.headers]  zusätzliche Kopfzeilen (z. B. List-Unsubscribe)
  * @returns {Promise<{sent: boolean, skipped?: string, messageId?: string, recipients: string[]}>}
  */
 async function send(message) {
@@ -181,7 +182,8 @@ async function send(message) {
         replyTo: message.replyTo || config.replyTo || undefined,
         subject: message.subject,
         html: message.html,
-        text: message.text
+        text: message.text,
+        headers: message.headers || undefined
     });
 
     return { sent: true, messageId: info.messageId, recipients };

@@ -1,0 +1,310 @@
+extends ../layouts/main
+
+include _mixins
+
+block content
+
+    - const base = `/crm/marketing/campaigns/${campaign._id}`
+    - const formatDate = (date) => date ? date.toLocaleString("de-DE", { timeZone: "Europe/Berlin", dateStyle: "short", timeStyle: "short" }) : "—"
+    - const isDraft = campaign.status === "draft"
+    - const isSending = campaign.status === "sending"
+    - const stats = campaign.stats || { total: 0, sent: 0, failed: 0, skipped: 0 }
+    - const done = stats.sent + stats.failed + stats.skipped
+    - const progress = stats.total ? Math.round((done / stats.total) * 100) : 0
+
+    .mb-4
+
+        a.text-decoration-none.small(href="/crm/marketing/campaigns")
+
+            i.bi.bi-arrow-left.me-1
+
+            | Kampagnen
+
+        .d-flex.justify-content-between.align-items-start.flex-wrap.gap-2.mt-1
+
+            div
+
+                h1.mb-1= campaign.name
+
+                .d-flex.align-items-center.gap-2.flex-wrap
+
+                    code= campaign.campaignNumber
+
+                    +campaignStatus(campaign.status)
+
+                    if campaign.description
+
+                        span.text-muted.small= campaign.description
+
+            if can("marketing.manage")
+
+                .d-flex.gap-2
+
+                    if isDraft
+
+                        a.btn.btn-outline-primary(href=`${base}/edit`)
+
+                            i.bi.bi-pencil.me-2
+
+                            | Bearbeiten
+
+                    form(method="POST" action=`${base}/duplicate`)
+
+                        button.btn.btn-outline-secondary(type="submit" title="Als neuen Entwurf kopieren")
+
+                            i.bi.bi-copy.me-2
+
+                            | Duplizieren
+
+                    if !isSending
+
+                        form(
+                            method="POST"
+                            action=`${base}/delete`
+                            onsubmit="return confirm('Kampagne wirklich löschen?');"
+                        )
+
+                            button.btn.btn-outline-danger(type="submit" title="Löschen")
+
+                                i.bi.bi-trash
+
+    if flash
+
+        .alert(class=`alert-${flash.type}`)= flash.text
+
+    .row.g-4
+
+        // =====================================================
+        // Vorschau
+        // =====================================================
+
+        .col-lg-8
+
+            .card.shadow-sm.mb-4
+
+                .card-header.bg-white.d-flex.justify-content-between.align-items-center
+
+                    span.fw-semibold
+
+                        i.bi.bi-eye.me-2
+
+                        | Vorschau mit Beispielwerten
+
+                    a.small(href=`${base}/preview` target="_blank") In neuem Tab öffnen
+
+                .card-body.border-bottom.small
+
+                    span.text-muted.me-1 Betreff:
+                    strong= campaign.subject
+
+                iframe.w-100.border-0(
+                    src=`${base}/preview`
+                    title="Vorschau der E-Mail"
+                    style="height: 640px; background: #f8fafc;"
+                )
+
+        // =====================================================
+        // Seitenleiste: Zielgruppe, Test, Versand
+        // =====================================================
+
+        .col-lg-4
+
+            .card.shadow-sm.mb-4
+
+                .card-header.bg-white.fw-semibold
+
+                    i.bi.bi-people.me-2
+
+                    | Zielgruppe
+
+                .card-body
+
+                    .mb-2
+
+                        +audienceLabel(campaign.audience && campaign.audience.tags)
+
+                    if isDraft
+
+                        .fs-4.fw-semibold= recipientCount
+
+                        .small.text-muted erreichbare Empfänger (Stand jetzt)
+
+                        if campaign.audience && campaign.audience.tags && campaign.audience.tags.length === 1
+
+                            a.small(href=`/crm/marketing?tag=${encodeURIComponent(campaign.audience.tags[0])}`) Empfängerliste ansehen
+
+                        else if !(campaign.audience && campaign.audience.tags && campaign.audience.tags.length)
+
+                            a.small(href="/crm/marketing") Empfängerliste ansehen
+
+            if can("marketing.manage") && !isSending
+
+                .card.shadow-sm.mb-4
+
+                    .card-header.bg-white.fw-semibold
+
+                        i.bi.bi-send-check.me-2
+
+                        | Test-Mail
+
+                    .card-body
+
+                        form(method="POST" action=`${base}/test`)
+
+                            .input-group
+
+                                input.form-control(type="email" name="email" value=testAddress required placeholder="ihre@adresse.de" aria-label="Adresse für die Test-Mail")
+
+                                button.btn.btn-outline-primary(type="submit") Senden
+
+                            .form-text Mit Beispielwerten (Max Mustermann, Muster GmbH). Betreff beginnt mit [Test].
+
+            if isDraft && can("marketing.manage")
+
+                .card.shadow-sm.mb-4.border-primary
+
+                    .card-header.bg-white.fw-semibold
+
+                        i.bi.bi-send.me-2
+
+                        | Versenden
+
+                    .card-body
+
+                        if !mailConfigured
+
+                            .alert.alert-warning.small.mb-0
+
+                                | Der Mailversand ist nicht eingerichtet (SMTP_HOST und MAIL_FROM in der .env). Versenden ist erst danach möglich.
+
+                        else if !recipientCount
+
+                            .alert.alert-warning.small.mb-0
+
+                                | Keine erreichbaren Empfänger in dieser Zielgruppe.
+
+                        else
+
+                            p.small.text-muted Jeder Empfänger bekommt eine persönliche Mail mit Abmeldelink. Danach kann die Kampagne nicht mehr geändert werden.
+
+                            form(
+                                method="POST"
+                                action=`${base}/send`
+                                onsubmit=`return confirm(${JSON.stringify("Kampagne jetzt an " + recipientCount + " Empfänger senden?")});`
+                            )
+
+                                button.btn.btn-primary.w-100(type="submit")
+
+                                    i.bi.bi-send.me-2
+
+                                    | Jetzt an #{recipientCount} Empfänger senden
+
+            if !isDraft
+
+                .card.shadow-sm.mb-4
+
+                    .card-header.bg-white.fw-semibold
+
+                        i.bi.bi-bar-chart.me-2
+
+                        | Versand
+
+                    .card-body
+
+                        if isSending
+
+                            .progress.mb-2(role="progressbar" aria-valuenow=progress aria-valuemin="0" aria-valuemax="100")
+
+                                .progress-bar.progress-bar-striped.progress-bar-animated(style=`width: ${progress}%`)
+
+                            .small.text-muted.mb-3 #{done} von #{stats.total} bearbeitet – die Seite aktualisiert sich selbst.
+
+                        dl.row.small.mb-0
+
+                            dt.col-7 Empfänger
+                            dd.col-5.text-end= stats.total
+
+                            dt.col-7.text-success Verschickt
+                            dd.col-5.text-end= stats.sent
+
+                            dt.col-7(class=stats.failed ? "text-danger" : "") Fehlgeschlagen
+                            dd.col-5.text-end= stats.failed
+
+                            dt.col-7.text-muted Übersprungen
+                            dd.col-5.text-end= stats.skipped
+
+                            dt.col-7 Gestartet
+                            dd.col-5.text-end= formatDate(campaign.startedAt)
+
+                            dt.col-7 Fertig
+                            dd.col-5.text-end= formatDate(campaign.sentAt)
+
+                            if campaign.sentBy
+
+                                dt.col-7 Von
+                                dd.col-5.text-end= campaign.sentBy
+
+    // =====================================================
+    // Empfänger und Ergebnis
+    // =====================================================
+
+    if !isDraft && campaign.deliveries && campaign.deliveries.length
+
+        - const colors = { pending: "secondary", sent: "success", failed: "danger", skipped: "warning" }
+
+        .card.shadow-sm.mt-2
+
+            .card-header.bg-white.fw-semibold
+
+                i.bi.bi-list-check.me-2
+
+                | Empfänger (#{campaign.deliveries.length})
+
+            .table-responsive
+
+                table.table.table-sm.table-hover.align-middle.mb-0
+
+                    thead.table-light
+
+                        tr
+                            th Name
+                            th Firma
+                            th E-Mail
+                            th Status
+                            th Zeit
+                            th Hinweis
+
+                    tbody
+
+                        each delivery in campaign.deliveries
+
+                            tr
+
+                                td
+
+                                    a.text-decoration-none(href=`/crm/contacts/${delivery.contact}`)= delivery.name || "—"
+
+                                td= delivery.companyName || "—"
+
+                                td.small= delivery.email
+
+                                td
+
+                                    span.badge(class=`text-bg-${colors[delivery.status] || "secondary"}`)= deliveryLabels[delivery.status] || delivery.status
+
+                                td.small.text-nowrap= delivery.sentAt ? formatDate(delivery.sentAt) : "—"
+
+                                td.small.text-muted= delivery.error || ""
+
+    if isSending
+
+        script.
+            setTimeout(function () { window.location.reload(); }, 4000);
+
+    p.small.text-muted.mt-4.mb-0
+
+        | Angelegt #{formatDate(campaign.createdAt)}
+        if campaign.createdBy
+            |  von #{campaign.createdBy}
+        if campaign.updatedAt && campaign.updatedBy
+            |  · zuletzt geändert #{formatDate(campaign.updatedAt)} von #{campaign.updatedBy}

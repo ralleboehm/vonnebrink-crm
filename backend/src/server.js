@@ -24,6 +24,11 @@ async function startServer() {
             console.log(`🚀 Server      : http://localhost:${PORT}`);
             console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             integrations.startAll();
+
+            // Kampagnen, deren Versand ein Neustart unterbrochen hat
+            require("./services/campaign.service").resumeInterrupted()
+                .catch((err) => console.error("❌ Kampagnen-Versand nicht fortgesetzt:", err.message));
+
             console.log("✅ Ready");
             console.log("");
 

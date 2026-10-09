@@ -323,3 +323,134 @@ test("Ticketliste: Vertrieb sieht Betreff, aber keine Links ins Ticket", { skip:
     assert.doesNotMatch(technician, /\/crm\/marketing/);
 
 });
+
+// ----------------------------------------------------
+// Kampagnen
+// ----------------------------------------------------
+
+const campaignHelpers = {
+    statusLabels: { draft: "Entwurf", sending: "Wird versendet", sent: "Versendet" },
+    deliveryLabels: { pending: "Wartet", sent: "Verschickt", failed: "Fehlgeschlagen", skipped: "Übersprungen" },
+    placeholders: require("../src/utils/campaignContent").PLACEHOLDERS
+};
+
+function campaignOf(extra = {}) {
+
+    return {
+        _id: "k1",
+        campaignNumber: "KAM-000001",
+        name: "Herbst Holzhändler",
+        description: "Herbstausgabe",
+        subject: "Neues für {{firma}}",
+        content: "{{anrede}},\n\nText",
+        audience: { tags: ["Holzhandel"] },
+        status: "draft",
+        stats: { total: 0, sent: 0, failed: 0, skipped: 0 },
+        deliveries: [],
+        createdBy: "Ralf Böhm",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        ...extra
+    };
+
+}
+
+test("Kampagnen: Übersicht", { skip: !pug && "pug nicht installiert" }, () => {
+
+    const sent = campaignOf({ _id: "k2", status: "sent", sentAt: new Date(), audience: { tags: [] }, stats: { total: 3, sent: 2, failed: 1, skipped: 0 } });
+
+    const html = render("crm/campaigns/index.pug", {
+        campaigns: [campaignOf(), sent],
+        filters: { status: "", search: "" },
+        flash: { type: "success", text: "Gespeichert." },
+        ...campaignHelpers
+    });
+
+    assert.match(html, /KAM-000001/);
+    assert.match(html, /Holzhandel/);
+    assert.match(html, /Alle erreichbaren Kontakte/);
+    assert.match(html, /2 \/ 3/);
+    assert.match(html, /\/crm\/marketing\/campaigns\/new/);
+    assert.match(html, /Gespeichert\./);
+
+    const empty = render("crm/campaigns/index.pug", { campaigns: [], filters: { status: "sent", search: "" }, flash: null, ...campaignHelpers }, "sales");
+    assert.match(empty, /Keine Kampagne passt/);
+
+    const technician = render("crm/campaigns/index.pug", { campaigns: [], filters: { status: "", search: "" }, flash: null, ...campaignHelpers }, "technician");
+    assert.doesNotMatch(technician, /href="\/crm\/marketing\/campaigns"/, "Techniker: kein Marketing-Menü");
+
+});
+
+test("Kampagnen: Formular neu und bearbeiten", { skip: !pug && "pug nicht installiert" }, () => {
+
+    const locals = {
+        groups: [{ tag: "Holzhandel", eligible: 4 }, { tag: "Arztpraxis", eligible: 0 }],
+        allEligible: 9,
+        error: null,
+        ...campaignHelpers
+    };
+
+    const create = render("crm/campaigns/create.pug", { ...locals, campaign: { name: "", description: "", subject: "", content: "{{anrede}},", audience: { tags: [] } } });
+
+    assert.match(create, /action="\/crm\/marketing\/campaigns"/);
+    assert.match(create, /formaction="\/crm\/marketing\/campaigns\/preview"/);
+    assert.match(create, /data-placeholder="anrede"/);
+    assert.match(create, /alle erreichbaren Kontakte \(9\)/);
+    assert.match(create, /4 erreichbar/);
+
+    const edit = render("crm/campaigns/edit.pug", { ...locals, campaign: campaignOf({ audience: { tags: ["holzhandel"] } }), error: "Unbekannter Platzhalter: {{foo}}." });
+
+    assert.match(edit, /action="\/crm\/marketing\/campaigns\/k1\/update"/);
+    assert.match(edit, /value="Holzhandel" id="tag-Holzhandel" checked/);
+    assert.match(edit, /Unbekannter Platzhalter/);
+    assert.match(edit, /Herbst Holzhändler/);
+
+});
+
+test("Kampagnen: Detailseite je Status", { skip: !pug && "pug nicht installiert" }, () => {
+
+    const base = { flash: null, testAddress: "ralf@vonnebrink.com", ...campaignHelpers };
+
+    const draft = render("crm/campaigns/show.pug", { ...base, campaign: campaignOf(), recipientCount: 4, mailConfigured: true });
+
+    assert.match(draft, /Jetzt an 4 Empfänger senden/);
+    assert.match(draft, /\/crm\/marketing\/campaigns\/k1\/preview/);
+    assert.match(draft, /\/crm\/marketing\/campaigns\/k1\/edit/);
+    assert.match(draft, /value="ralf@vonnebrink.com"/);
+
+    const noMail = render("crm/campaigns/show.pug", { ...base, campaign: campaignOf(), recipientCount: 4, mailConfigured: false });
+    assert.match(noMail, /Mailversand ist nicht eingerichtet/);
+    assert.doesNotMatch(noMail, /Jetzt an 4 Empfänger senden/);
+
+    const deliveries = [
+        { contact: "p1", email: "a@x.de", name: "Anna Jung", companyName: "Holz Müller", status: "sent", sentAt: new Date() },
+        { contact: "p2", email: "b@x.de", name: "Bert", companyName: "", status: "failed", error: "Mailbox voll", sentAt: new Date() },
+        { contact: "p3", email: "c@x.de", name: "Carl", companyName: "", status: "pending", sentAt: null }
+    ];
+
+    const sending = render("crm/campaigns/show.pug", {
+        ...base,
+        campaign: campaignOf({ status: "sending", startedAt: new Date(), deliveries, stats: { total: 3, sent: 1, failed: 1, skipped: 0 } }),
+        recipientCount: 3,
+        mailConfigured: true
+    });
+
+    assert.match(sending, /2 von 3 bearbeitet/);
+    assert.match(sending, /window\.location\.reload/);
+    assert.match(sending, /Mailbox voll/);
+    assert.doesNotMatch(sending, /\/edit"/, "kein Bearbeiten während des Versands");
+    assert.doesNotMatch(sending, /\/delete"/, "kein Löschen während des Versands");
+
+    const sent = render("crm/campaigns/show.pug", {
+        ...base,
+        campaign: campaignOf({ status: "sent", sentAt: new Date(), sentBy: "Ralf Böhm", deliveries: deliveries.slice(0, 2), stats: { total: 2, sent: 1, failed: 1, skipped: 0 } }),
+        recipientCount: 2,
+        mailConfigured: true
+    }, "sales");
+
+    assert.match(sent, /Verschickt/);
+    assert.match(sent, /Duplizieren/);
+    assert.doesNotMatch(sent, /Jetzt an/);
+    assert.doesNotMatch(sent, /window\.location\.reload/);
+
+});

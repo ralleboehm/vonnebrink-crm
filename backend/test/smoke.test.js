@@ -657,6 +657,213 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
 
     });
 
+    await t.test("Marketing: Kampagnen anlegen, prüfen, testen, versenden", async () => {
+
+        const Campaign = require("../src/models/campaign.model");
+        const campaignService = require("../src/services/campaign.service");
+        const emailService = require("../src/services/email.service");
+
+        const base = "/crm/marketing/campaigns";
+
+        await Company.updateOne({ _id: company._id }, { $set: { tags: ["Holzhandel"] } });
+
+        assertPage(await crm.get(base), base);
+        assertPage(await crm.get(`${base}/new`), `${base}/new`);
+        assert.match((await crm.get("/crm")).text, /\/crm\/marketing\/campaigns/, "Navigation: Kampagnen");
+
+        // Fehler: Formular mit Meldung statt JSON
+        const short = await crm.post(base, { name: "Kurz", subject: "Hallo", content: "kurz" });
+        assert.equal(short.status, 422);
+        assert.match(short.text, /mindestens 10 Zeichen/);
+        assert.match(short.text, /<form/);
+
+        const unknown = await crm.post(base, { name: "Tippfehler", subject: "Hallo", content: "Hallo {{vornahme}}, wie geht es?" });
+        assert.equal(unknown.status, 422);
+        assert.match(unknown.text, /Unbekannter Platzhalter/);
+
+        assert.equal(await Campaign.countDocuments(), 0, "nichts gespeichert");
+
+        // Genau die Eingabe, die früher gescheitert ist
+        const form = {
+            name: "Email an Holzhändler",
+            description: "Herbstausgabe",
+            subject: "Hallo {{firstName}} {{lastName}} Für eure {{company}} gibt es tolle Herbstangebote",
+            content: "{{anrede}},\n\n{{firstName}} {{lastName}} Jetzt im Herbst sollte {{company}} unbedingt an so etwas denken: https://vonnebrink.com",
+            tags: "Holzhandel"
+        };
+
+        const created = await crm.post(base, form);
+        assert.equal(created.status, 302, `Anlegen: Status ${created.status}`);
+
+        const campaign = await Campaign.findOne({ name: "Email an Holzhändler" });
+        assert.ok(campaign, "gespeichert");
+        assert.equal(created.location, `${base}/${campaign._id}`);
+        assert.match(campaign.campaignNumber, /^KAM-\d{6}$/);
+        assert.deepEqual([...campaign.audience.tags], ["Holzhandel"]);
+        assert.equal(campaign.status, "draft");
+
+        const show = await crm.get(`${base}/${campaign._id}`);
+        assertPage(show, "Kampagne anzeigen");
+        assert.match(show.text, /Kampagne gespeichert/);
+        assert.match(show.text, /Mailversand ist nicht eingerichtet/, "ohne SMTP kein Versand-Knopf");
+        assert.match(show.text, /value="admin@smoke\.test"/, "eigene Adresse für die Test-Mail");
+
+        // Vorschau mit Beispielwerten
+        const preview = await crm.get(`${base}/${campaign._id}/preview`);
+        assert.equal(preview.status, 200);
+        assert.match(preview.contentType, /text\/html/);
+        assert.match(preview.text, /Sehr geehrter Herr Mustermann/);
+        assert.match(preview.text, /Max Mustermann Jetzt im Herbst sollte Muster GmbH/);
+        assert.match(preview.text, /href="https:\/\/vonnebrink\.com"/);
+        assert.match(preview.text, /hier abmelden/);
+
+        const draftPreview = await crm.post(`${base}/preview`, { subject: "Test", content: "Ungespeichert <script>alert(1)</script> {{firma}}" });
+        assert.equal(draftPreview.status, 200);
+        assert.match(draftPreview.text, /Ungespeichert &lt;script&gt;/);
+        assert.match(draftPreview.text, /Muster GmbH/);
+
+        // Bearbeiten
+        assertPage(await crm.get(`${base}/${campaign._id}/edit`), "Kampagne bearbeiten");
+        assertRedirect(await crm.post(`${base}/${campaign._id}/update`, { ...form, name: "Holzhändler Herbst" }), "speichern", `${base}/${campaign._id}`);
+        assert.equal((await Campaign.findById(campaign._id)).name, "Holzhändler Herbst");
+
+        const badUpdate = await crm.post(`${base}/${campaign._id}/update`, { ...form, subject: "" });
+        assert.equal(badUpdate.status, 422);
+        assert.match(badUpdate.text, /Betreffzeile/);
+
+        // Test-Mail ohne SMTP: protokolliert, nicht verschickt
+        assertRedirect(await crm.post(`${base}/${campaign._id}/test`, { email: "ralf@smoke.test" }), "Test-Mail", `${base}/${campaign._id}`);
+        assert.match((await crm.get(`${base}/${campaign._id}`)).text, /nicht verschickt: Mailversand nicht konfiguriert/);
+
+        const testLog = await EmailLog.findOne({ template: `kampagne-test ${campaign.campaignNumber}` });
+        assert.ok(testLog, "Test-Mail im Protokoll");
+        assert.equal(testLog.status, "skipped");
+        assert.match(testLog.subject, /^\[Test\] Hallo Max Mustermann/);
+
+        // Versand ohne SMTP wird abgelehnt
+        assertRedirect(await crm.post(`${base}/${campaign._id}/send`, {}), "Versand ohne SMTP");
+        assert.equal((await Campaign.findById(campaign._id)).status, "draft");
+
+        // Versand mit (simuliertem) Mailserver
+        const original = { isConfigured: emailService.isConfigured, send: emailService.send };
+        const outbox = [];
+
+        emailService.isConfigured = () => true;
+        emailService.send = async (message) => {
+            outbox.push(message);
+            return { sent: true, messageId: `<smoke-${outbox.length}>`, recipients: [message.to] };
+        };
+
+        try {
+
+            assert.match((await crm.get(`${base}/${campaign._id}`)).text, /Jetzt an 1 Empfänger senden/);
+
+            assertRedirect(await crm.post(`${base}/${campaign._id}/send`, {}), "Versand", `${base}/${campaign._id}`);
+            await campaignService.waitForSending();
+
+            const sent = await Campaign.findById(campaign._id);
+            assert.equal(sent.status, "sent");
+            assert.equal(sent.stats.total, 1);
+            assert.equal(sent.stats.sent, 1);
+            assert.equal(sent.deliveries[0].email, "hans@smoke.test");
+            assert.equal(sent.deliveries[0].status, "sent");
+            assert.ok(sent.sentAt);
+
+            assert.equal(outbox.length, 1);
+            assert.equal(outbox[0].to, "hans@smoke.test");
+            assert.equal(outbox[0].subject, "Hallo Hans Smoke Für eure Smoke GmbH gibt es tolle Herbstangebote");
+            assert.match(outbox[0].html, /Sehr geehrter Herr Smoke/);
+
+            const token = (await Contact.findById(contact._id)).marketing.unsubscribeToken;
+            assert.match(outbox[0].html, new RegExp(`/email/abmelden/${token}`), "persönlicher Abmeldelink");
+            assert.match(outbox[0].headers["List-Unsubscribe"], new RegExp(token));
+            assert.equal(outbox[0].headers["List-Unsubscribe-Post"], "List-Unsubscribe=One-Click");
+
+            assert.ok(await EmailLog.exists({ template: `kampagne ${campaign.campaignNumber}`, status: "sent" }), "Kampagnen-Mail im Protokoll");
+
+            // Kein zweiter Versand, keine Änderungen mehr
+            assertRedirect(await crm.post(`${base}/${campaign._id}/send`, {}), "erneuter Versand");
+            assert.equal(outbox.length, 1, "niemand bekommt die Mail doppelt");
+
+            const afterPage = await crm.get(`${base}/${campaign._id}`);
+            assertPage(afterPage, "versendete Kampagne");
+            assert.match(afterPage.text, /bereits versendet/);
+            assert.match(afterPage.text, /hans@smoke\.test/);
+
+            assertRedirect(await crm.get(`${base}/${campaign._id}/edit`), "Bearbeiten nach Versand", `${base}/${campaign._id}`);
+            assertRedirect(await crm.post(`${base}/${campaign._id}/update`, { ...form, name: "geändert" }), "Speichern nach Versand");
+            assert.equal((await Campaign.findById(campaign._id)).name, "Holzhändler Herbst");
+
+            // Unterbrochener Versand (Serverneustart): wer sich inzwischen abgemeldet hat, wird übersprungen
+            const doris = await Contact.findOne({ email: "doris@smoke.test" });
+            assert.equal(doris.marketing.status, "revoked");
+
+            const interrupted = await Campaign.create({
+                campaignNumber: "KAM-999999",
+                name: "Unterbrochen",
+                subject: "Hallo {{vorname}}",
+                content: "Ein unterbrochener Versand.",
+                status: "sending",
+                deliveries: [
+                    { contact: contact._id, email: "hans@smoke.test", name: "Hans Smoke", status: "sent", sentAt: new Date() },
+                    { contact: doris._id, email: "doris@smoke.test", name: "Doris Doi", status: "pending" }
+                ],
+                stats: { total: 2, sent: 1, failed: 0, skipped: 0 }
+            });
+
+            assert.equal(await campaignService.resumeInterrupted(), 1);
+            await campaignService.waitForSending();
+
+            const resumed = await Campaign.findById(interrupted._id);
+            assert.equal(resumed.status, "sent");
+            assert.equal(resumed.deliveries[1].status, "skipped");
+            assert.match(resumed.deliveries[1].error, /Abgemeldet/);
+            assert.equal(resumed.stats.skipped, 1);
+            assert.equal(outbox.length, 1, "Hans nicht erneut, Doris gar nicht");
+
+        } finally {
+
+            emailService.isConfigured = original.isConfigured;
+            emailService.send = original.send;
+
+        }
+
+        // Duplizieren und Löschen
+        const copy = await crm.post(`${base}/${campaign._id}/duplicate`, {});
+        assert.equal(copy.status, 302);
+
+        const duplicate = await Campaign.findOne({ name: "Kopie von Holzhändler Herbst" });
+        assert.ok(duplicate);
+        assert.equal(duplicate.status, "draft");
+        assert.equal(duplicate.deliveries.length, 0);
+        assert.equal(copy.location, `${base}/${duplicate._id}/edit`);
+        assert.match((await crm.get(copy.location)).text, /Kopie angelegt/, "Hinweis auf der Bearbeiten-Seite");
+
+        assertRedirect(await crm.post(`${base}/${duplicate._id}/delete`, {}), "löschen", base);
+        assert.equal((await Campaign.findById(duplicate._id)).isDeleted, true);
+        assert.equal((await crm.get(`${base}/${duplicate._id}`)).status, 404);
+
+        for (const url of [base, `${base}?status=sent`, `${base}?search=Holz`, `${base}?status=quatsch`]) {
+            assertPage(await crm.get(url), url);
+        }
+
+        assert.equal((await crm.get(`${base}/kaputt`)).status, 404);
+
+        // Rechte
+        const tech = createClient(baseUrl);
+        assertRedirect(await tech.post("/crm/login", { username: "smoke-tech", password: PASSWORD }), "Login Techniker");
+        assert.equal((await tech.get(base)).status, 403, "Techniker: keine Kampagnen");
+        assert.equal((await tech.post(`${base}/${campaign._id}/send`, {})).status, 403);
+
+        const sales = createClient(baseUrl);
+        assertRedirect(await sales.post("/crm/login", { username: "smoke-sales", password: PASSWORD }), "Login Vertrieb");
+        assertPage(await sales.get(base), "Vertrieb Kampagnen");
+        assertPage(await sales.get(`${base}/${campaign._id}`), "Vertrieb Kampagne");
+
+        await Company.updateOne({ _id: company._id }, { $set: { tags: [] } });
+
+    });
+
     await t.test("Rollen: Techniker – Tickets und Assets, kein Marketing", async () => {
 
         const tech = createClient(baseUrl);

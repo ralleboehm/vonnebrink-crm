@@ -60,9 +60,10 @@ router.use("/integrations", require("./integration.routes"));
 router.use("/notifications", require("./notification.routes"));
 
 // ----------------------------------------------------
-// Marketing (Empfänger, Gruppen; später Kampagnen)
+// Marketing (Kampagnen, Empfänger, Gruppen)
 // ----------------------------------------------------
 
+router.use("/marketing/campaigns", require("./campaign.routes"));
 router.use("/marketing", require("./marketing.routes"));
 
 // ----------------------------------------------------

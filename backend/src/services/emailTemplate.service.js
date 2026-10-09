@@ -247,6 +247,32 @@ async function render(name, data = {}) {
 }
 
 /**
+ * Fertigen HTML-Inhalt (z. B. einer Kampagne) in das Layout einbetten.
+ * Der Inhalt wird NICHT mehr verändert – er muss bereits sicher sein.
+ *
+ * @param {string} subject      fertiger Betreff
+ * @param {string} contentHtml  fertiger, maskierter HTML-Inhalt
+ * @param {object} [data]       weitere Werte für das Layout
+ * @returns {Promise<{subject: string, html: string, text: string}>}
+ */
+async function renderWithLayout(subject, contentHtml, data = {}) {
+
+    const values = { ...defaults(), ...data };
+    const cleanSubject = String(subject || "").replace(/[\r\n]+/g, " ").trim();
+
+    const layout = await load(LAYOUT);
+
+    const html = fill(layout.body, { ...values, emailSubject: cleanSubject }, { raw: { content: contentHtml } });
+
+    return {
+        subject: cleanSubject,
+        html,
+        text: htmlToText(contentHtml)
+    };
+
+}
+
+/**
  * Namen aller vorhandenen Vorlagen
  */
 async function list() {
@@ -267,5 +293,6 @@ module.exports = {
     fill,
     htmlToText,
     render,
+    renderWithLayout,
     list
 };

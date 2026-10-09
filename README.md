@@ -18,7 +18,7 @@ A self-hosted CRM, Helpdesk and Customer Portal designed for Managed Service Pro
 - CSV Import & Export (Companies & Contacts)
 - Asset Management (Geräte je Kunde)
 - Action1 RMM Sync (Geräte, Online-Status, fehlende Updates)
-- Marketing: Empfänger mit Einwilligung, Gruppen-Verwaltung, CSV-Export
+- Marketing: E-Mail-Kampagnen, Empfänger mit Einwilligung, Gruppen-Verwaltung, CSV-Export
 
 ### Customer Portal
 
@@ -234,6 +234,23 @@ Menü **Marketing** (Rollen: Admin und Vertrieb).
   Kennzahlen, CSV-Export (Serienbrief / Anrufliste).
 - **Gruppen** (`/crm/marketing/groups`): alle Branchen / Gruppen der Firmen mit Anzahl Firmen und
   erreichbaren Kontakten; umbenennen, zusammenführen (umbenennen auf einen vorhandenen Namen), entfernen.
+- **Kampagnen** (`/crm/marketing/campaigns`): E-Mail an eine Zielgruppe schreiben, ansehen, testen, versenden.
+
+### Kampagnen
+
+1. **Neue Kampagne**: Name, Betreff, Text, Zielgruppe (Gruppen; keine Auswahl = alle erreichbaren Kontakte).
+   Der Text ist normaler Text – Leerzeile = neuer Absatz, `https://…` wird ein Link.
+2. **Platzhalter** je Empfänger: `{{anrede}}` („Sehr geehrter Herr Müller“ / „Sehr geehrte Frau Müller“),
+   `{{vorname}}`, `{{nachname}}`, `{{firma}}`, `{{position}}`, `{{email}}` (englisch geht auch:
+   `{{firstName}}`, `{{lastName}}`, `{{company}}`). Unbekannte Platzhalter werden beim Speichern gemeldet.
+3. **Vorschau** (mit Beispielwerten) und **Test-Mail** an die eigene Adresse.
+4. **Senden**: Die Empfängerliste wird festgeschrieben, die Mails gehen nacheinander im Hintergrund raus.
+   Vor jeder Mail wird geprüft, ob der Kontakt noch erreichbar ist. Jede Mail enthält den persönlichen
+   Abmeldelink (auch als `List-Unsubscribe`-Kopfzeile) und steht im E-Mail-Protokoll.
+5. Versendete Kampagnen sind nicht mehr änderbar – **Duplizieren** legt einen neuen Entwurf an.
+   Startet der Server während eines Versands neu, geht es danach mit den offenen Empfängern weiter.
+
+Ohne Mailserver (`SMTP_HOST`, `MAIL_FROM` in der `.env`) lässt sich alles vorbereiten, aber nicht versenden.
 
 ### Wer ist erreichbar?
 

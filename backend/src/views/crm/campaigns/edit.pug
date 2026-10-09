@@ -1,0 +1,22 @@
+extends ../layouts/main
+
+block content
+
+    .mb-4
+
+        a.text-decoration-none.small(href=`/crm/marketing/campaigns/${campaign._id}`)
+
+            i.bi.bi-arrow-left.me-1
+
+            | Zurück zur Kampagne
+
+        h1.mb-0.mt-1
+
+            i.bi.bi-pencil-square.me-2
+
+            | Kampagne bearbeiten
+
+    - const action = `/crm/marketing/campaigns/${campaign._id}/update`
+    - const cancelUrl = `/crm/marketing/campaigns/${campaign._id}`
+
+    include _form

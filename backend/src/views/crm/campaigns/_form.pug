@@ -1,0 +1,191 @@
+//- Gemeinsames Formular für Neu und Bearbeiten
+//- Erwartet: campaign, action, cancelUrl, groups, allEligible, placeholders, error, flash
+
+- const selectedTags = ((campaign.audience && campaign.audience.tags) || []).map((tag) => String(tag).toLowerCase())
+
+if flash
+
+    .alert(class=`alert-${flash.type}`)= flash.text
+
+if error
+
+    .alert.alert-danger
+
+        i.bi.bi-exclamation-triangle.me-2
+
+        = error
+
+form#campaignForm(method="POST" action=action)
+
+    .row.g-4
+
+        .col-lg-8
+
+            .card.shadow-sm.mb-4
+
+                .card-header.bg-white.fw-semibold
+
+                    i.bi.bi-info-circle.me-2
+
+                    | Grunddaten
+
+                .card-body
+
+                    .mb-3
+
+                        label.form-label(for="name") Name der Kampagne
+
+                        input.form-control#name(type="text" name="name" value=campaign.name required maxlength="150" placeholder="z. B. Herbstangebote Holzhändler 2026")
+
+                        .form-text Nur intern sichtbar.
+
+                    .mb-0
+
+                        label.form-label(for="description") Notiz (optional)
+
+                        input.form-control#description(type="text" name="description" value=campaign.description maxlength="500" placeholder="Worum geht es, was ist das Ziel?")
+
+            .card.shadow-sm.mb-4
+
+                .card-header.bg-white.fw-semibold
+
+                    i.bi.bi-envelope.me-2
+
+                    | E-Mail
+
+                .card-body
+
+                    .mb-3
+
+                        label.form-label(for="subject") Betreff
+
+                        input.form-control#subject(type="text" name="subject" value=campaign.subject required maxlength="200" placeholder="z. B. Neue Sicherheitsangebote für {{firma}}")
+
+                    .mb-2
+
+                        label.form-label(for="content") Text
+
+                        textarea.form-control#content(name="content" rows="16" required maxlength="20000" style="font-size: 0.95rem;")= campaign.content
+
+                    .form-text
+
+                        | Normaler Text: Leerzeile = neuer Absatz, Links (https://…) werden automatisch anklickbar.
+                        | Der Abmeldelink wird automatisch unten angefügt.
+
+        .col-lg-4
+
+            .card.shadow-sm.mb-4
+
+                .card-header.bg-white.fw-semibold
+
+                    i.bi.bi-braces.me-2
+
+                    | Platzhalter
+
+                .card-body
+
+                    p.small.text-muted.mb-2 Klick fügt den Platzhalter an der Cursor-Position ein (Betreff oder Text).
+
+                    .list-group.list-group-flush
+
+                        each placeholder in placeholders
+
+                            button.list-group-item.list-group-item-action.d-flex.justify-content-between.align-items-center.px-0(
+                                type="button"
+                                data-placeholder=placeholder.key
+                            )
+
+                                span
+
+                                    code= "{{" + placeholder.key + "}}"
+
+                                    span.small.text-muted.ms-2= placeholder.label
+
+                                i.bi.bi-plus-circle.text-primary
+
+                    p.small.text-muted.mt-2.mb-0
+
+                        | {{anrede}} wird z. B. zu „Sehr geehrter Herr Müller“ bzw. „Sehr geehrte Frau Müller“.
+
+            .card.shadow-sm.mb-4
+
+                .card-header.bg-white.fw-semibold
+
+                    i.bi.bi-people.me-2
+
+                    | Zielgruppe
+
+                .card-body
+
+                    p.small.text-muted Nur Kontakte mit Einwilligung bekommen die Mail. Keine Gruppe gewählt = alle erreichbaren Kontakte (#{allEligible}).
+
+                    if groups.length
+
+                        each group in groups
+
+                            - const id = "tag-" + group.tag.replace(/[^a-z0-9]/gi, "_")
+
+                            .form-check
+
+                                input.form-check-input(type="checkbox" name="tags" value=group.tag id=id checked=selectedTags.includes(group.tag.toLowerCase()))
+
+                                label.form-check-label.d-flex.justify-content-between(for=id)
+
+                                    span= group.tag
+
+                                    span.text-muted.small.ms-2 #{group.eligible} erreichbar
+
+                    else
+
+                        p.small.text-muted.mb-0
+
+                            | Noch keine Gruppen. Gruppen entstehen über „Branche / Gruppen“ bei den Firmen.
+
+            .card.shadow-sm
+
+                .card-body.d-grid.gap-2
+
+                    button.btn.btn-primary(type="submit")
+
+                        i.bi.bi-check-lg.me-2
+
+                        | Speichern
+
+                    button.btn.btn-outline-primary(
+                        type="submit"
+                        formaction="/crm/marketing/campaigns/preview"
+                        formtarget="_blank"
+                        formnovalidate
+                    )
+
+                        i.bi.bi-eye.me-2
+
+                        | Vorschau (neuer Tab)
+
+                    a.btn.btn-outline-secondary(href=cancelUrl)
+
+                        | Abbrechen
+
+                    .small.text-muted.mt-1 Versendet wird erst auf der nächsten Seite – nach Vorschau und Test-Mail.
+
+script.
+    (function () {
+        var lastField = document.getElementById("content");
+
+        ["subject", "content"].forEach(function (id) {
+            var field = document.getElementById(id);
+            field.addEventListener("focus", function () { lastField = field; });
+        });
+
+        document.querySelectorAll("[data-placeholder]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                var text = "{{" + button.getAttribute("data-placeholder") + "}}";
+                var field = lastField;
+                var start = field.selectionStart;
+                var end = field.selectionEnd;
+                field.value = field.value.slice(0, start) + text + field.value.slice(end);
+                field.focus();
+                field.selectionStart = field.selectionEnd = start + text.length;
+            });
+        });
+    })();

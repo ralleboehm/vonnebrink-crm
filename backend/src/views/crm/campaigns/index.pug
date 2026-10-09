@@ -1,0 +1,152 @@
+extends ../layouts/main
+
+include _mixins
+
+block content
+
+    .d-flex.justify-content-between.align-items-center.mb-4.flex-wrap.gap-2
+
+        div
+
+            h1.mb-0
+
+                i.bi.bi-envelope-paper.me-2
+
+                | Kampagnen
+
+            small.text-muted E-Mails an erreichbare Kontakte – mit Einwilligung und persönlichem Abmeldelink
+
+        if can("marketing.manage")
+
+            a.btn.btn-primary(href="/crm/marketing/campaigns/new")
+
+                i.bi.bi-plus-lg.me-2
+
+                | Neue Kampagne
+
+    if flash
+
+        .alert(class=`alert-${flash.type}`)= flash.text
+
+    form.row.g-2.mb-3(method="GET" action="/crm/marketing/campaigns")
+
+        .col-md-3
+
+            select.form-select(name="status")
+
+                option(value="") Alle Status
+
+                each label, key in statusLabels
+
+                    option(value=key selected=filters.status === key)= label
+
+        .col-md-6
+
+            input.form-control(type="search" name="search" value=filters.search placeholder="Name, Betreff oder Nummer …" maxlength="100")
+
+        .col-md-3.d-flex.gap-2
+
+            button.btn.btn-primary(type="submit")
+
+                i.bi.bi-funnel.me-1
+
+                | Filtern
+
+            if filters.status || filters.search
+
+                a.btn.btn-outline-secondary(href="/crm/marketing/campaigns") Zurücksetzen
+
+    if campaigns.length
+
+        .card.shadow-sm
+
+            .table-responsive
+
+                table.table.table-hover.align-middle.mb-0
+
+                    thead.table-light
+
+                        tr
+                            th Nummer
+                            th Name
+                            th Zielgruppe
+                            th Status
+                            th.text-end Empfänger
+                            th Versendet
+                            th Erstellt
+
+                    tbody
+
+                        each campaign in campaigns
+
+                            tr
+
+                                td
+
+                                    code= campaign.campaignNumber
+
+                                td
+
+                                    a.fw-semibold.text-decoration-none(href=`/crm/marketing/campaigns/${campaign._id}`)= campaign.name
+
+                                    .small.text-muted.text-truncate(style="max-width: 360px;")= campaign.subject
+
+                                td
+
+                                    +audienceLabel(campaign.audience && campaign.audience.tags)
+
+                                td
+
+                                    +campaignStatus(campaign.status)
+
+                                td.text-end
+
+                                    if campaign.status === "draft"
+
+                                        span.text-muted —
+
+                                    else
+
+                                        | #{campaign.stats.sent} / #{campaign.stats.total}
+
+                                        if campaign.stats.failed
+
+                                            span.text-danger.ms-1(title="fehlgeschlagen")= `(${campaign.stats.failed} ✕)`
+
+                                td.small
+
+                                    if campaign.sentAt
+
+                                        = campaign.sentAt.toLocaleString("de-DE", { timeZone: "Europe/Berlin", dateStyle: "short", timeStyle: "short" })
+
+                                    else
+
+                                        span.text-muted —
+
+                                td.small.text-muted
+
+                                    = campaign.createdAt.toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" })
+
+                                    if campaign.createdBy
+
+                                        | , #{campaign.createdBy}
+
+    else
+
+        .card.shadow-sm
+
+            .card-body.text-center.text-muted.py-5
+
+                i.bi.bi-envelope-paper.display-6.d-block.mb-2
+
+                if filters.status || filters.search
+
+                    | Keine Kampagne passt zum Filter.
+
+                else
+
+                    | Noch keine Kampagnen.
+
+                    if can("marketing.manage")
+
+                        a.ms-1(href="/crm/marketing/campaigns/new") Jetzt die erste anlegen
