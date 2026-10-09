@@ -9,9 +9,10 @@
 //   - Interne Benachrichtigungen (Glocke): create, notifyUser, notifyUsers,
 //     markAsRead, markAllAsRead, getUnread, countUnread, getRecent, getPage
 //
-//   - Ereignisse: dispatch(event, payload) ruft den Handler aus dem
-//     Ereignis-Register auf (services/notification/events.js). Der Handler
-//     legt Benachrichtigungen an und verschickt E-Mails.
+//   - Ereignisse: Dieser Service hört am Event-Bus (core/events) auf alle
+//     Ereignisse, für die ein Benachrichtigungs-Handler existiert
+//     (services/notification/handlers). dispatch(event, payload) ruft den
+//     Handler direkt auf; er legt Benachrichtigungen an und verschickt E-Mails.
 //
 //   - Kurzmethoden für Controller, z. B. ticketCreated(ticket)
 //
@@ -25,6 +26,7 @@ const mongoose = require("mongoose");
 const Notification = require("../models/notification.model");
 const User = require("../models/user.model");
 const events = require("./notification/events");
+const bus = require("../core/events");
 const { clampLimit, parsePagination, buildPage } = require("../utils/pagination");
 const { internalPath } = require("../core/http/redirect");
 
@@ -354,13 +356,51 @@ async function dispatch(event, payload = {}, ctx = null) {
  */
 async function ticketCreated(ticket, options = {}) {
 
-    return dispatch(EVENTS.TICKET_CREATED, {
+    // Über den Event-Bus: so hören künftig auch Activity-, Audit- oder
+    // Websocket-Zuhörer auf neue Tickets, ohne dass sich hier etwas ändert.
+    const results = await bus.emit(EVENTS.TICKET_CREATED, {
         ticket,
         createdByUserId: options.createdByUserId || null,
         source: options.source || "crm"
     });
 
+    const own = results.find((entry) => entry.listener === BUS_LISTENER_NAME);
+
+    return own && own.result ? own.result : { ok: true, event: EVENTS.TICKET_CREATED, result: null };
+
 }
+
+// ----------------------------------------------------
+// Am Event-Bus anmelden
+// ----------------------------------------------------
+
+const BUS_LISTENER_NAME = "notifications";
+
+let subscribed = false;
+
+/**
+ * Für jedes Ereignis mit Benachrichtigungs-Handler einen Zuhörer am Bus
+ * anmelden. Läuft einmal beim ersten Laden dieses Moduls.
+ */
+function subscribeToBus() {
+
+    if (subscribed) return;
+
+    loadHandlers();
+
+    for (const { event, implemented } of events.list()) {
+
+        if (implemented) {
+            bus.on(event, (payload) => dispatch(event, payload), { name: BUS_LISTENER_NAME });
+        }
+
+    }
+
+    subscribed = true;
+
+}
+
+subscribeToBus();
 
 module.exports = {
 

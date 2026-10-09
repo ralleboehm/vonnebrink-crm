@@ -1,9 +1,14 @@
+const { can } = require("../core/permissions");
+
 module.exports = (req, res, next) => {
 
     res.locals.session = req.session;
 
     // CRM
     res.locals.currentUser = req.session.user || null;
+
+    // Rechteprüfung in Views: if can("users.manage")
+    res.locals.can = (permission) => can(req.session.user, permission);
 
     // Kundenportal
     res.locals.currentPortalUser = req.session.portalUser || null;

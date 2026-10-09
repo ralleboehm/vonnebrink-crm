@@ -165,3 +165,6 @@ exports.softDelete = async (id) => {
     );
 
 };
+
+// Einheitliche Namen (findAll, findById, delete) zusätzlich zu den bisherigen
+require("../core/service/crudAliases").applyCrudAliases(exports);

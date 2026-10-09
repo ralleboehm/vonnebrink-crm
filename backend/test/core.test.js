@@ -66,3 +66,130 @@ test("flash: einmal setzen, einmal lesen", () => {
     assert.equal(flash.takeFlash({}), null);
 
 });
+
+// ----------------------------------------------------
+// Event-Bus
+// ----------------------------------------------------
+
+const bus = require("../src/core/events");
+
+test("Event-Bus: mehrere Zuhörer, Fehler isoliert, Reihenfolge", async () => {
+
+    const seen = [];
+
+    const offA = bus.on(bus.EVENTS.INVOICE_CREATED, async (p) => { seen.push(`a:${p.n}`); return 1; }, { name: "a" });
+    const offB = bus.on(bus.EVENTS.INVOICE_CREATED, () => { throw new Error("kaputt"); }, { name: "b" });
+    const offC = bus.on(bus.EVENTS.INVOICE_CREATED, (p) => { seen.push(`c:${p.n}`); }, { name: "c" });
+
+    const originalError = console.error;
+    console.error = () => {};
+
+    try {
+
+        const results = await bus.emit(bus.EVENTS.INVOICE_CREATED, { n: 7 });
+
+        assert.deepEqual(seen, ["a:7", "c:7"]);
+        assert.deepEqual(results.map((r) => [r.listener, r.ok]), [["a", true], ["b", false], ["c", true]]);
+        assert.equal(results[1].error, "kaputt");
+
+    } finally {
+
+        console.error = originalError;
+        offA(); offB(); offC();
+
+    }
+
+    assert.equal(bus.listenerCount(bus.EVENTS.INVOICE_CREATED), 0);
+    assert.deepEqual(await bus.emit(bus.EVENTS.INVOICE_CREATED, {}), []);
+
+});
+
+test("Event-Bus: nur bekannte Ereignisse", async () => {
+
+    assert.throws(() => bus.on("rechnung.erstellt", () => {}), /Unbekanntes Ereignis/);
+    await assert.rejects(bus.emit("rechnung.erstellt", {}), /Unbekanntes Ereignis/);
+
+    for (const name of ["ticket.created", "ticket.updated", "asset.created", "asset.updated", "customer.created", "sales.created", "invoice.created"]) {
+        assert.equal(bus.isKnownEvent(name), true, name);
+    }
+
+});
+
+// ----------------------------------------------------
+// Rechte
+// ----------------------------------------------------
+
+const permissions = require("../src/core/permissions");
+
+test("Rechte: Rollen bilden das heutige Verhalten ab", () => {
+
+    const { can } = permissions;
+
+    assert.equal(can({ role: "admin" }, "users.manage"), true);
+    assert.equal(can({ role: "admin" }, "invoices.edit"), true);
+
+    for (const role of ["technician", "sales"]) {
+        assert.equal(can({ role }, "tickets.delete"), true, role);
+        assert.equal(can({ role }, "assets.edit"), true, role);
+        assert.equal(can({ role }, "users.manage"), false, role);
+        assert.equal(can({ role }, "import.run"), false, role);
+        assert.equal(can({ role }, "integrations.manage"), false, role);
+    }
+
+    assert.equal(can("sales", "quotes.edit"), true);
+    assert.equal(can("technician", "quotes.edit"), false);
+    assert.equal(can("accounting", "invoices.edit"), true);
+    assert.equal(can("accounting", "tickets.view"), false);
+    assert.equal(can("portal", "tickets.view"), false);
+    assert.equal(can(null, "tickets.view"), false);
+    assert.equal(can({ role: "unbekannt" }, "tickets.view"), false);
+
+});
+
+test("Rechte: requirePermission-Middleware", () => {
+
+    const run = (user, ...perms) => {
+        const result = {};
+        const res = {
+            redirect: (to) => { result.redirect = to; },
+            status: (code) => { result.status = code; return { send: () => {} }; }
+        };
+        permissions.requirePermission(...perms)({ session: { user } }, res, () => { result.next = true; });
+        return result;
+    };
+
+    assert.deepEqual(run({ role: "admin" }, "users.manage"), { next: true });
+    assert.deepEqual(run({ role: "sales" }, "users.manage"), { status: 403 });
+    assert.deepEqual(run(null, "tickets.view"), { redirect: "/crm/login" });
+    assert.deepEqual(run({ role: "technician" }, "tickets.view", "users.manage"), { status: 403 });
+
+});
+
+// ----------------------------------------------------
+// Einheitliche Service-Namen
+// ----------------------------------------------------
+
+test("CRUD-Aliase ergänzen, überschreiben aber nichts", async () => {
+
+    const { applyCrudAliases } = require("../src/core/service/crudAliases");
+
+    const service = {
+        getAll: async () => "liste",
+        getById: async (id) => `datensatz ${id}`,
+        softDelete: async (id) => `gelöscht ${id}`
+    };
+
+    applyCrudAliases(service);
+
+    assert.equal(await service.findAll(), "liste");
+    assert.equal(await service.findById(3), "datensatz 3");
+    assert.equal(await service.delete(4), "gelöscht 4");
+
+    const own = applyCrudAliases({ delete: () => "eigenes delete", softDelete: () => "soft" });
+    assert.equal(own.delete(), "eigenes delete");
+
+    class Klasse { async getById(id) { return this.prefix + id; } }
+    const instance = applyCrudAliases(Object.assign(new Klasse(), { prefix: "K" }));
+    assert.equal(await instance.findById(1), "K1");
+
+});

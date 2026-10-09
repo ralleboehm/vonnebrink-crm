@@ -196,4 +196,7 @@ class UserService {
 
 }
 
-module.exports = new UserService();
+const { applyCrudAliases } = require("../core/service/crudAliases");
+
+// Einheitliche Namen (findAll, findById, delete) zusätzlich zu den bisherigen
+module.exports = applyCrudAliases(new UserService());

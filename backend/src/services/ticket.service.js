@@ -287,4 +287,7 @@ class TicketService {
 
 }
 
-module.exports = new TicketService();
+const { applyCrudAliases } = require("../core/service/crudAliases");
+
+// Einheitliche Namen (findAll, findById, delete) zusätzlich zu den bisherigen
+module.exports = applyCrudAliases(new TicketService());

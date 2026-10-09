@@ -1,48 +1,30 @@
 "use strict";
 
 // ----------------------------------------------------
-// Ereignis-Register für Benachrichtigungen
+// Benachrichtigungs-Handler je Ereignis
 // ----------------------------------------------------
 //
-// Jedes Ereignis im CRM (z. B. "ticket.created") hat genau einen
-// Handler. Der Handler entscheidet, WER benachrichtigt wird und WIE
-// (interne Benachrichtigung, E-Mail, beides).
+// Die Ereignisnamen kommen aus dem zentralen Event-Bus (core/events).
+// Das Benachrichtigungsmodul ist dort EIN Zuhörer unter mehreren
+// (später z. B. Activity-Log, Audit, Websocket).
+//
+// Pro Ereignis gibt es hier genau einen Benachrichtigungs-Handler. Er
+// entscheidet, WER benachrichtigt wird und WIE (Glocke, E-Mail, beides).
 //
 // Handler bekommen alle Werkzeuge über "ctx" übergeben und importieren
 // selbst keine Services. Dadurch gibt es keine zirkulären Abhängigkeiten,
 // und Handler lassen sich ohne Datenbank und Mailserver testen.
 //
 // Neues Ereignis hinzufügen:
-//   1. Namen unten in EVENTS eintragen (falls noch nicht vorhanden)
+//   1. Namen in core/events/names.js eintragen (falls noch nicht vorhanden)
 //   2. Handler in services/notification/handlers/<bereich>.handlers.js
 //      schreiben und dort mit register() anmelden
 //   3. Datei in services/notification/handlers/index.js eintragen
-//   4. Im Service an passender Stelle notificationService.dispatch(...)
-//      bzw. eine eigene Kurzmethode (wie ticketCreated) aufrufen
+//   4. Das Ereignis mit core/events emit(...) auslösen – der
+//      notification.service hört automatisch auf alle Ereignisse,
+//      für die hier ein Handler angemeldet ist.
 
-const EVENTS = Object.freeze({
-
-    // Tickets
-    TICKET_CREATED: "ticket.created",
-    TICKET_ASSIGNED: "ticket.assigned",
-    TICKET_CLOSED: "ticket.closed",
-
-    // Kundenportal & Benutzer
-    PORTAL_WELCOME: "portal.welcome",
-    PASSWORD_RESET: "password.reset",
-
-    // Vorbereitet, noch ohne Handler
-    CUSTOMER_CREATED: "customer.created",
-    LEAD_CREATED: "lead.created",
-    QUOTE_CREATED: "quote.created",
-    INVOICE_CREATED: "invoice.created",
-    ASSET_OFFLINE: "asset.offline",
-    ACTION1_ALERT: "action1.alert",
-    NEXTCLOUD_DOCUMENT_UPLOADED: "nextcloud.documentUploaded"
-
-});
-
-const KNOWN_EVENTS = new Set(Object.values(EVENTS));
+const { EVENTS, isKnownEvent } = require("../../core/events/names");
 
 const handlers = new Map();
 
@@ -54,8 +36,8 @@ const handlers = new Map();
  */
 function register(event, handler) {
 
-    if (!KNOWN_EVENTS.has(event)) {
-        throw new Error(`Unbekanntes Benachrichtigungs-Ereignis "${event}". Bitte zuerst in EVENTS eintragen.`);
+    if (!isKnownEvent(event)) {
+        throw new Error(`Unbekanntes Benachrichtigungs-Ereignis "${event}". Bitte zuerst in core/events/names.js eintragen.`);
     }
 
     if (typeof handler !== "function") {
