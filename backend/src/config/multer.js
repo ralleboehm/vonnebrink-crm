@@ -27,6 +27,9 @@ const upload = multer({
 
     storage,
 
+    // Dateinamen mit Umlauten richtig lesen (Standard wäre latin1)
+    defParamCharset: "utf8",
+
 limits: {
 
     fileSize:

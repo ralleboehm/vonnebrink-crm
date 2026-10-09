@@ -18,6 +18,8 @@ const Asset = require("../models/asset.model");
 const Campaign = require("../models/campaign.model");
 const Opportunity = require("../models/opportunity.model");
 const Survey = require("../models/survey.model");
+const Document = require("../models/document.model");
+const DocumentFolder = require("../models/documentFolder.model");
 const Activity = require("../models/activity.model");
 const Notification = require("../models/notification.model");
 const SyncRun = require("../models/syncRun.model");
@@ -83,6 +85,7 @@ function confirmReset() {
         console.log(" • Kampagnen");
         console.log(" • Verkaufschancen");
         console.log(" • Kundenumfragen (NPS)");
+        console.log(" • Dokument-Metadaten (Dateien in Nextcloud bleiben)");
         console.log(" • Benachrichtigungen");
         console.log(" • Action1-Syncprotokolle");
         console.log(" • Counter");
@@ -242,6 +245,16 @@ async function resetBusinessData() {
 
     console.log(
         `✔ Kundenumfragen: ${surveys.deletedCount}`
+    );
+
+    // Dokument-Metadaten (die Dateien in Nextcloud bleiben unangetastet)
+    const documents =
+        await Document.deleteMany({});
+
+    await DocumentFolder.deleteMany({});
+
+    console.log(
+        `✔ Dokument-Metadaten: ${documents.deletedCount} (Dateien in Nextcloud bleiben erhalten)`
     );
 
     const notifications =

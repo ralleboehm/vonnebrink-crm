@@ -1,5 +1,6 @@
 const Company = require("../models/company.model");
 const counterService = require("./counter.service");
+const events = require("../core/events");
 
 const { normalizeTags } = require("../utils/tags");
 const { escapeRegex } = require("./search.service");
@@ -77,7 +78,7 @@ exports.create = async (companyData) => {
 
     const customerNumber = await counterService.next("company", "CUS");
 
-    return await Company.create({
+    const company = await Company.create({
 
         customerNumber,
 
@@ -98,6 +99,11 @@ exports.create = async (companyData) => {
         isDeleted: false
 
     });
+
+    // z. B. Kundenordner in Nextcloud (läuft im Hintergrund, blockiert nie)
+    events.emit(events.EVENTS.CUSTOMER_CREATED, { company: company.toObject() }).catch(() => {});
+
+    return company;
 
 };
 

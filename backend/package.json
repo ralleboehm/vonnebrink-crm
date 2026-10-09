@@ -13,7 +13,8 @@
     "create-admin": "node src/scripts/create-admin.js",
     "dev:reset-demo-data": "node src/scripts/reset-demo-data.js",
     "dev:seed": "node src/scripts/seed-demo-data.js",
-    "dev:reset": "node src/scripts/dev-reset.js"
+    "dev:reset": "node src/scripts/dev-reset.js",
+    "nextcloud:setup": "node src/scripts/nextcloud-setup.js"
   },
   "keywords": [
     "crm",

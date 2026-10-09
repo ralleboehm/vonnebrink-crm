@@ -1,0 +1,13 @@
+//- Reiter oben auf der Firmenseite: Übersicht | Dokumente
+
+mixin companyTabs(company, active)
+    ul.nav.nav-tabs.vb-company-tabs.mb-4
+        li.nav-item
+            a.nav-link(class=active === "overview" ? "active" : "" href=`/crm/companies/${company._id}` aria-current=active === "overview" ? "page" : false)
+                i.bi.bi-building.me-2
+                | Übersicht
+        if can("documents.view")
+            li.nav-item
+                a.nav-link(class=active === "documents" ? "active" : "" href=`/crm/companies/${company._id}/documents` aria-current=active === "documents" ? "page" : false)
+                    i.bi.bi-folder2-open.me-2
+                    | Dokumente

@@ -72,6 +72,16 @@ Rechte heißen `bereich.aktion` (`tickets.delete`, `invoices.edit`). Die
 Rollen-Tabelle bildet das heutige Verhalten ab; Rollen Buchhaltung und
 Portal sind vorbereitet.
 
+## Dokumente (Nextcloud)
+
+Dateien liegen nur in Nextcloud, MongoDB hält Metadaten (`models/document.model.js`,
+Ordnerzuordnung in `documentFolder.model.js`). Jedes Modul spricht Nextcloud nur über
+`services/nextcloud.service.js` an (WebDAV, Versionen, OCS-Freigaben, Wiederholen,
+Zeitlimit; Konfiguration `config/nextcloud.js`). Fachlogik in `services/document.service.js`:
+ein neuer Bereich meldet sich mit `registerReference(type, resolver)` an und sagt, zu welcher
+Firma er gehört und in welchen Unterordner seine Dokumente kommen. Kategorien, Ordner und
+Rollen-Kategorien: `utils/documentRules.js`.
+
 ## Integrationen (integrations/)
 
 Jede Integration: `index.js` (Register-Eintrag), `client.js` (API),

@@ -46,6 +46,14 @@ const PERMISSIONS = Object.freeze({
     ASSETS_EDIT: "assets.edit",
     ASSETS_DELETE: "assets.delete",
 
+    // Dokumente (Nextcloud). Welche Kategorien eine Rolle sieht:
+    // utils/documentRules.js (Vertrieb nur Verträge und Angebote)
+    DOCUMENTS_VIEW: "documents.view",
+    DOCUMENTS_UPLOAD: "documents.upload",
+    DOCUMENTS_EDIT: "documents.edit",       // umbenennen, verschieben
+    DOCUMENTS_DELETE: "documents.delete",
+    DOCUMENTS_SHARE: "documents.share",     // Freigabelinks
+
     // Verwaltung
     USERS_MANAGE: "users.manage",
     IMPORT_RUN: "import.run",
@@ -105,11 +113,11 @@ const ROLE_PERMISSIONS = Object.freeze({
 
     admin: ["*"],
 
-    technician: [...INTERNAL_BASE, "tickets.*", "assets.*"],
+    technician: [...INTERNAL_BASE, "tickets.*", "assets.*", "documents.view", "documents.upload"],
 
-    sales: [...INTERNAL_BASE, "tickets.list", "assets.view", "marketing.*", "sales.*", "quotes.*"],
+    sales: [...INTERNAL_BASE, "tickets.list", "assets.view", "marketing.*", "sales.*", "quotes.*", "documents.view", "documents.upload"],
 
-    accounting: ["companies.view", "contacts.view", "invoices.*", "contracts.*", "reports.view", "search.use", "notifications.view"],
+    accounting: ["companies.view", "contacts.view", "invoices.*", "contracts.*", "reports.view", "search.use", "notifications.view", "documents.view", "documents.upload"],
 
     portal: ["portal.tickets"]
 

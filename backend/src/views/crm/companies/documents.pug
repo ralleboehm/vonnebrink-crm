@@ -1,0 +1,361 @@
+extends ../layouts/main
+
+include _tabs
+
+block content
+
+    - const docs = page.documents
+    - const configured = page.status.configured
+    - const canUpload = can("documents.upload") && configured && !page.folder.error
+    - const canEdit = can("documents.edit") && configured
+    - const canDelete = can("documents.delete") && configured
+    - const base = `/crm/companies/${company._id}/documents`
+    - const actionQuery = "?returnTo=" + encodeURIComponent(returnTo)
+    - const isAdmin = session && session.user && session.user.role === "admin"
+    - const personName = (user) => user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : "—"
+
+    .d-flex.justify-content-between.align-items-center.mb-3.flex-wrap.gap-2
+
+        div
+
+            h1.mb-0= company.companyName
+
+            small.text-muted= company.customerNumber
+
+        a.btn.btn-secondary(href="/crm/companies")
+
+            i.bi.bi-arrow-left.me-2
+
+            | Zurück
+
+    +companyTabs(company, "documents")
+
+    if flash
+
+        .alert(class=`alert-${flash.type}`)= flash.text
+
+    //- =====================================================
+    //- Hinweise zur Einrichtung / Erreichbarkeit
+    //- =====================================================
+
+    if !configured
+
+        .alert.alert-info
+
+            h2.h6.mb-2
+
+                i.bi.bi-cloud-slash.me-2
+
+                | Die Dokumentenablage (Nextcloud) ist noch nicht eingerichtet
+
+            if isAdmin
+
+                p.mb-2 So binden Sie Nextcloud an:
+
+                ol.mb-2.small
+                    li In Nextcloud einen eigenen Benutzer für das CRM anlegen (z. B. „crm“) und dafür ein App-Passwort erzeugen (Einstellungen → Sicherheit).
+                    li
+                        | In
+                        code.mx-1 backend/.env
+                        | eintragen:
+                        code.ms-1 NEXTCLOUD_URL, NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD
+                        | (optional
+                        code.mx-1 NEXTCLOUD_ROOT_FOLDER
+                        | , Standard „CRM“).
+                    li
+                        | CRM neu starten und
+                        code.mx-1 npm run nextcloud:setup
+                        | ausführen – das prüft die Verbindung und legt die Kundenordner für alle Firmen an.
+
+                if page.status.invalidUrl
+
+                    p.mb-0.text-danger.small NEXTCLOUD_URL muss mit http:// oder https:// beginnen.
+
+            else
+
+                p.mb-0 Bitte wenden Sie sich an einen Administrator.
+
+    else if page.folder.error
+
+        .alert.alert-warning
+
+            i.bi.bi-exclamation-triangle.me-2
+
+            strong Nextcloud ist gerade nicht erreichbar:
+
+            |  #{page.folder.error}
+
+            br
+
+            small Die Liste zeigt die gespeicherten Angaben. Hochladen und Herunterladen gehen wieder, sobald Nextcloud erreichbar ist.
+
+    .row.g-4
+
+        //- =================================================
+        //- Hochladen
+        //- =================================================
+
+        if canUpload
+
+            .col-lg-4
+
+                .card.shadow-sm
+
+                    .card-header
+
+                        h2.h5.mb-0
+
+                            i.bi.bi-cloud-arrow-up.me-2
+
+                            | Hochladen
+
+                    .card-body
+
+                        form(method="POST" action=`/crm/documents${actionQuery}` enctype="multipart/form-data")
+
+                            input(type="hidden" name="referenceType" value="company")
+
+                            input(type="hidden" name="referenceId" value=String(company._id))
+
+                            .mb-3
+
+                                label.form-label(for="documentFile") Datei
+
+                                input.form-control#documentFile(type="file" name="file" required)
+
+                                .form-text Höchstens #{maxUploadMb} MB.
+
+                            .mb-3
+
+                                label.form-label(for="documentCategory") Kategorie
+
+                                select.form-select#documentCategory(name="category" required)
+
+                                    option(value="") Bitte wählen …
+
+                                    each entry in page.categories
+
+                                        option(value=entry.key selected=page.category === entry.key) #{entry.label} (#{entry.folder})
+
+                            .mb-3
+
+                                label.form-label(for="documentTags") Schlagworte
+
+                                    span.text-muted.small.ms-1 (freiwillig)
+
+                                input.form-control#documentTags(type="text" name="tags" maxlength="300" placeholder="z. B. Firewall, VPN")
+
+                            button.btn.btn-primary.w-100(type="submit")
+
+                                i.bi.bi-upload.me-2
+
+                                | Hochladen
+
+                        p.small.text-muted.mt-3.mb-0
+                            | Gleicher Dateiname in derselben Kategorie wird als
+                            strong.mx-1 neue Version
+                            | gespeichert – Nextcloud behält die früheren Fassungen.
+
+                if page.folder.path
+
+                    .card.shadow-sm.mt-3
+
+                        .card-body.small
+
+                            .text-muted.mb-1 Ablage in Nextcloud
+
+                            code.d-block.text-break.mb-2= page.folder.path
+
+                            if page.folder.link
+
+                                a(href=page.folder.link target="_blank" rel="noopener")
+
+                                    i.bi.bi-box-arrow-up-right.me-1
+
+                                    | In Nextcloud öffnen
+
+        //- =================================================
+        //- Liste
+        //- =================================================
+
+        div(class=canUpload ? "col-lg-8" : "col-12")
+
+            .d-flex.flex-wrap.gap-2.mb-3(role="navigation" aria-label="Kategorien")
+
+                a.btn.btn-sm(class=page.category ? "btn-outline-secondary" : "btn-primary" href=base) Alle (#{page.total})
+
+                each entry in page.categories
+
+                    if entry.count || page.category === entry.key
+
+                        a.btn.btn-sm(class=page.category === entry.key ? "btn-primary" : "btn-outline-secondary" href=`${base}?category=${entry.key}`)
+
+                            i.bi.me-1(class=entry.icon)
+
+                            | #{entry.label} (#{entry.count})
+
+            if docs.length
+
+                .card.shadow-sm
+
+                    .table-responsive
+
+                        table.table.table-hover.align-middle.mb-0.vb-documents
+
+                            thead.table-light
+
+                                tr
+                                    th Name
+                                    th Kategorie
+                                    th.text-end Größe
+                                    th Hochgeladen
+                                    th.text-end
+                                        span.visually-hidden Aktionen
+
+                            tbody
+
+                                each doc in docs
+
+                                    - const category = rules.CATEGORIES[doc.category] || { label: doc.category, icon: "bi-file-earmark" }
+                                    - const downloadUrl = `/crm/documents/${doc._id}/download`
+                                    - const editId = `doc-edit-${doc._id}`
+
+                                    tr
+
+                                        td
+
+                                            .d-flex.align-items-start.gap-2
+
+                                                i.bi.fs-5.text-muted(class=rules.fileIcon(doc.extension) aria-hidden="true")
+
+                                                div.text-break
+
+                                                    if configured
+
+                                                        a.fw-semibold.text-decoration-none(href=downloadUrl)= doc.fileName
+
+                                                    else
+
+                                                        span.fw-semibold= doc.fileName
+
+                                                    if doc.version > 1
+
+                                                        span.badge.text-bg-light.border.ms-2(title="Frühere Fassungen liegen in Nextcloud") Version #{doc.version}
+
+                                                    if doc.originalName && doc.originalName !== doc.fileName
+
+                                                        .small.text-muted Original: #{doc.originalName}
+
+                                                    if doc.tags && doc.tags.length
+
+                                                        .mt-1
+
+                                                            each tag in doc.tags
+
+                                                                span.badge.text-bg-light.border.me-1= tag
+
+                                        td.text-nowrap
+
+                                            i.bi.me-1(class=category.icon)
+
+                                            = category.label
+
+                                        td.text-end.text-nowrap.small= rules.formatSize(doc.size)
+
+                                        td.small.text-nowrap
+
+                                            = format.formatDateTime(doc.uploadedAt)
+
+                                            .text-muted= personName(doc.uploadedBy)
+
+                                        td.text-end.text-nowrap
+
+                                            if configured && rules.isPreviewable(doc.mimeType)
+
+                                                a.btn.btn-sm.btn-outline-secondary.me-1(href=`${downloadUrl}?inline=1` target="_blank" rel="noopener" title="Vorschau" aria-label=`Vorschau: ${doc.fileName}`)
+
+                                                    i.bi.bi-eye
+
+                                            if configured
+
+                                                a.btn.btn-sm.btn-outline-secondary.me-1(href=downloadUrl title="Herunterladen" aria-label=`Herunterladen: ${doc.fileName}`)
+
+                                                    i.bi.bi-download
+
+                                            if canEdit || canDelete
+
+                                                button.btn.btn-sm.btn-outline-secondary(
+                                                    type="button"
+                                                    data-bs-toggle="collapse"
+                                                    data-bs-target=`#${editId}`
+                                                    aria-expanded="false"
+                                                    aria-controls=editId
+                                                    title="Bearbeiten"
+                                                    aria-label=`Bearbeiten: ${doc.fileName}`
+                                                )
+
+                                                    i.bi.bi-pencil
+
+                                    if canEdit || canDelete
+
+                                        tr.collapse.vb-document-edit(id=editId)
+
+                                            td(colspan="5")
+
+                                                .d-flex.flex-wrap.gap-3.align-items-end.py-2
+
+                                                    if canEdit
+
+                                                        form.d-flex.gap-2.align-items-end(method="POST" action=`/crm/documents/${doc._id}/rename${actionQuery}`)
+
+                                                            div
+
+                                                                label.form-label.small.mb-1(for=`name-${doc._id}`) Umbenennen
+
+                                                                input.form-control.form-control-sm(id=`name-${doc._id}` type="text" name="fileName" value=doc.fileName maxlength="200" required)
+
+                                                            button.btn.btn-sm.btn-outline-primary(type="submit") Speichern
+
+                                                        form.d-flex.gap-2.align-items-end(method="POST" action=`/crm/documents/${doc._id}/move${actionQuery}`)
+
+                                                            div
+
+                                                                label.form-label.small.mb-1(for=`category-${doc._id}`) Verschieben nach
+
+                                                                select.form-select.form-select-sm(id=`category-${doc._id}` name="category")
+
+                                                                    each entry in page.categories
+
+                                                                        option(value=entry.key selected=entry.key === doc.category) #{entry.label} (#{entry.folder})
+
+                                                            button.btn.btn-sm.btn-outline-primary(type="submit") Verschieben
+
+                                                    if canDelete
+
+                                                        form.ms-auto(method="POST" action=`/crm/documents/${doc._id}/delete${actionQuery}` onsubmit="return confirm('Dokument wirklich löschen? Es landet im Nextcloud-Papierkorb.');")
+
+                                                            button.btn.btn-sm.btn-outline-danger(type="submit")
+
+                                                                i.bi.bi-trash.me-1
+
+                                                                | Löschen
+
+            else
+
+                .card.shadow-sm
+
+                    .card-body.text-center.text-muted.py-5
+
+                        i.bi.bi-folder2-open.display-6.d-block.mb-2
+
+                        if page.category
+
+                            | Keine Dokumente in dieser Kategorie.
+
+                        else if canUpload
+
+                            | Noch keine Dokumente. Laden Sie links die erste Datei hoch.
+
+                        else
+
+                            | Noch keine Dokumente.

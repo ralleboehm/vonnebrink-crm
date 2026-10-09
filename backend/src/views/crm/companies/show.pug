@@ -2,10 +2,11 @@ extends ../layouts/main
 
 include ../assets/_mixins
 include _tags
+include _tabs
 
 block content
 
-    .d-flex.justify-content-between.align-items-center.mb-4
+    .d-flex.justify-content-between.align-items-center.mb-3
 
         h1.mb-0= company.companyName
 
@@ -26,6 +27,8 @@ block content
                 i.bi.bi-arrow-left.me-2
 
                 | Zurück
+
+    +companyTabs(company, "overview")
 
     // =====================================================
     // Firmendaten

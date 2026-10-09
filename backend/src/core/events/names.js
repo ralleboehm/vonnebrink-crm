@@ -37,6 +37,14 @@ const EVENTS = Object.freeze({
     QUOTE_CREATED: "quote.created",
     INVOICE_CREATED: "invoice.created",
 
+    // Dokumente (Nextcloud) – Nutzlast: { document, user, … }
+    DOCUMENT_UPLOADED: "document.uploaded",
+    DOCUMENT_DOWNLOADED: "document.downloaded",
+    DOCUMENT_UPDATED: "document.updated",            // umbenannt, verschoben
+    DOCUMENT_DELETED: "document.deleted",
+    DOCUMENT_SHARED: "document.shared",
+    DOCUMENT_VERSION_CREATED: "document.versionCreated",
+
     // Integrationen
     ACTION1_ALERT: "action1.alert",
     NEXTCLOUD_DOCUMENT_UPLOADED: "nextcloud.documentUploaded"

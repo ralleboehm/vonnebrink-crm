@@ -48,6 +48,12 @@ router.use("/tickets", require("./ticket.routes"));
 router.use("/assets", require("./asset.routes"));
 
 // ----------------------------------------------------
+// Dokumente (Nextcloud)
+// ----------------------------------------------------
+
+router.use("/documents", require("./document.routes"));
+
+// ----------------------------------------------------
 // Integrationen (Action1)
 // ----------------------------------------------------
 

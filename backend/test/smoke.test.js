@@ -14,6 +14,9 @@
 //     Der Test bricht ab, wenn der Name nicht auf "_test" endet.
 //   - Dateien: Uploads landen in einem temporären Ordner, nicht in storage/.
 //   - E-Mail und Action1 sind während des Tests abgeschaltet.
+//   - Nextcloud: statt einer echten Nextcloud läuft ein Nachbau im Speicher
+//     (test/helpers/fakeNextcloud.js) – eine eingetragene Nextcloud wird
+//     nie angesprochen.
 //
 // Ausführen (braucht eine laufende MongoDB):
 //   npm run test:smoke
@@ -158,6 +161,19 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         delete process.env[key];
     }
 
+    // Nextcloud: Nachbau statt echter Cloud
+    const { startFakeNextcloud } = require("./helpers/fakeNextcloud");
+    const fakeCloud = await startFakeNextcloud({ username: "crm-smoke", password: "smoke-pass" });
+
+    Object.assign(process.env, {
+        NEXTCLOUD_URL: fakeCloud.url,
+        NEXTCLOUD_USERNAME: "crm-smoke",
+        NEXTCLOUD_PASSWORD: "smoke-pass",
+        NEXTCLOUD_ROOT_FOLDER: "CRM",
+        NEXTCLOUD_TIMEOUT: "5000",
+        NEXTCLOUD_RETRY_DELAY_MS: "1"
+    });
+
     process.env.NODE_ENV = "test";
     process.env.MONGODB_URI = uri;
 
@@ -181,6 +197,14 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         console.warn = quiet.warn;
 
         if (server) await new Promise((resolve) => server.close(resolve));
+
+        try {
+            await require("../src/services/document.service").whenIdle();
+        } catch {
+            // egal
+        }
+
+        await fakeCloud.close();
 
         try {
             await require("../src/services/email.service").flush();
@@ -454,6 +478,167 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         assert.match(form.text, new RegExp(`value="${contact._id}"[^>]*selected`));
 
         await Asset.updateOne({ _id: manualAsset._id }, { $set: { contact: null } });
+
+    });
+
+    await t.test("Dokumente (Nextcloud): Kundenordner, hochladen, Versionen, ändern, Rechte", async () => {
+
+        const Document = require("../src/models/document.model");
+        const documentService = require("../src/services/document.service");
+
+        const folder = "CRM/Customers/CUS-900001 Smoke GmbH";
+        const pageUrl = `/crm/companies/${company._id}/documents`;
+        const returnTo = `?returnTo=${encodeURIComponent(pageUrl)}`;
+
+        const fileForm = (fields, name, content, type = "application/pdf") => {
+            const form = new FormData();
+            for (const [key, value] of Object.entries(fields)) form.append(key, value);
+            if (name) form.append("file", new Blob([content], { type }), name);
+            return form;
+        };
+
+        const companyFields = (category, extra = {}) => ({ referenceType: "company", referenceId: String(company._id), category, ...extra });
+
+        // Reiter auf der Firmenseite
+        assert.match((await crm.get(`/crm/companies/${company._id}`)).text, new RegExp(`href="${pageUrl}"`), "Reiter Dokumente");
+
+        // Seite öffnen legt die Kundenstruktur an
+        const empty = await crm.get(pageUrl);
+        assertPage(empty, "Dokumente-Seite");
+        assert.match(empty.text, /Noch keine Dokumente/);
+        assert.match(empty.text, /CRM\/Customers\/CUS-900001 Smoke GmbH/);
+
+        for (const sub of ["Contracts", "Offers", "Invoices", "Tickets", "Assets", "Manuals", "Licenses", "Reports", "Photos", "Projects"]) {
+            assert.ok(fakeCloud.isFolder(`${folder}/${sub}`), `Ordner ${sub}`);
+        }
+
+        // Hochladen
+        assertRedirect(await crm.upload(`/crm/documents${returnTo}`, fileForm(companyFields("offer", { tags: "VPN, Firewall" }), "Angebot Müller.pdf", "%PDF Version 1")), "Upload", pageUrl);
+
+        let doc = await Document.findOne({ company: company._id, fileName: "Angebot Müller.pdf" });
+        assert.ok(doc, "Metadaten gespeichert");
+        assert.equal(doc.nextcloud.path, `${folder}/Offers/Angebot Müller.pdf`);
+        assert.equal(doc.version, 1);
+        assert.equal(doc.category, "offer");
+        assert.equal(doc.extension, "pdf");
+        assert.deepEqual([...doc.tags], ["VPN", "Firewall"]);
+        assert.equal(doc.checksum.length, 64);
+        assert.equal(String(doc.uploadedBy), String(admin._id));
+        assert.ok(doc.nextcloud.fileId);
+        assert.equal(fakeCloud.file(doc.nextcloud.path).toString(), "%PDF Version 1");
+
+        const listed = await crm.get(pageUrl);
+        assert.match(listed.text, /Angebot Müller\.pdf/);
+        assert.match(listed.text, /„Angebot Müller\.pdf“ wurde hochgeladen/);
+        assert.match(listed.text, /Firewall/);
+
+        // Gleicher Inhalt: nichts passiert; neuer Inhalt: Version 2
+        assertRedirect(await crm.upload(`/crm/documents${returnTo}`, fileForm(companyFields("offer"), "Angebot Müller.pdf", "%PDF Version 1")), "gleich");
+        assert.match((await crm.get(pageUrl)).text, /unverändert/);
+        assert.equal((await Document.findById(doc._id)).version, 1);
+
+        assertRedirect(await crm.upload(`/crm/documents${returnTo}`, fileForm(companyFields("offer"), "Angebot Müller.pdf", "%PDF Version 2")), "Version 2");
+        doc = await Document.findById(doc._id);
+        assert.equal(doc.version, 2);
+        assert.equal(await Document.countDocuments({ company: company._id }), 1, "kein zweites Dokument");
+        assert.equal(fakeCloud.file(doc.nextcloud.path).toString(), "%PDF Version 2");
+        assert.equal(fakeCloud.nodes.get(doc.nextcloud.path).versions.length, 1, "alte Fassung in Nextcloud");
+        assert.match((await crm.get(pageUrl)).text, /Version 2/);
+
+        // Herunterladen und Vorschau
+        const download = await crm.get(`/crm/documents/${doc._id}/download`);
+        assert.equal(download.status, 200);
+        assert.equal(download.text, "%PDF Version 2");
+        assert.match(download.contentType, /application\/pdf/);
+
+        const preview = await crm.get(`/crm/documents/${doc._id}/download?inline=1`);
+        assert.equal(preview.status, 200);
+
+        // Umbenennen (Endung bleibt) und verschieben
+        assertRedirect(await crm.post(`/crm/documents/${doc._id}/rename`, { fileName: "Angebot Q4" }), "Umbenennen", pageUrl);
+        doc = await Document.findById(doc._id);
+        assert.equal(doc.fileName, "Angebot Q4.pdf");
+        assert.equal(doc.nextcloud.path, `${folder}/Offers/Angebot Q4.pdf`);
+        assert.equal(fakeCloud.file(`${folder}/Offers/Angebot Müller.pdf`), undefined);
+
+        assertRedirect(await crm.post(`/crm/documents/${doc._id}/move`, { category: "contract" }), "Verschieben", pageUrl);
+        doc = await Document.findById(doc._id);
+        assert.equal(doc.category, "contract");
+        assert.equal(doc.nextcloud.path, `${folder}/Contracts/Angebot Q4.pdf`);
+        assert.equal(fakeCloud.file(doc.nextcloud.path).toString(), "%PDF Version 2");
+
+        // Eingaben prüfen
+        assertRedirect(await crm.upload(`/crm/documents${returnTo}`, fileForm(companyFields("quatsch"), "x.txt", "x", "text/plain")), "falsche Kategorie");
+        assert.match((await crm.get(pageUrl)).text, /Bitte eine Kategorie wählen/);
+        assertRedirect(await crm.upload(`/crm/documents${returnTo}`, fileForm(companyFields("backup"))), "ohne Datei");
+        assert.match((await crm.get(pageUrl)).text, /Bitte eine Datei auswählen/);
+
+        // Ein Backup (Techniker-Kategorie) für die Rechte-Prüfung
+        assertRedirect(await crm.upload(`/crm/documents${returnTo}`, fileForm(companyFields("backup"), "firewall.conf", "config", "text/plain")), "Backup");
+        const backup = await Document.findOne({ fileName: "firewall.conf" });
+        assert.equal(backup.nextcloud.path, `${folder}/Other/firewall.conf`);
+
+        // Techniker: lesen und hochladen, nicht ändern/löschen
+        const tech = createClient(baseUrl);
+        assertRedirect(await tech.post("/crm/login", { username: "smoke-tech", password: PASSWORD }), "Login Techniker");
+
+        const techPage = await tech.get(pageUrl);
+        assertPage(techPage, "Techniker Dokumente");
+        assert.match(techPage.text, /firewall\.conf/);
+        assert.doesNotMatch(techPage.text, /\/delete/, "kein Löschen");
+        assertRedirect(await tech.upload(`/crm/documents${returnTo}`, fileForm(companyFields("photo"), "Rack.jpg", "JPEG", "image/jpeg")), "Techniker Upload");
+        assert.ok(await Document.exists({ fileName: "Rack.jpg", category: "photo" }));
+        assert.equal((await tech.post(`/crm/documents/${backup._id}/delete`, {})).status, 403);
+        assert.equal((await tech.post(`/crm/documents/${backup._id}/rename`, { fileName: "x" })).status, 403);
+
+        // Vertrieb: nur Verträge und Angebote
+        const sales = createClient(baseUrl);
+        assertRedirect(await sales.post("/crm/login", { username: "smoke-sales", password: PASSWORD }), "Login Vertrieb");
+
+        const salesPage = await sales.get(pageUrl);
+        assertPage(salesPage, "Vertrieb Dokumente");
+        assert.match(salesPage.text, /Angebot Q4\.pdf/);
+        assert.doesNotMatch(salesPage.text, /firewall\.conf/, "Backup nicht sichtbar");
+        assert.equal((await sales.get(`/crm/documents/${backup._id}/download`)).status, 404, "fremde Kategorie: nicht gefunden");
+        assertRedirect(await sales.upload(`/crm/documents${returnTo}`, fileForm(companyFields("invoice"), "Rechnung.pdf", "%PDF")), "Vertrieb Rechnung");
+        assert.equal(await Document.exists({ fileName: "Rechnung.pdf" }), null, "Rechnung abgewiesen");
+        assert.match((await sales.get(pageUrl)).text, /dürfen Sie nicht hochladen/);
+        assertRedirect(await sales.upload(`/crm/documents${returnTo}`, fileForm(companyFields("offer"), "Angebot 2.pdf", "%PDF")), "Vertrieb Angebot");
+        assert.ok(await Document.exists({ fileName: "Angebot 2.pdf" }));
+
+        // Löschen (Admin): Papierkorb, Metadaten bleiben als gelöscht
+        assertRedirect(await crm.post(`/crm/documents/${backup._id}/delete`, {}), "Löschen", pageUrl);
+        const deleted = await Document.findById(backup._id);
+        assert.equal(deleted.isDeleted, true);
+        assert.equal(fakeCloud.file(backup.nextcloud.path), undefined);
+        assert.doesNotMatch((await crm.get(pageUrl)).text, /firewall\.conf/);
+        assert.equal((await crm.get(`/crm/documents/${backup._id}/download`)).status, 404);
+
+        // Kaputte Adressen
+        assert.equal((await crm.get("/crm/documents/kaputt/download")).status, 404);
+        assert.equal((await crm.get("/crm/companies/kaputt/documents")).status, 404);
+
+        // Neue Firma: Kundenordner entsteht automatisch
+        assertRedirect(await crm.post("/crm/companies", { companyName: "Ordner Test AG", status: "prospect" }), "neue Firma");
+        await documentService.whenIdle();
+        const created = await Company.findOne({ companyName: "Ordner Test AG" });
+        assert.ok(fakeCloud.isFolder(`CRM/Customers/${created.customerNumber} Ordner Test AG/Contracts`), "Kundenordner automatisch");
+
+        // Ohne Nextcloud: Hinweis statt Fehler
+        const savedUrl = process.env.NEXTCLOUD_URL;
+        process.env.NEXTCLOUD_URL = "";
+
+        try {
+            const off = await crm.get(pageUrl);
+            assertPage(off, "ohne Nextcloud");
+            assert.match(off.text, /noch nicht eingerichtet/);
+            assert.match(off.text, /npm run nextcloud:setup/);
+            assert.match(off.text, /Angebot Q4\.pdf/, "Liste bleibt sichtbar");
+            assertRedirect(await crm.upload(`/crm/documents${returnTo}`, fileForm(companyFields("offer"), "y.pdf", "%PDF")), "Upload ohne Nextcloud");
+            assert.match((await crm.get(pageUrl)).text, /class="alert alert-warning">Die Dokumentenablage \(Nextcloud\) ist noch nicht eingerichtet\./, "Hinweis nach dem Upload-Versuch");
+        } finally {
+            process.env.NEXTCLOUD_URL = savedUrl;
+        }
 
     });
 

@@ -751,3 +751,78 @@ test("Kundenumfrage: Seite für Kunden und Auswertung für Admins", { skip: !pug
     }
 
 });
+
+const documentRules = require("../src/utils/documentRules");
+const format = require("../src/utils/format");
+
+test("Dokumente: Reiter bei der Firma, Liste, Hochladen, Rechte, ohne Nextcloud", { skip: !pug && "pug nicht installiert" }, () => {
+
+    const doc = {
+        _id: "d1",
+        fileName: "Angebot Q4.pdf",
+        originalName: "Angebot Müller.pdf",
+        extension: "pdf",
+        mimeType: "application/pdf",
+        size: 1536,
+        category: "offer",
+        tags: ["VPN"],
+        version: 2,
+        uploadedAt: new Date("2026-10-09T10:00:00Z"),
+        uploadedBy: { firstName: "Ralf", lastName: "Böhm" }
+    };
+
+    const pageOf = (overrides = {}) => ({
+        status: { configured: true, invalidUrl: false },
+        folder: { path: "CRM/Customers/CUS-000001 Holz Müller GmbH", link: "https://cloud.example.de/index.php/apps/files/?dir=x", error: null },
+        category: "",
+        categories: documentRules.allowedCategories("admin").map((key) => ({ key, ...documentRules.CATEGORIES[key], count: key === "offer" ? 1 : 0 })),
+        total: 1,
+        documents: [doc],
+        ...overrides
+    });
+
+    const locals = (page) => ({ company, page, rules: documentRules, format, returnTo: "/crm/companies/c1/documents", maxUploadMb: 100, flash: null });
+
+    const admin = render("crm/companies/documents.pug", locals(pageOf()));
+
+    assert.match(admin, /class="nav-link active" href="\/crm\/companies\/c1\/documents"/, "Reiter aktiv");
+    assert.match(admin, /enctype="multipart\/form-data"/);
+    assert.match(admin, /action="\/crm\/documents\?returnTo=%2Fcrm%2Fcompanies%2Fc1%2Fdocuments"/);
+    assert.match(admin, /Angebot Q4\.pdf/);
+    assert.match(admin, /Version 2/);
+    assert.match(admin, /Original: Angebot Müller\.pdf/);
+    assert.match(admin, /1,5 KB/);
+    assert.match(admin, /href="\/crm\/documents\/d1\/download\?inline=1"/, "Vorschau für PDF");
+    assert.match(admin, /action="\/crm\/documents\/d1\/rename/);
+    assert.match(admin, /action="\/crm\/documents\/d1\/move/);
+    assert.match(admin, /action="\/crm\/documents\/d1\/delete/);
+    assert.match(admin, /CRM\/Customers\/CUS-000001 Holz Müller GmbH/);
+    assert.match(admin, /Angebot \(1\)/, "Kategorie-Filter mit Anzahl");
+
+    // Vertrieb: nur seine Kategorien, kein Ändern/Löschen
+    const salesPage = pageOf({ categories: documentRules.allowedCategories("sales").map((key) => ({ key, ...documentRules.CATEGORIES[key], count: 0 })) });
+    const sales = render("crm/companies/documents.pug", locals(salesPage), "sales");
+
+    assert.match(sales, /enctype="multipart\/form-data"/, "Vertrieb darf hochladen");
+    assert.doesNotMatch(sales, /\/delete/);
+    assert.doesNotMatch(sales, /\/rename/);
+    assert.doesNotMatch(sales, /value="invoice"/, "keine Rechnungen im Auswahlfeld");
+
+    // Ohne Nextcloud: Hinweis, kein Hochladen, Liste bleibt
+    const off = render("crm/companies/documents.pug", locals(pageOf({ status: { configured: false, invalidUrl: false }, folder: { path: null, link: null, error: null } })));
+
+    assert.match(off, /noch nicht eingerichtet/);
+    assert.match(off, /npm run nextcloud:setup/);
+    assert.doesNotMatch(off, /enctype="multipart\/form-data"/);
+    assert.match(off, /Angebot Q4\.pdf/);
+    assert.doesNotMatch(off, /\/download/, "ohne Nextcloud kein Download-Knopf");
+
+    // Nicht erreichbar
+    const down = render("crm/companies/documents.pug", locals(pageOf({ folder: { path: null, link: null, error: "Nextcloud ist nicht erreichbar (ECONNREFUSED)." } })));
+    assert.match(down, /ECONNREFUSED/);
+    assert.doesNotMatch(down, /enctype="multipart\/form-data"/);
+
+    // Leer
+    assert.match(render("crm/companies/documents.pug", locals(pageOf({ documents: [], total: 0 }))), /Noch keine Dokumente/);
+
+});

@@ -335,6 +335,57 @@ Menü **Umfragen** (nur Admins).
   Antworten mit Kommentar und Ticket. Filter nach Zeitraum, Firma, Gruppe, Text; CSV-Export.
 - Regeln und Kennzahlen: `utils/npsRules.js`, Versand und Auswertung: `services/survey.service.js`.
 
+## Dokumente (Nextcloud)
+
+Reiter **Dokumente** auf jeder Firmenseite. Die Dateien liegen ausschließlich in Nextcloud,
+MongoDB speichert nur Metadaten (Name, Kategorie, Größe, Prüfsumme, Version, Nextcloud-Pfad, wer/wann).
+
+**Einrichten**
+
+1. In Nextcloud einen eigenen Benutzer für das CRM anlegen (z. B. `crm`) und ein **App-Passwort**
+   erzeugen (Einstellungen → Sicherheit).
+2. In `backend/.env`: `NEXTCLOUD_URL`, `NEXTCLOUD_USERNAME`, `NEXTCLOUD_PASSWORD`, optional
+   `NEXTCLOUD_ROOT_FOLDER` (Standard `CRM`) und `NEXTCLOUD_TIMEOUT` (ms, Standard 30000).
+3. CRM neu starten und `npm run nextcloud:setup` ausführen: prüft die Verbindung und legt die
+   Kundenordner für alle vorhandenen Firmen an (beliebig oft ausführbar).
+
+Ohne diese Werte läuft das CRM wie bisher; der Reiter zeigt dann einen Einrichtungshinweis.
+
+**Ablage**
+
+```
+CRM/Customers/CUS-000001 Musterfirma/
+    Contracts/ Offers/ Invoices/ Tickets/ Assets/ Manuals/
+    Licenses/ Reports/ Photos/ Projects/ Other/
+```
+
+- Neue Firma → Kundenordner entsteht automatisch (im Hintergrund). Vorhandene Ordner werden nie
+  neu angelegt. Wird die Firma umbenannt, bleibt der Ordner derselbe.
+- Die **Kategorie** bestimmt den Unterordner (Vertrag → Contracts, Angebot → Offers, Rechnung →
+  Invoices, Lizenz → Licenses, Handbuch → Manuals, Bericht → Reports, Foto/Screenshot → Photos,
+  Projektunterlage → Projects, Backup/Konfiguration/Sonstiges → Other). Weitere Kategorien:
+  `registerCategory()` in `utils/documentRules.js`.
+- **Versionen:** gleicher Dateiname in derselben Kategorie = neue Version; Nextcloud behält die
+  alten Fassungen. Gleicher Inhalt wird erkannt und nicht erneut hochgeladen.
+- **Löschen** verschiebt die Datei in den Nextcloud-Papierkorb.
+- Vorschau im Browser für PDF, Bilder und Text; alles andere wird heruntergeladen.
+
+| Recht | Admin | Techniker | Vertrieb |
+|---|---|---|---|
+| Ansehen, Herunterladen | alle Kategorien | alle Kategorien | nur Verträge, Angebote |
+| Hochladen | ✔ | ✔ | nur Verträge, Angebote |
+| Umbenennen, Verschieben, Löschen | ✔ | – | – |
+
+**Technik:** `services/nextcloud.service.js` ist der zentrale Zugang für alle Module (WebDAV:
+Ordner, Hochladen, Herunterladen, Verschieben, Kopieren, Umbenennen, Löschen, Eigenschaften;
+Versionen; Freigaben über die OCS-API) mit Zeitlimit, Wiederholen bei Störungen (503, Abbruch)
+und Log (`NEXTCLOUD_DEBUG=1` zeigt jede Anfrage). Fachlogik: `services/document.service.js`.
+Ereignisse: `document.uploaded`, `.downloaded`, `.updated`, `.deleted`, `.shared`,
+`.versionCreated`. Die Tests laufen gegen einen Nextcloud-Nachbau (`test/helpers/fakeNextcloud.js`).
+
+**Nächste Etappen:** Ticket- und Asset-Ordner (neue Ticket-Anhänge nach Nextcloud), danach
+Versionen und Freigabelinks in der Oberfläche sowie Vorbereitung von Vertragsverwaltung und Portal.
+
 ## Rollen
 
 | Bereich | Administrator | Techniker | Vertrieb |
@@ -344,6 +395,7 @@ Menü **Umfragen** (nur Admins).
 | Assets | ✔ | ✔ | nur ansehen |
 | Marketing (Kampagnen, Empfänger, Gruppen) | ✔ | – | ✔ |
 | Vertrieb (Pipeline, Verkaufschancen; Angebote später) | ✔ | – | ✔ |
+| Dokumente (Nextcloud) | ✔ | lesen, hochladen | Verträge, Angebote: lesen, hochladen |
 | Kundenumfragen (NPS) | ✔ | – | – |
 | Benutzer, Import & Export, Action1, E-Mail-Protokoll | ✔ | – | – |
 
