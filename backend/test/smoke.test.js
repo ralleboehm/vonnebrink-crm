@@ -491,6 +491,57 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
 
     });
 
+    // ------------------------------------------------
+    // Beispieldaten (npm run dev:seed)
+    // ------------------------------------------------
+
+    await t.test("Beispieldaten: Seeder füllt eine leere Datenbank", async () => {
+
+        // Geschäftsdaten leeren wie reset-demo-data (Benutzer bleiben)
+        for (const name of ["companies", "contacts", "portalaccounts", "tickets", "ticketmessages", "attachments", "assets", "notifications", "counters"]) {
+            await mongoose.connection.db.collection(name).deleteMany({});
+        }
+
+        const { seed } = require("../src/scripts/seed-demo-data");
+        const { COMPANIES, PORTAL_PASSWORD } = require("../src/scripts/seed/demoData");
+
+        const summary = await seed({ log: () => {} });
+
+        const expected = (key) => COMPANIES.reduce((n, c) => n + c[key].length, 0);
+
+        assert.equal(summary.companies, COMPANIES.length);
+        assert.equal(await Company.countDocuments(), COMPANIES.length);
+        assert.equal(await Contact.countDocuments(), expected("contacts"));
+        assert.equal(await Asset.countDocuments(), expected("assets"));
+        assert.equal(await Ticket.countDocuments(), expected("tickets"));
+        assert.equal(await Notification.countDocuments(), 0, "Seeder löst keine Benachrichtigungen aus");
+
+        const first = await Company.findOne({ companyName: COMPANIES[0].companyName });
+        assert.equal(first.customerNumber, "CUS-000001", "Nummern beginnen nach dem Reset bei 1");
+
+        assert.ok(await Ticket.exists({ status: "in_progress", assignedTo: admin._id }), "Status und Bearbeiter gesetzt");
+
+        // Zweiter Lauf ohne --force wird abgelehnt
+        await assert.rejects(seed({ log: () => {} }), /bereits/);
+
+        // Seiten mit Beispieldaten
+        const viewer = createClient(baseUrl);
+        assertRedirect(await viewer.post("/crm/login", { username: "smoke-admin", password: PASSWORD }), "Login");
+
+        for (const url of ["/crm", "/crm/companies", "/crm/tickets", "/crm/assets", `/crm/companies/${first._id}`]) {
+            const page = await viewer.get(url);
+            assertPage(page, url);
+        }
+
+        assert.match((await viewer.get("/crm/companies")).text, /Bäckerei Sonnenschein/);
+
+        // Portal-Login mit Beispielzugang
+        const customer = createClient(baseUrl);
+        assertRedirect(await customer.post("/portal/login", { email: summary.portalAccounts[0], password: PORTAL_PASSWORD }), "Portal-Login Beispielzugang", "/portal");
+        assertPage(await customer.get("/portal/tickets"), "/portal/tickets (Beispieldaten)");
+
+    });
+
 });
 
 module.exports = { testDatabaseUri, databaseName };
