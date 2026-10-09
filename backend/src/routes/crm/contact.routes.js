@@ -6,6 +6,8 @@ const contactController = require("../../controllers/crm/contact.controller");
 const portalAccountController = require("../../controllers/crm/portalAccount.controller");
 
 const { requireAuth } = require("../../middleware/auth/crmAuth.middleware");
+const marketingController = require("../../controllers/crm/marketing.controller");
+const { requirePermission, PERMISSIONS } = require("../../core/permissions");
 
 // ----------------------------------------------------
 // Kontakte
@@ -49,6 +51,16 @@ router.post(
     "/:id/portal/deactivate",
     requireAuth,
     portalAccountController.deactivate
+);
+
+// ----------------------------------------------------
+// Marketing-Einwilligung
+// ----------------------------------------------------
+
+router.post(
+    "/:id/marketing",
+    requirePermission(PERMISSIONS.MARKETING_MANAGE),
+    marketingController.setContactConsent
 );
 
 module.exports = router;

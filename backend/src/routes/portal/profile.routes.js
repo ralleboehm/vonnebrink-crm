@@ -33,4 +33,11 @@ router.post(
     profileController.changePassword
 );
 
+// Informationen per E-Mail an-/abbestellen
+router.post(
+    "/marketing",
+    requirePortalAuth,
+    profileController.marketing
+);
+
 module.exports = router;

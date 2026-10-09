@@ -56,6 +56,10 @@ const PERMISSIONS = Object.freeze({
     SEARCH_USE: "search.use",
     NOTIFICATIONS_VIEW: "notifications.view",
 
+    // Marketing (Gruppen, Empfänger, Einwilligungen, später Kampagnen)
+    MARKETING_VIEW: "marketing.view",
+    MARKETING_MANAGE: "marketing.manage",
+
     // Vorbereitet für kommende Module
     SALES_VIEW: "sales.view",
     SALES_EDIT: "sales.edit",
@@ -102,9 +106,9 @@ const ROLE_PERMISSIONS = Object.freeze({
 
     admin: ["*"],
 
-    technician: [...INTERNAL_DEFAULT],
+    technician: [...INTERNAL_DEFAULT, "marketing.view"],
 
-    sales: [...INTERNAL_DEFAULT, "sales.*", "quotes.*"],
+    sales: [...INTERNAL_DEFAULT, "sales.*", "quotes.*", "marketing.*"],
 
     accounting: ["companies.view", "contacts.view", "invoices.*", "contracts.*", "reports.view", "search.use", "notifications.view"],
 

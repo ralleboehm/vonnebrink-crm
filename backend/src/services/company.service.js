@@ -251,5 +251,86 @@ exports.saveAction1Mapping = async (entries) => {
 
 };
 
+// ----------------------------------------------------
+// Gruppen (Schlagwörter) verwalten
+// ----------------------------------------------------
+
+function tagMatcher(tag) {
+
+    return { $regex: `^${escapeRegex(String(tag).trim())}$`, $options: "i" };
+
+}
+
+/**
+ * Gruppe bei allen Firmen umbenennen. Gibt es den neuen Namen bei einer
+ * Firma schon, werden beide zusammengeführt (keine Dubletten).
+ *
+ * @returns {Promise<number>} Anzahl geänderter Firmen
+ */
+exports.renameTag = async (from, to) => {
+
+    const [target] = normalizeTags(to);
+
+    if (!from || !target) {
+        throw new Error("Bitte alten und neuen Gruppennamen angeben.");
+    }
+
+    const companies = await Company.find(
+        { isDeleted: false, tags: tagMatcher(from) },
+        "tags"
+    ).lean();
+
+    const fromKey = String(from).trim().toLowerCase();
+
+    const operations = companies.map((company) => ({
+        updateOne: {
+            filter: { _id: company._id },
+            update: {
+                $set: {
+                    tags: normalizeTags(company.tags.map((tag) => (tag.toLowerCase() === fromKey ? target : tag)))
+                }
+            }
+        }
+    }));
+
+    if (operations.length) {
+        await Company.bulkWrite(operations);
+    }
+
+    return operations.length;
+
+};
+
+/**
+ * Gruppe bei allen Firmen entfernen
+ *
+ * @returns {Promise<number>} Anzahl geänderter Firmen
+ */
+exports.removeTag = async (tag) => {
+
+    if (!tag) return 0;
+
+    const companies = await Company.find(
+        { isDeleted: false, tags: tagMatcher(tag) },
+        "tags"
+    ).lean();
+
+    const key = String(tag).trim().toLowerCase();
+
+    const operations = companies.map((company) => ({
+        updateOne: {
+            filter: { _id: company._id },
+            update: { $set: { tags: company.tags.filter((t) => t.toLowerCase() !== key) } }
+        }
+    }));
+
+    if (operations.length) {
+        await Company.bulkWrite(operations);
+    }
+
+    return operations.length;
+
+};
+
 // Einheitliche Namen (findAll, findById, delete) zusätzlich zu den bisherigen
 require("../core/service/crudAliases").applyCrudAliases(exports);

@@ -1,0 +1,182 @@
+extends ../layouts/main
+
+block content
+
+    - const query = (extra) => { const p = new URLSearchParams(); if (filters.tag) p.set("tag", filters.tag); if (filters.search) p.set("search", filters.search); if (filters.show === "all") p.set("show", "all"); for (const [k, v] of Object.entries(extra)) { if (v) p.set(k, v); else p.delete(k); } const s = p.toString(); return s ? "?" + s : ""; }
+
+    .d-flex.justify-content-between.align-items-center.mb-4.flex-wrap.gap-2
+
+        div
+
+            h1.mb-0
+
+                i.bi.bi-megaphone.me-2
+
+                | Empfänger
+
+            small.text-muted Für Kampagnen erreichbar sind nur Kontakte mit aktivem Portalzugang und Einwilligung.
+
+        div.d-flex.gap-2
+
+            a.btn.btn-outline-secondary(href="/crm/marketing/groups")
+
+                i.bi.bi-tags.me-2
+
+                | Gruppen
+
+            a.btn.btn-primary(href=`/crm/marketing/export${query({})}`)
+
+                i.bi.bi-download.me-2
+
+                | CSV exportieren
+
+    // =====================================================
+    // Kennzahlen
+    // =====================================================
+
+    .row.g-3.mb-4
+
+        each card in [["Kontakte", summary.contacts, ""], ["mit Portalzugang", summary.withPortal, ""], ["eingewilligt", summary.granted, ""], ["abgemeldet", summary.revoked, summary.revoked ? "text-danger" : ""], ["erreichbar", summary.eligible, "text-success"]]
+
+            .col
+
+                .card.shadow-sm.h-100
+
+                    .card-body
+
+                        .text-muted.small= card[0]
+
+                        .fs-3.fw-semibold(class=card[2])= card[1]
+
+    // =====================================================
+    // Filter
+    // =====================================================
+
+    form.row.g-2.mb-3(method="GET" action="/crm/marketing")
+
+        .col-md-4
+
+            select.form-select(name="tag")
+
+                option(value="") Alle Gruppen
+
+                each entry in tagStats
+
+                    option(value=entry.tag selected=filters.tag && filters.tag.toLowerCase() === entry.tag.toLowerCase()) #{entry.tag} (#{entry.count})
+
+        .col-md-4
+
+            input.form-control(type="search" name="search" value=filters.search placeholder="Name oder E-Mail …" maxlength="100")
+
+        .col-md-4.d-flex.gap-2.align-items-center
+
+            .form-check.me-2
+
+                input.form-check-input#showAll(type="checkbox" name="show" value="all" checked=filters.show === "all")
+
+                label.form-check-label(for="showAll") auch nicht erreichbare
+
+            button.btn.btn-primary(type="submit")
+
+                i.bi.bi-funnel
+
+    // =====================================================
+    // Liste
+    // =====================================================
+
+    if rows.length
+
+        .card.shadow-sm
+
+            .table-responsive
+
+                table.table.table-hover.align-middle.mb-0
+
+                    thead.table-light
+
+                        tr
+                            th Kontakt
+                            th Firma
+                            th Branche / Gruppen
+                            th E-Mail
+                            th Einwilligung
+                            th Erreichbar
+
+                    tbody
+
+                        each row in rows
+
+                            tr
+
+                                td
+
+                                    a.text-decoration-none(href=`/crm/contacts/${row.contact._id}`)
+
+                                        | #{row.contact.firstName} #{row.contact.lastName}
+
+                                    if row.contact.position
+
+                                        br
+
+                                        small.text-muted= row.contact.position
+
+                                td
+
+                                    if row.company
+
+                                        a.text-decoration-none(href=`/crm/companies/${row.company._id}`)= row.company.companyName
+
+                                td
+
+                                    if row.company
+
+                                        each tag in row.company.tags || []
+
+                                            span.badge.rounded-pill.text-bg-light.border.me-1= tag
+
+                                td.small= row.contact.email
+
+                                td
+
+                                    if row.consent.status === "granted"
+
+                                        span.badge.bg-success= statusLabels.granted
+
+                                    else if row.consent.status === "revoked"
+
+                                        span.badge.bg-danger= statusLabels.revoked
+
+                                    else
+
+                                        span.badge.bg-secondary= statusLabels.none
+
+                                td
+
+                                    if row.eligible
+
+                                        i.bi.bi-check-circle-fill.text-success(title="erreichbar")
+
+                                    else
+
+                                        small.text-muted= row.reason
+
+        p.small.text-muted.mt-2
+
+            | #{rows.length} #{rows.length === 1 ? "Kontakt" : "Kontakte"}
+
+    else
+
+        .card.shadow-sm
+
+            .card-body.text-center.text-muted.py-5
+
+                i.bi.bi-people.display-6.d-block.mb-2
+
+                if filters.show === "all"
+
+                    | Keine Kontakte für diese Auswahl.
+
+                else
+
+                    | Noch niemand erreichbar. Kontakte brauchen einen aktiven Portalzugang und müssen im Portal
+                    | (Mein Profil) eingewilligt haben – oder Sie erfassen eine nachweisbare Einwilligung beim Kontakt.

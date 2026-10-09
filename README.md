@@ -18,6 +18,7 @@ A self-hosted CRM, Helpdesk and Customer Portal designed for Managed Service Pro
 - CSV Import & Export (Companies & Contacts)
 - Asset Management (Geräte je Kunde)
 - Action1 RMM Sync (Geräte, Online-Status, fehlende Updates)
+- Marketing: Empfänger mit Einwilligung, Gruppen-Verwaltung, CSV-Export
 
 ### Customer Portal
 
@@ -27,6 +28,7 @@ A self-hosted CRM, Helpdesk and Customer Portal designed for Managed Service Pro
 - Reply to tickets
 - Manage profile
 - Change password
+- Informations-E-Mails selbst an- und abbestellen
 
 ---
 
@@ -221,3 +223,30 @@ die globale Suche findet Assets auch über Seriennummer, IP und Benutzer, und
 2. Handler in `services/notification/handlers/<bereich>.handlers.js` schreiben und mit `register()` anmelden.
 3. Datei in `services/notification/handlers/index.js` eintragen.
 4. An der passenden Stelle `notificationService.dispatch(EVENTS.…, payload)` aufrufen.
+
+## Marketing
+
+Menü **Marketing** (Rollen: Admin und Vertrieb dürfen ändern, Techniker nur ansehen).
+
+- **Empfänger** (`/crm/marketing`): Wer ist für Kampagnen erreichbar? Filter nach Gruppe und Name,
+  Kennzahlen, CSV-Export (Serienbrief / Anrufliste).
+- **Gruppen** (`/crm/marketing/groups`): alle Branchen / Gruppen der Firmen mit Anzahl Firmen und
+  erreichbaren Kontakten; umbenennen, zusammenführen (umbenennen auf einen vorhandenen Namen), entfernen.
+
+### Wer ist erreichbar?
+
+Nur Kontakte, die
+
+1. einen **aktiven Portalzugang** haben (dort können sie sich jederzeit selbst abmelden),
+2. **eingewilligt** haben und
+3. aktiv und nicht archiviert sind.
+
+### Einwilligung
+
+- Der Kontakt selbst: Kundenportal → *Mein Profil* → „Informationen per E-Mail“.
+- Im CRM beim Kontakt (Abschnitt *Marketing*): nur mit Nachweis (z. B. „schriftlich am …“).
+- Hat sich ein Kontakt **selbst im Portal abgemeldet**, kann ihn kein Mitarbeiter wieder eintragen –
+  nur er selbst.
+- Jede Änderung steht im Verlauf (wann, wer, wie, Notiz).
+
+Ticket-E-Mails sind davon nicht betroffen.

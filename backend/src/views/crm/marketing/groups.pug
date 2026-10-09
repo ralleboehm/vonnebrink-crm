@@ -1,0 +1,125 @@
+extends ../layouts/main
+
+block content
+
+    .d-flex.justify-content-between.align-items-center.mb-4.flex-wrap.gap-2
+
+        div
+
+            h1.mb-0
+
+                i.bi.bi-tags.me-2
+
+                | Gruppen
+
+            small.text-muted Branche / Gruppen aller Firmen – Grundlage für Zielgruppen und Kampagnen
+
+        a.btn.btn-outline-secondary(href="/crm/marketing")
+
+            i.bi.bi-megaphone.me-2
+
+            | Empfänger
+
+    if flash
+
+        .alert(class=`alert-${flash.type}`)= flash.text
+
+    if groups.length
+
+        .card.shadow-sm
+
+            .table-responsive
+
+                table.table.table-hover.align-middle.mb-0
+
+                    thead.table-light
+
+                        tr
+                            th Gruppe
+                            th.text-end Firmen
+                            th.text-end Erreichbare Kontakte
+                            th.text-end Aktionen
+
+                    tbody
+
+                        each group in groups
+
+                            tr
+
+                                td
+
+                                    span.badge.rounded-pill.text-bg-light.border.fs-6.fw-normal= group.tag
+
+                                td.text-end
+
+                                    a.text-decoration-none(href=`/crm/companies?tag=${encodeURIComponent(group.tag)}`)= group.count
+
+                                td.text-end
+
+                                    a.text-decoration-none(href=`/crm/marketing?tag=${encodeURIComponent(group.tag)}`)= group.eligible
+
+                                td.text-end.text-nowrap
+
+                                    a.btn.btn-sm.btn-outline-secondary.me-1(
+                                        href=`/crm/marketing/export?tag=${encodeURIComponent(group.tag)}&show=all`
+                                        title="Alle Kontakte dieser Gruppe als CSV"
+                                    )
+
+                                        i.bi.bi-download
+
+                                    if can("marketing.manage")
+
+                                        button.btn.btn-sm.btn-outline-primary.me-1(
+                                            type="button"
+                                            data-bs-toggle="collapse"
+                                            data-bs-target=`#rename-${group.tag.replace(/[^a-z0-9]/gi, "_")}`
+                                            title="Umbenennen / zusammenführen"
+                                        )
+
+                                            i.bi.bi-pencil
+
+                                        form.d-inline(
+                                            method="POST"
+                                            action="/crm/marketing/groups/remove"
+                                            onsubmit="return confirm(" + JSON.stringify("„" + group.tag + "“ bei allen " + group.count + " Firmen entfernen?") + ");"
+                                        )
+
+                                            input(type="hidden" name="tag" value=group.tag)
+
+                                            button.btn.btn-sm.btn-outline-danger(type="submit" title="Bei allen Firmen entfernen")
+
+                                                i.bi.bi-trash
+
+                            if can("marketing.manage")
+
+                                tr.collapse(id=`rename-${group.tag.replace(/[^a-z0-9]/gi, "_")}`)
+
+                                    td(colspan="4")
+
+                                        form.d-flex.gap-2.align-items-center(method="POST" action="/crm/marketing/groups/rename")
+
+                                            input(type="hidden" name="from" value=group.tag)
+
+                                            span.small.text-nowrap „#{group.tag}“ umbenennen in
+
+                                            input.form-control.form-control-sm(type="text" name="to" required maxlength="40" value=group.tag list="groupNames")
+
+                                            button.btn.btn-sm.btn-primary(type="submit") Speichern
+
+                                        small.text-muted Gibt es den neuen Namen schon, werden beide Gruppen zusammengeführt.
+
+        datalist#groupNames
+
+            each group in groups
+
+                option(value=group.tag)
+
+    else
+
+        .card.shadow-sm
+
+            .card-body.text-center.text-muted.py-5
+
+                i.bi.bi-tags.display-6.d-block.mb-2
+
+                | Noch keine Gruppen. Vergeben Sie bei einer Firma Branche / Gruppen – oder importieren Sie eine Spalte „Branche“ bzw. „Kundengruppe“.

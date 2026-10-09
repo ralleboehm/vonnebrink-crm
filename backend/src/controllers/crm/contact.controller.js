@@ -1,6 +1,9 @@
 const contactService = require("../../services/contact.service");
 const companyService = require("../../services/company.service");
 const portalAccountService = require("../../services/portalAccount.service");
+const marketingService = require("../../services/marketing.service");
+const { takeFlash } = require("../../core/http/flash");
+const format = require("../../utils/format");
 
 // Alle Kontakte anzeigen
 exports.index = async (req, res, next) => {
@@ -90,7 +93,16 @@ exports.show = async (req, res, next) => {
             title: `${contact.firstName} ${contact.lastName}`,
             contact,
             portalAccount,
-            generatedPassword: req.session.generatedPortalPassword || null
+            generatedPassword: req.session.generatedPortalPassword || null,
+            marketing: {
+                consent: marketingService.consentOf(contact),
+                reason: marketingService.ineligibleReason(contact, portalAccount),
+                staffMayGrant: marketingService.staffMayGrant(contact),
+                statusLabels: marketingService.STATUS_LABELS,
+                sourceLabels: marketingService.SOURCE_LABELS
+            },
+            flash: takeFlash(req),
+            format
         });
 
         delete req.session.generatedPortalPassword;

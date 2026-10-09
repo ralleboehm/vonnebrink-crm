@@ -14,6 +14,10 @@ block content
 
             | Dashboard
 
+    if flash
+
+        .alert(class=`alert-${flash.type}`)= flash.text
+
     .card.shadow-sm
 
         .card-header
@@ -147,3 +151,67 @@ block content
                         i.bi.bi-key.me-2
 
                         | Passwort ändern
+
+    // =====================================================
+    // Informationen per E-Mail
+    // =====================================================
+
+    - const subscribed = marketingConsent && marketingConsent.status === "granted"
+
+    .card.shadow-sm.mt-4
+
+        .card-header
+
+            h5.mb-0
+
+                i.bi.bi-envelope-paper.me-2
+
+                | Informationen per E-Mail
+
+        .card-body
+
+            p.text-muted
+
+                | Wir informieren Sie gelegentlich über Neuigkeiten, Sicherheitshinweise und Angebote rund um Ihre IT.
+                | Sie können das hier jederzeit an- und wieder abbestellen.
+
+            p
+
+                | Aktuell:
+                if subscribed
+
+                    span.badge.bg-success.ms-2 Angemeldet
+
+                else
+
+                    span.badge.bg-secondary.ms-2 Nicht angemeldet
+
+                if marketingConsent && marketingConsent.changedAt
+
+                    small.text-muted.ms-2 seit #{new Date(marketingConsent.changedAt).toLocaleDateString("de-DE")}
+
+            form(method="POST" action="/portal/profile/marketing")
+
+                if subscribed
+
+                    input(type="hidden" name="marketing" value="no")
+
+                    button.btn.btn-outline-secondary(type="submit")
+
+                        i.bi.bi-envelope-x.me-2
+
+                        | Abmelden
+
+                else
+
+                    input(type="hidden" name="marketing" value="yes")
+
+                    button.btn.btn-primary(type="submit")
+
+                        i.bi.bi-envelope-check.me-2
+
+                        | Informationen per E-Mail erhalten
+
+            small.d-block.text-muted.mt-3
+
+                | Hinweise zu Ihren Tickets (z. B. Eingangsbestätigungen) erhalten Sie unabhängig von dieser Einstellung.

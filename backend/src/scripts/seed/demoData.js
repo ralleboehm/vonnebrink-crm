@@ -26,7 +26,7 @@ const COMPANIES = [
         address: { street: "Kaiserstraße", houseNumber: "12", postalCode: "68623", city: "Lampertheim", country: "Deutschland" },
 
         contacts: [
-            { key: "becker", salutation: "mr", firstName: "Markus", lastName: "Becker", position: "Geschäftsführer", email: "m.becker@baeckerei-sonnenschein.example", phone: "06206 555-101", mobile: "0170 5550101", portal: true },
+            { key: "becker", salutation: "mr", firstName: "Markus", lastName: "Becker", position: "Geschäftsführer", email: "m.becker@baeckerei-sonnenschein.example", phone: "06206 555-101", mobile: "0170 5550101", portal: true, marketing: "granted" },
             { key: "hartmann", salutation: "mrs", firstName: "Julia", lastName: "Hartmann", position: "Büro & Buchhaltung", email: "j.hartmann@baeckerei-sonnenschein.example", phone: "06206 555-102" }
         ],
 
@@ -66,7 +66,7 @@ const COMPANIES = [
         address: { street: "Hauptstraße", houseNumber: "45", postalCode: "64625", city: "Bensheim", country: "Deutschland" },
 
         contacts: [
-            { key: "weber", salutation: "mrs", firstName: "Sabine", lastName: "Weber", position: "Steuerberaterin, Partnerin", email: "s.weber@weber-partner.example", phone: "06251 555-201", portal: true },
+            { key: "weber", salutation: "mrs", firstName: "Sabine", lastName: "Weber", position: "Steuerberaterin, Partnerin", email: "s.weber@weber-partner.example", phone: "06251 555-201", portal: true, marketing: "revoked" },
             { key: "klein", salutation: "mr", firstName: "Thomas", lastName: "Klein", position: "IT-Ansprechpartner", email: "t.klein@weber-partner.example", phone: "06251 555-209" }
         ],
 
@@ -145,7 +145,7 @@ const COMPANIES = [
 
         contacts: [
             { key: "lindner", salutation: "mrs", firstName: "Anna", lastName: "Lindner", position: "Ärztin, Inhaberin", email: "a.lindner@dr-lindner.example", phone: "06204 555-401" },
-            { key: "meyer", salutation: "mr", firstName: "Jonas", lastName: "Meyer", position: "Praxismanager", email: "j.meyer@dr-lindner.example", phone: "06204 555-402", portal: true }
+            { key: "meyer", salutation: "mr", firstName: "Jonas", lastName: "Meyer", position: "Praxismanager", email: "j.meyer@dr-lindner.example", phone: "06204 555-402", portal: true, marketing: "granted" }
         ],
 
         assets: [

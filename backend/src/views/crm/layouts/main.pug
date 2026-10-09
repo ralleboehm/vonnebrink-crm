@@ -69,51 +69,76 @@ html(lang="de")
                                 i.bi.bi-speedometer2.me-1
                                 | Dashboard
 
-                        li.nav-item
-                            a.nav-link(href="/crm/companies")
+                        li.nav-item.dropdown
+                            a.nav-link.dropdown-toggle(href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false")
                                 i.bi.bi-buildings.me-1
-                                | Firmen
+                                | Kunden
+                            ul.dropdown-menu.shadow
+                                li
+                                    a.dropdown-item(href="/crm/companies")
+                                        i.bi.bi-buildings.me-2
+                                        | Firmen
+                                li
+                                    a.dropdown-item(href="/crm/contacts")
+                                        i.bi.bi-people.me-2
+                                        | Kontakte
 
-                        li.nav-item
-                            a.nav-link(href="/crm/contacts")
-                                i.bi.bi-people.me-1
-                                | Kontakte
+                        li.nav-item.dropdown
+                            a.nav-link.dropdown-toggle(href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false")
+                                i.bi.bi-tools.me-1
+                                | Service
+                            ul.dropdown-menu.shadow
+                                li
+                                    a.dropdown-item(href="/crm/tickets")
+                                        i.bi.bi-ticket-detailed.me-2
+                                        | Tickets
+                                li
+                                    a.dropdown-item(href="/crm/assets")
+                                        i.bi.bi-pc-display.me-2
+                                        | Assets
 
-                        li.nav-item
-                            a.nav-link(href="/crm/tickets")
-                                i.bi.bi-ticket-detailed.me-1
-                                | Tickets
+                        if can("marketing.view")
 
-                        li.nav-item
-                            a.nav-link(href="/crm/assets")
-                                i.bi.bi-pc-display.me-1
-                                | Assets
+                            li.nav-item.dropdown
+                                a.nav-link.dropdown-toggle(href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false")
+                                    i.bi.bi-megaphone.me-1
+                                    | Marketing
+                                ul.dropdown-menu.shadow
+                                    li
+                                        a.dropdown-item(href="/crm/marketing")
+                                            i.bi.bi-person-check.me-2
+                                            | Empfänger
+                                    li
+                                        a.dropdown-item(href="/crm/marketing/groups")
+                                            i.bi.bi-tags.me-2
+                                            | Gruppen
 
                         if session && session.user && session.user.role === "admin"
 
-                            li.nav-item
-
-                                a.nav-link(href="/crm/users")
-
-                                    i.bi.bi-person-gear.me-1
-
-                                    | Benutzer
-
-                            li.nav-item
-
-                                a.nav-link(href="/crm/import")
-
-                                    i.bi.bi-upload.me-1
-
-                                    | Import & Export
-
-                            li.nav-item
-
-                                a.nav-link(href="/crm/integrations/action1")
-
-                                    i.bi.bi-arrow-repeat.me-1
-
-                                    | Action1
+                            li.nav-item.dropdown
+                                a.nav-link.dropdown-toggle(href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false")
+                                    i.bi.bi-gear.me-1
+                                    | Verwaltung
+                                ul.dropdown-menu.shadow
+                                    li
+                                        a.dropdown-item(href="/crm/users")
+                                            i.bi.bi-person-gear.me-2
+                                            | Benutzer
+                                    li
+                                        a.dropdown-item(href="/crm/import")
+                                            i.bi.bi-upload.me-2
+                                            | Import & Export
+                                    li
+                                        a.dropdown-item(href="/crm/integrations/action1")
+                                            i.bi.bi-arrow-repeat.me-2
+                                            | Action1
+                                    li
+                                        hr.dropdown-divider
+                                    if can("email.log")
+                                        li
+                                            a.dropdown-item(href="/crm/email-log")
+                                                i.bi.bi-envelope-check.me-2
+                                                | E-Mail-Protokoll
 
                     if session && session.user
 

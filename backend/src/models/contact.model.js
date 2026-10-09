@@ -82,6 +82,42 @@ const contactSchema = new mongoose.Schema({
         trim: true
     },
 
+    // Einwilligung in Marketing-E-Mails (Kampagnen).
+    // Änderungen nur über services/marketing.service.js – dort wird auch
+    // der Verlauf (Nachweis: wer, wann, wie) geschrieben.
+    marketing: {
+
+        status: {
+            type: String,
+            enum: ["none", "granted", "revoked"],
+            default: "none"
+        },
+
+        changedAt: {
+            type: Date,
+            default: null
+        },
+
+        // "portal" = vom Kontakt selbst im Kundenportal, "crm" = von einem Mitarbeiter erfasst
+        source: {
+            type: String,
+            enum: ["portal", "crm", null],
+            default: null
+        },
+
+        history: [
+            {
+                _id: false,
+                status: { type: String, enum: ["granted", "revoked"] },
+                at: { type: Date },
+                source: { type: String, enum: ["portal", "crm"] },
+                by: { type: String, trim: true, maxlength: 200 },
+                note: { type: String, trim: true, maxlength: 500 }
+            }
+        ]
+
+    },
+
     isDeleted: {
         type: Boolean,
         default: false

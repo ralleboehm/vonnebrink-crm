@@ -1,5 +1,7 @@
 const contactService = require("../../services/contact.service");
 const portalAccountService = require("../../services/portalAccount.service");
+const marketingService = require("../../services/marketing.service");
+const { setFlash, takeFlash } = require("../../core/http/flash");
 
 // ----------------------------------------------------
 // Profil anzeigen
@@ -27,7 +29,11 @@ exports.index = async (req, res, next) => {
 
             contact,
 
-            portalAccount
+            portalAccount,
+
+            marketingConsent: marketingService.consentOf(contact),
+
+            flash: takeFlash(req)
 
         });
 
@@ -176,6 +182,40 @@ exports.changePassword = async (req, res, next) => {
         );
 
         req.session.portalUser.mustChangePassword = false;
+
+        res.redirect("/portal/profile");
+
+    } catch (err) {
+
+        next(err);
+
+    }
+
+};
+
+// ----------------------------------------------------
+// Informationen per E-Mail an-/abbestellen
+// ----------------------------------------------------
+
+exports.marketing = async (req, res, next) => {
+
+    try {
+
+        const granted = req.body.marketing === "yes";
+        const user = req.session.portalUser;
+
+        await marketingService.setConsent(user.contact, granted, {
+            source: "portal",
+            by: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email
+        });
+
+        setFlash(
+            req,
+            "success",
+            granted
+                ? "Vielen Dank – Sie erhalten künftig Informationen per E-Mail. Die Abmeldung ist hier jederzeit möglich."
+                : "Sie sind abgemeldet und erhalten keine Informations-E-Mails mehr."
+        );
 
         res.redirect("/portal/profile");
 

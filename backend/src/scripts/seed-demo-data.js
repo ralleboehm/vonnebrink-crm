@@ -52,6 +52,7 @@ async function seed(options = {}) {
     const ticketMessageService = require("../services/ticketMessage.service");
     const assetService = require("../services/asset.service");
     const userService = require("../services/user.service");
+    const marketingService = require("../services/marketing.service");
 
     const existing = await companyService.findAll();
 
@@ -66,7 +67,7 @@ async function seed(options = {}) {
         throw new Error("Kein aktiver interner Benutzer gefunden. Bitte zuerst \"npm run create-admin\" ausführen.");
     }
 
-    const summary = { companies: 0, contacts: 0, portalAccounts: [], assets: 0, tickets: 0, messages: 0 };
+    const summary = { companies: 0, contacts: 0, portalAccounts: [], assets: 0, tickets: 0, messages: 0, marketing: { granted: 0, revoked: 0 } };
 
     for (const data of COMPANIES) {
 
@@ -115,6 +116,16 @@ async function seed(options = {}) {
 
                 portalAccounts[person.key] = portalAccount;
                 summary.portalAccounts.push(contact.email);
+
+                // Marketing-Einwilligung, wie vom Kontakt selbst im Portal gesetzt
+                if (person.marketing) {
+                    await marketingService.setConsent(contact._id, person.marketing === "granted", {
+                        source: "portal",
+                        by: `${contact.firstName} ${contact.lastName}`,
+                        note: "Beispieldaten"
+                    });
+                    summary.marketing[person.marketing]++;
+                }
 
             }
 
@@ -257,6 +268,7 @@ async function main() {
         console.log(`✔ Kontakte:      ${summary.contacts}`);
         console.log(`✔ Assets:        ${summary.assets}`);
         console.log(`✔ Tickets:       ${summary.tickets} (mit ${summary.messages} Nachrichten, Bearbeiter: ${summary.staff})`);
+        console.log(`✔ Marketing:     ${summary.marketing.granted} eingewilligt, ${summary.marketing.revoked} abgemeldet`);
         console.log("");
         console.log("Kundenportal-Zugänge (Passwort für alle):");
         console.log(`   ${summary.portalPassword}`);

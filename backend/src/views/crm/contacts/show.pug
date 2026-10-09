@@ -223,6 +223,138 @@ block content
 
                             | Portalzugang erstellen
 
+            // =================================================
+            // Marketing-Einwilligung
+            // =================================================
+
+            hr
+
+            h5.mb-3
+
+                i.bi.bi-envelope-paper.me-2
+
+                | Marketing
+
+            if flash
+
+                .alert(class=`alert-${flash.type}`)= flash.text
+
+            - const consent = marketing.consent
+
+            .row.mb-2
+
+                .col-md-6
+
+                    p
+
+                        strong Einwilligung:
+
+                        br
+
+                        if consent.status === "granted"
+
+                            span.badge.bg-success= marketing.statusLabels.granted
+
+                        else if consent.status === "revoked"
+
+                            span.badge.bg-danger= marketing.statusLabels.revoked
+
+                        else
+
+                            span.badge.bg-secondary= marketing.statusLabels.none
+
+                        if consent.changedAt
+
+                            small.text-muted.ms-2
+
+                                | #{format.formatDateTime(consent.changedAt)}, #{marketing.sourceLabels[consent.source] || ""}
+
+                .col-md-6
+
+                    p
+
+                        strong Für Kampagnen erreichbar:
+
+                        br
+
+                        if !marketing.reason
+
+                            span.badge.bg-success
+
+                                i.bi.bi-check-lg.me-1
+
+                                | Ja
+
+                        else
+
+                            span.badge.bg-light.text-dark.border
+
+                                | Nein – #{marketing.reason}
+
+            if can("marketing.manage")
+
+                if consent.status === "granted"
+
+                    form.d-flex.gap-2.align-items-start.mb-3(method="POST" action=`/crm/contacts/${contact._id}/marketing`)
+
+                        input(type="hidden" name="consent" value="revoked")
+
+                        input.form-control.form-control-sm(type="text" name="note" maxlength="500" placeholder="Grund (optional), z. B. telefonisch abgemeldet")
+
+                        button.btn.btn-sm.btn-outline-danger.text-nowrap(type="submit")
+
+                            i.bi.bi-envelope-x.me-1
+
+                            | Widerrufen
+
+                else if marketing.staffMayGrant
+
+                    form.d-flex.gap-2.align-items-start.mb-3(method="POST" action=`/crm/contacts/${contact._id}/marketing`)
+
+                        input(type="hidden" name="consent" value="granted")
+
+                        input.form-control.form-control-sm(type="text" name="note" maxlength="500" required minlength="3" placeholder="Nachweis, z. B. schriftlich am 09.10.2026")
+
+                        button.btn.btn-sm.btn-outline-success.text-nowrap(type="submit")
+
+                            i.bi.bi-envelope-check.me-1
+
+                            | Einwilligung erfassen
+
+                else
+
+                    p.small.text-muted
+
+                        i.bi.bi-lock.me-1
+
+                        | Der Kontakt hat sich selbst im Kundenportal abgemeldet. Nur er selbst kann sich dort wieder anmelden.
+
+            if consent.history.length
+
+                details.mb-3
+
+                    summary.small.text-muted Verlauf (#{consent.history.length})
+
+                    ul.list-unstyled.small.mt-2.mb-0
+
+                        each entry in consent.history.slice().reverse()
+
+                            li.border-bottom.py-1
+
+                                strong= entry.status === "granted" ? "Eingewilligt" : "Abgemeldet"
+
+                                |  · #{format.formatDateTime(entry.at)} · #{marketing.sourceLabels[entry.source] || entry.source}
+
+                                if entry.by
+
+                                    |  · #{entry.by}
+
+                                if entry.note
+
+                                    br
+
+                                    span.text-muted= entry.note
+
             if contact.notes
 
                 hr

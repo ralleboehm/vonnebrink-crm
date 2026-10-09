@@ -60,6 +60,12 @@ router.use("/integrations", require("./integration.routes"));
 router.use("/notifications", require("./notification.routes"));
 
 // ----------------------------------------------------
+// Marketing (Empfänger, Gruppen; später Kampagnen)
+// ----------------------------------------------------
+
+router.use("/marketing", require("./marketing.routes"));
+
+// ----------------------------------------------------
 // E-Mail-Protokoll (Admins)
 // ----------------------------------------------------
 
