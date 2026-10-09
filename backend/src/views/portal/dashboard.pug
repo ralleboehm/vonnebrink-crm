@@ -1,44 +1,125 @@
 extends layouts/main
 
+include partials/_status
+
 block content
 
-    .d-flex.justify-content-between.align-items-center.mb-4
+    - const user = currentPortalUser || {}
+    - const active = tickets.filter((t) => ["open", "in_progress", "waiting"].includes(t.status))
+    - const inProgress = tickets.filter((t) => t.status === "in_progress")
+    - const done = tickets.filter((t) => ["resolved", "closed"].includes(t.status))
+    - const recent = tickets.slice().sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)).slice(0, 5)
+    - const formatDate = (date) => date ? new Date(date).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" }) : "—"
 
-        h1.mb-0 Kundenportal
+    // =====================================================
+    // Begrüßung
+    // =====================================================
 
-        a.btn.btn-primary(
-            href="/portal/tickets/new"
-        )
+    section.vb-hero
 
-            i.bi.bi-plus-circle.me-2
+        .vb-eyebrow= user.companyName || "Kundenportal"
 
-            | Neues Ticket
+        h1 Guten Tag, #{user.firstName} #{user.lastName}
 
-    .row
+        p.mb-4(style="max-width: 560px;")
 
-        .col-md-4.mb-4
+            if active.length
 
-            .card.shadow-sm
+                | Sie haben #{active.length} #{active.length === 1 ? "offenes Ticket" : "offene Tickets"}. Wir kümmern uns darum und halten Sie hier auf dem Laufenden.
 
-                .card-body.text-center
+            else
 
-                    h2.display-6.mb-0= tickets.length
+                | Alles erledigt – Sie haben keine offenen Tickets. Brauchen Sie Hilfe? Schreiben Sie uns einfach ein Ticket.
 
-                    p.text-muted.mb-0 Meine Tickets
+        .d-flex.flex-wrap.gap-2
 
-        .col-md-8.mb-4
+            a.btn.btn-primary(href="/portal/tickets/new")
 
-            .card.shadow-sm
+                i.bi.bi-plus-lg.me-2
 
-                .card-header
+                | Neues Ticket
 
-                    h5.mb-0 Letzte Tickets
+            a.btn.btn-light-outline(href="/portal/tickets")
 
-                .card-body.p-0
+                | Alle Tickets
 
-                    if tickets.length
+    // =====================================================
+    // Kennzahlen
+    // =====================================================
 
-                        table.table.table-hover.mb-0
+    .row.g-3.mb-4
+
+        .col-md-4
+
+            .card.h-100
+
+                a.vb-stat(href="/portal/tickets")
+
+                    span.vb-stat-icon
+
+                        i.bi.bi-inbox
+
+                    div
+
+                        .vb-stat-value= active.length
+
+                        .vb-stat-label Offen
+
+        .col-md-4
+
+            .card.h-100
+
+                a.vb-stat(href="/portal/tickets")
+
+                    span.vb-stat-icon.is-amber
+
+                        i.bi.bi-tools
+
+                    div
+
+                        .vb-stat-value= inProgress.length
+
+                        .vb-stat-label In Bearbeitung
+
+        .col-md-4
+
+            .card.h-100
+
+                a.vb-stat(href="/portal/tickets")
+
+                    span.vb-stat-icon.is-teal
+
+                        i.bi.bi-check2-circle
+
+                    div
+
+                        .vb-stat-value= done.length
+
+                        .vb-stat-label Erledigt
+
+    .row.g-4
+
+        // =====================================================
+        // Letzte Tickets
+        // =====================================================
+
+        .col-lg-8
+
+            .card
+
+                .card-header.d-flex.justify-content-between.align-items-center
+
+                    h5 Zuletzt aktualisiert
+
+                    if tickets.length > recent.length
+
+                        a.small.fw-semibold(href="/portal/tickets") Alle #{tickets.length} anzeigen
+
+                if recent.length
+
+                    .table-responsive
+
+                        table.table.table-hover.align-middle
 
                             thead
 
@@ -50,58 +131,78 @@ block content
 
                                     th Status
 
-                                    th
+                                    th.text-end Aktualisiert
 
                             tbody
 
-                                each ticket in tickets
+                                each ticket in recent
 
                                     tr
 
-                                        td= ticket.ticketNumber
+                                        td.text-nowrap
 
-                                        td= ticket.subject
+                                            a.fw-semibold.text-decoration-none(href=`/portal/tickets/${ticket._id}`)= ticket.ticketNumber
 
                                         td
 
-                                            case ticket.status
+                                            a.text-reset.text-decoration-none(href=`/portal/tickets/${ticket._id}`)= ticket.subject
 
-                                                when "open"
+                                        td
 
-                                                    span.badge.bg-primary Offen
+                                            +ticketStatus(ticket.status)
 
-                                                when "in_progress"
+                                        td.text-end.text-muted.small.text-nowrap= formatDate(ticket.updatedAt || ticket.createdAt)
 
-                                                    span.badge.bg-warning.text-dark In Bearbeitung
+                else
 
-                                                when "waiting"
+                    .card-body.text-center.py-5
 
-                                                    span.badge.bg-info Wartend
+                        i.bi.bi-ticket-perforated.display-6.text-muted
 
-                                                when "resolved"
+                        p.text-muted.mt-3.mb-3 Noch keine Tickets vorhanden.
 
-                                                    span.badge.bg-success Gelöst
+                        a.btn.btn-primary(href="/portal/tickets/new")
 
-                                                when "closed"
+                            i.bi.bi-plus-lg.me-2
 
-                                                    span.badge.bg-secondary Geschlossen
+                            | Erstes Ticket erstellen
 
-                                                default
+        // =====================================================
+        // Hilfe
+        // =====================================================
 
-                                                    span.badge.bg-light.text-dark= ticket.status
+        .col-lg-4
 
-                                        td.text-end
+            .card.h-100
 
-                                            a.btn.btn-sm.btn-outline-primary(
-                                                href=`/portal/tickets/${ticket._id}`
-                                            )
+                .card-header
 
-                                                i.bi.bi-eye.me-1
+                    h5 So helfen wir Ihnen am schnellsten
 
-                                                | Öffnen
+                .card-body
 
-                    else
+                    ul.vb-help.list-unstyled.mb-4
 
-                        .p-3.text-muted
+                        li
 
-                            | Es sind noch keine Tickets vorhanden.
+                            i.bi.bi-1-circle-fill
+
+                            span Beschreiben Sie das Problem kurz und genau – was passiert, seit wann, an welchem Gerät.
+
+                        li
+
+                            i.bi.bi-2-circle-fill
+
+                            span Hängen Sie Screenshots oder Fehlermeldungen als Datei an.
+
+                        li
+
+                            i.bi.bi-3-circle-fill
+
+                            span Unsere Antworten und den aktuellen Stand finden Sie jederzeit hier im Ticket.
+
+                    a.btn.btn-outline-primary.w-100(href="https://vonnebrink.com/contact-2/" rel="noopener")
+
+                        i.bi.bi-telephone.me-2
+
+                        | Kontakt bei dringenden Störungen

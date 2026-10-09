@@ -14,7 +14,7 @@ exports.index = async (req, res, next) => {
 
         res.render("portal/dashboard", {
 
-            title: "Kundenportal",
+            title: "Übersicht",
 
             tickets
 

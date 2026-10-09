@@ -13,6 +13,9 @@ module.exports = (req, res, next) => {
     // Kundenportal
     res.locals.currentPortalUser = req.session.portalUser || null;
 
+    // Aktueller Pfad (z. B. für den aktiven Menüpunkt)
+    res.locals.currentPath = req.originalUrl.split("?")[0];
+
     // Ziel des "Zurück"-Links auf Fehlerseiten
     res.locals.homeUrl = req.originalUrl.startsWith("/portal")
         ? "/portal"

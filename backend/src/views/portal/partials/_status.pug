@@ -1,0 +1,13 @@
+//- Einheitliche Anzeige von Ticket-Status und -Priorität im Portal
+
+mixin ticketStatus(status)
+
+    - const labels = { open: "Offen", in_progress: "In Bearbeitung", waiting: "Wartend", resolved: "Gelöst", closed: "Geschlossen" }
+
+    span.vb-badge(class=`vb-badge-${labels[status] ? status : "unknown"}`)= labels[status] || status
+
+mixin ticketPriority(priority)
+
+    - const labels = { low: "Niedrig", normal: "Normal", high: "Hoch", urgent: "Dringend" }
+
+    span.vb-badge(class=`vb-badge-${labels[priority] ? priority : "normal"}`)= labels[priority] || priority

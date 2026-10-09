@@ -8,7 +8,7 @@ const portalAccountService = require("../../services/portalAccount.service");
 exports.login = (req, res) => {
 
     res.render("portal/login", {
-        title: "Kundenportal"
+        title: "Anmelden"
     });
 
 };
@@ -49,8 +49,9 @@ exports.authenticate = async (req, res, next) => {
             }
 
             return res.render("portal/login", {
-                title: "Kundenportal",
-                error
+                title: "Anmelden",
+                error,
+                email: typeof email === "string" ? email.trim().slice(0, 255) : ""
             });
 
         }

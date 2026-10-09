@@ -1,0 +1,712 @@
+/* ====================================================
+   Kundenportal – Design wie vonnebrink.com
+   ====================================================
+   Farben und Schriften aus der Webseite (Astra-Theme):
+     Grün  #1b9156 (Akzent, Knöpfe)   Petrol #013839 (Überschriften, Fuß)
+     Text  #494d4d                    Hell   #f2f7f5 (Flächen)
+   Logo: Grün #79a335, Blau #0000fe (nur als kleiner Akzent)
+   Schriften: Montserrat (Überschriften), Source Sans 3 (Text),
+   DM Sans (Knöpfe)
+   Gilt nur im Portal (body.vb-portal), das CRM bleibt unverändert.
+   ==================================================== */
+
+body.vb-portal {
+
+    --vb-green: #1b9156;
+    --vb-green-dark: #147245;
+    --vb-green-light: #2ac578;
+    --vb-green-soft: #e4f3eb;
+    --vb-teal: #013839;
+    --vb-teal-2: #0a4d4e;
+    --vb-text: #494d4d;
+    --vb-muted: #6b7672;
+    --vb-soft: #f2f7f5;
+    --vb-line: #dde7e2;
+    --vb-logo-green: #79a335;
+    --vb-logo-blue: #0000fe;
+
+    --vb-font-text: "Source Sans 3", "Source Sans Pro", Arial, sans-serif;
+    --vb-font-head: "Montserrat", Arial, sans-serif;
+    --vb-font-button: "DM Sans", Arial, sans-serif;
+
+    /* Bootstrap an die Marke anpassen */
+    --bs-body-font-family: var(--vb-font-text);
+    --bs-body-font-size: 1.0625rem;
+    --bs-body-color: var(--vb-text);
+    --bs-body-bg: var(--vb-soft);
+    --bs-primary: var(--vb-green);
+    --bs-primary-rgb: 27, 145, 86;
+    --bs-link-color: var(--vb-green);
+    --bs-link-color-rgb: 27, 145, 86;
+    --bs-link-hover-color: var(--vb-green-dark);
+    --bs-link-hover-color-rgb: 20, 114, 69;
+    --bs-border-color: var(--vb-line);
+    --bs-secondary-color: var(--vb-muted);
+    --bs-focus-ring-color: rgba(27, 145, 86, .25);
+
+    font-family: var(--vb-font-text);
+    color: var(--vb-text);
+    background: var(--vb-soft);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+
+}
+
+.vb-portal main {
+
+    flex: 1 0 auto;
+
+}
+
+/* Überschriften */
+
+.vb-portal h1,
+.vb-portal h2,
+.vb-portal h3,
+.vb-portal h4,
+.vb-portal h5,
+.vb-portal .h1,
+.vb-portal .h2,
+.vb-portal .h3 {
+
+    font-family: var(--vb-font-head);
+    font-weight: 700;
+    color: var(--vb-teal);
+    letter-spacing: -.01em;
+
+}
+
+.vb-portal h1 { font-size: 1.85rem; }
+.vb-portal h5 { font-size: 1.05rem; }
+
+.vb-portal .text-muted { color: var(--vb-muted) !important; }
+
+/* ----------------------------------------------------
+   Kopf
+   ---------------------------------------------------- */
+
+.vb-portal .vb-header {
+
+    background: #ffffff;
+    box-shadow: 0 1px 0 var(--vb-line), 0 6px 18px rgba(1, 56, 57, .05);
+
+}
+
+/* Markenstreifen: Grün mit blauem Abschluss wie im Logo */
+.vb-portal .vb-brandbar {
+
+    height: 4px;
+    background: linear-gradient(90deg, var(--vb-green) 0 86%, var(--vb-logo-green) 86% 94%, var(--vb-logo-blue) 94% 100%);
+
+}
+
+.vb-portal .vb-header .navbar {
+
+    padding-top: .9rem;
+    padding-bottom: .9rem;
+
+}
+
+.vb-portal .vb-logo {
+
+    height: 34px;
+    width: auto;
+
+}
+
+.vb-portal .vb-brand-label {
+
+    font-family: var(--vb-font-head);
+    font-weight: 700;
+    font-size: .8rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--vb-green);
+    border-left: 2px solid var(--vb-line);
+    padding-left: .85rem;
+    margin-left: .85rem;
+
+}
+
+.vb-portal .vb-header .nav-link {
+
+    color: var(--vb-teal);
+    font-weight: 600;
+    padding: .5rem .9rem;
+    border-bottom: 2px solid transparent;
+
+}
+
+.vb-portal .vb-header .nav-link:hover,
+.vb-portal .vb-header .nav-link:focus {
+
+    color: var(--vb-green);
+
+}
+
+.vb-portal .vb-header .nav-link.active {
+
+    color: var(--vb-green);
+    border-bottom-color: var(--vb-green);
+
+}
+
+.vb-portal .vb-user {
+
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+
+}
+
+.vb-portal .vb-avatar {
+
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--vb-teal);
+    color: #ffffff;
+    font-family: var(--vb-font-head);
+    font-weight: 700;
+    font-size: .85rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+}
+
+.vb-portal .dropdown-menu {
+
+    border: 1px solid var(--vb-line);
+    border-radius: 4px;
+    box-shadow: 0 10px 30px rgba(1, 56, 57, .12);
+
+}
+
+.vb-portal .dropdown-item:active {
+
+    background: var(--vb-green);
+
+}
+
+/* ----------------------------------------------------
+   Knöpfe (eckig, wie auf der Webseite)
+   ---------------------------------------------------- */
+
+.vb-portal .btn {
+
+    font-family: var(--vb-font-button);
+    font-weight: 700;
+    border-radius: 0;
+    border-width: 2px;
+    padding: .55rem 1.2rem;
+    letter-spacing: .01em;
+
+}
+
+.vb-portal .btn-sm {
+
+    padding: .3rem .75rem;
+    font-size: .85rem;
+
+}
+
+.vb-portal .btn-lg {
+
+    padding: .8rem 1.75rem;
+
+}
+
+.vb-portal .btn-primary {
+
+    --bs-btn-bg: var(--vb-green);
+    --bs-btn-border-color: var(--vb-green);
+    --bs-btn-hover-bg: var(--vb-green-dark);
+    --bs-btn-hover-border-color: var(--vb-green-dark);
+    --bs-btn-active-bg: var(--vb-green-dark);
+    --bs-btn-active-border-color: var(--vb-green-dark);
+    --bs-btn-disabled-bg: var(--vb-green);
+    --bs-btn-disabled-border-color: var(--vb-green);
+    --bs-btn-focus-shadow-rgb: 27, 145, 86;
+
+}
+
+.vb-portal .btn-outline-primary {
+
+    --bs-btn-color: var(--vb-green);
+    --bs-btn-border-color: var(--vb-green);
+    --bs-btn-hover-bg: var(--vb-green);
+    --bs-btn-hover-border-color: var(--vb-green);
+    --bs-btn-active-bg: var(--vb-green-dark);
+    --bs-btn-active-border-color: var(--vb-green-dark);
+    --bs-btn-focus-shadow-rgb: 27, 145, 86;
+
+}
+
+/* "Zurück", "Abbrechen": ruhig, Petrol-Rahmen */
+.vb-portal .btn-secondary,
+.vb-portal .btn-outline-secondary {
+
+    --bs-btn-color: var(--vb-teal);
+    --bs-btn-bg: transparent;
+    --bs-btn-border-color: #b6c4bd;
+    --bs-btn-hover-color: var(--vb-teal);
+    --bs-btn-hover-bg: #ffffff;
+    --bs-btn-hover-border-color: var(--vb-teal);
+    --bs-btn-active-color: var(--vb-teal);
+    --bs-btn-active-bg: #ffffff;
+    --bs-btn-active-border-color: var(--vb-teal);
+    --bs-btn-focus-shadow-rgb: 1, 56, 57;
+
+}
+
+/* Auf dunklem Grund */
+.vb-portal .btn-light-outline {
+
+    --bs-btn-color: #ffffff;
+    --bs-btn-border-color: rgba(255, 255, 255, .55);
+    --bs-btn-hover-color: var(--vb-teal);
+    --bs-btn-hover-bg: #ffffff;
+    --bs-btn-hover-border-color: #ffffff;
+    --bs-btn-active-color: var(--vb-teal);
+    --bs-btn-active-bg: #ffffff;
+    --bs-btn-active-border-color: #ffffff;
+
+}
+
+/* ----------------------------------------------------
+   Karten, Formulare, Tabellen
+   ---------------------------------------------------- */
+
+.vb-portal .card {
+
+    border: 1px solid var(--vb-line);
+    border-radius: 6px;
+    box-shadow: 0 2px 10px rgba(1, 56, 57, .05) !important;
+    background: #ffffff;
+
+}
+
+.vb-portal .card-header {
+
+    background: #ffffff;
+    border-bottom: 1px solid var(--vb-line);
+    padding: 1rem 1.25rem;
+    font-family: var(--vb-font-head);
+    font-weight: 700;
+    color: var(--vb-teal);
+
+}
+
+.vb-portal .card-header h1,
+.vb-portal .card-header h2,
+.vb-portal .card-header h3,
+.vb-portal .card-header h4,
+.vb-portal .card-header h5 {
+
+    font-size: 1.05rem;
+    margin: 0;
+
+}
+
+.vb-portal .card-footer {
+
+    background: var(--vb-soft);
+    border-top: 1px solid var(--vb-line);
+
+}
+
+.vb-portal .form-label {
+
+    font-weight: 600;
+    color: var(--vb-teal);
+
+}
+
+.vb-portal .form-control,
+.vb-portal .form-select {
+
+    border-radius: 2px;
+    border-color: #c9d6cf;
+    padding: .6rem .8rem;
+
+}
+
+.vb-portal .form-control:focus,
+.vb-portal .form-select:focus,
+.vb-portal .form-check-input:focus {
+
+    border-color: var(--vb-green);
+    box-shadow: 0 0 0 .2rem rgba(27, 145, 86, .18);
+
+}
+
+.vb-portal .form-check-input:checked {
+
+    background-color: var(--vb-green);
+    border-color: var(--vb-green);
+
+}
+
+.vb-portal .table {
+
+    --bs-table-hover-bg: var(--vb-soft);
+    margin-bottom: 0;
+
+}
+
+.vb-portal .table > thead > tr > th,
+.vb-portal .table-dark > tr > th {
+
+    background: var(--vb-soft);
+    color: var(--vb-teal);
+    font-family: var(--vb-font-head);
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--vb-line);
+    padding-top: .8rem;
+    padding-bottom: .8rem;
+
+}
+
+.vb-portal .table td {
+
+    padding-top: .85rem;
+    padding-bottom: .85rem;
+    border-color: var(--vb-line);
+
+}
+
+.vb-portal .table td:first-child,
+.vb-portal .table th:first-child {
+
+    padding-left: 1.25rem;
+
+}
+
+.vb-portal .table td:last-child,
+.vb-portal .table th:last-child {
+
+    padding-right: 1.25rem;
+
+}
+
+.vb-portal .alert {
+
+    border-radius: 4px;
+    border-width: 0 0 0 4px;
+
+}
+
+.vb-portal .alert-success {
+
+    background: var(--vb-green-soft);
+    border-color: var(--vb-green);
+    color: var(--vb-green-dark);
+
+}
+
+/* Kopfzeile jeder Seite */
+.vb-portal .vb-page-head {
+
+    margin-bottom: 1.75rem;
+
+}
+
+.vb-portal .vb-eyebrow {
+
+    font-family: var(--vb-font-head);
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--vb-green);
+
+}
+
+/* ----------------------------------------------------
+   Status und Priorität
+   ---------------------------------------------------- */
+
+.vb-portal .vb-badge {
+
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .28rem .65rem;
+    border-radius: 999px;
+    font-size: .8rem;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+
+}
+
+.vb-portal .vb-badge::before {
+
+    content: "";
+    width: .5rem;
+    height: .5rem;
+    border-radius: 50%;
+    background: currentColor;
+
+}
+
+.vb-portal .vb-badge-open        { background: var(--vb-green-soft); color: var(--vb-green-dark); }
+.vb-portal .vb-badge-in_progress { background: #fff1d6; color: #8a5a00; }
+.vb-portal .vb-badge-waiting     { background: #e8eaff; color: #2a33b8; }
+.vb-portal .vb-badge-resolved    { background: #dcecea; color: var(--vb-teal); }
+.vb-portal .vb-badge-closed      { background: #eceeed; color: #5c6461; }
+.vb-portal .vb-badge-unknown     { background: #eceeed; color: #5c6461; }
+
+.vb-portal .vb-badge-low         { background: #eceeed; color: #5c6461; }
+.vb-portal .vb-badge-normal      { background: var(--vb-soft); color: var(--vb-teal); border: 1px solid var(--vb-line); }
+.vb-portal .vb-badge-high        { background: #fff1d6; color: #8a5a00; }
+.vb-portal .vb-badge-urgent      { background: #fde4e1; color: #b42318; }
+
+/* ----------------------------------------------------
+   Dashboard
+   ---------------------------------------------------- */
+
+.vb-portal .vb-hero {
+
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    padding: 2.25rem 2.25rem;
+    margin-bottom: 1.75rem;
+    color: #d8e6e1;
+    background:
+        radial-gradient(circle at 92% 20%, rgba(42, 197, 120, .28), transparent 42%),
+        linear-gradient(120deg, var(--vb-teal) 0%, var(--vb-teal-2) 100%);
+
+}
+
+.vb-portal .vb-hero h1 {
+
+    color: #ffffff;
+    font-size: 2rem;
+    margin-bottom: .35rem;
+
+}
+
+.vb-portal .vb-hero .vb-eyebrow {
+
+    color: var(--vb-green-light);
+
+}
+
+/* Logo-Zeichen als Wasserzeichen */
+.vb-portal .vb-hero::after {
+
+    content: "";
+    position: absolute;
+    right: -30px;
+    bottom: -40px;
+    width: 220px;
+    height: 220px;
+    background: url("/images/logo-mark.png") center / contain no-repeat;
+    opacity: .12;
+    pointer-events: none;
+
+}
+
+.vb-portal .vb-stat {
+
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem;
+    text-decoration: none;
+    color: inherit;
+    height: 100%;
+
+}
+
+.vb-portal a.vb-stat:hover {
+
+    background: var(--vb-soft);
+
+}
+
+.vb-portal .vb-stat-icon {
+
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    background: var(--vb-green-soft);
+    color: var(--vb-green);
+
+}
+
+.vb-portal .vb-stat-icon.is-amber { background: #fff1d6; color: #8a5a00; }
+.vb-portal .vb-stat-icon.is-teal  { background: #dcecea; color: var(--vb-teal); }
+
+.vb-portal .vb-stat-value {
+
+    font-family: var(--vb-font-head);
+    font-weight: 700;
+    font-size: 1.75rem;
+    line-height: 1;
+    color: var(--vb-teal);
+
+}
+
+.vb-portal .vb-stat-label {
+
+    color: var(--vb-muted);
+    font-size: .95rem;
+
+}
+
+.vb-portal .vb-help li {
+
+    display: flex;
+    gap: .6rem;
+    margin-bottom: .6rem;
+
+}
+
+.vb-portal .vb-help li i {
+
+    color: var(--vb-green);
+
+}
+
+/* ----------------------------------------------------
+   Anmeldung
+   ---------------------------------------------------- */
+
+.vb-portal .vb-login {
+
+    max-width: 980px;
+    margin: 0 auto;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow: 0 20px 50px rgba(1, 56, 57, .12);
+
+}
+
+.vb-portal .vb-login-aside {
+
+    position: relative;
+    padding: 2.75rem;
+    color: #cfe0da;
+    background:
+        radial-gradient(circle at 15% 110%, rgba(42, 197, 120, .30), transparent 45%),
+        linear-gradient(140deg, var(--vb-teal) 0%, var(--vb-teal-2) 100%);
+
+}
+
+.vb-portal .vb-login-aside h2 {
+
+    color: #ffffff;
+    font-size: 1.9rem;
+    line-height: 1.2;
+    margin: 2rem 0 1.25rem;
+
+}
+
+.vb-portal .vb-login-aside h2 span {
+
+    color: var(--vb-green-light);
+
+}
+
+.vb-portal .vb-checks {
+
+    list-style: none;
+    padding: 0;
+    margin: 0;
+
+}
+
+.vb-portal .vb-checks li {
+
+    display: flex;
+    gap: .65rem;
+    margin-bottom: .7rem;
+
+}
+
+.vb-portal .vb-checks i {
+
+    color: var(--vb-green-light);
+
+}
+
+.vb-portal .vb-login-form {
+
+    padding: 2.75rem;
+
+}
+
+/* ----------------------------------------------------
+   Fuß
+   ---------------------------------------------------- */
+
+.vb-portal .vb-footer {
+
+    background: var(--vb-teal);
+    color: #b9cec7;
+    font-size: .95rem;
+    padding: 2rem 0;
+    margin-top: 3rem;
+
+}
+
+.vb-portal .vb-footer a {
+
+    color: #ffffff;
+    text-decoration: none;
+
+}
+
+.vb-portal .vb-footer a:hover {
+
+    color: var(--vb-green-light);
+
+}
+
+.vb-portal .vb-footer .vb-logo {
+
+    height: 26px;
+
+}
+
+@media (max-width: 767.98px) {
+
+    .vb-portal .vb-hero,
+    .vb-portal .vb-login-aside,
+    .vb-portal .vb-login-form {
+
+        padding: 1.75rem 1.5rem;
+
+    }
+
+    .vb-portal .vb-hero h1 { font-size: 1.6rem; }
+
+    .vb-portal .vb-brand-label { display: none; }
+
+}
+
+/* Nur lesbare Felder (Profil) */
+.vb-portal .vb-readonly,
+.vb-portal .vb-readonly:focus {
+
+    background-color: var(--vb-soft) !important;
+    color: var(--vb-muted) !important;
+    border-color: var(--vb-line);
+    box-shadow: none;
+    cursor: default;
+
+}

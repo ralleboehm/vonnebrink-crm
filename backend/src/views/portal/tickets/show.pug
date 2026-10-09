@@ -1,5 +1,7 @@
 extends ../layouts/main
 
+include ../partials/_status
+
 block content
 
     .d-flex.justify-content-between.align-items-center.mb-4
@@ -42,25 +44,7 @@ block content
 
                     p.mb-0
 
-                        case ticket.status
-
-                            when "open"
-                                span.badge.bg-primary Offen
-
-                            when "in_progress"
-                                span.badge.bg-warning.text-dark In Bearbeitung
-
-                            when "waiting"
-                                span.badge.bg-secondary Wartend
-
-                            when "resolved"
-                                span.badge.bg-success Gelöst
-
-                            when "closed"
-                                span.badge.bg-dark Geschlossen
-
-                            default
-                                span.badge.bg-secondary= ticket.status
+                        +ticketStatus(ticket.status)
 
                 .col-md-3.mb-3
 
@@ -68,22 +52,7 @@ block content
 
                     p.mb-0
 
-                        case ticket.priority
-
-                            when "low"
-                                span.badge.bg-success Niedrig
-
-                            when "normal"
-                                span.badge.bg-primary Normal
-
-                            when "high"
-                                span.badge.bg-warning.text-dark Hoch
-
-                            when "urgent"
-                                span.badge.bg-danger Dringend
-
-                            default
-                                span.badge.bg-secondary= ticket.priority
+                        +ticketPriority(ticket.priority)
 
             .row
 

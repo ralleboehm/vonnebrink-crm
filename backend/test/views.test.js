@@ -473,3 +473,50 @@ test("Kampagnen: Detailseite je Status", { skip: !pug && "pug nicht installiert"
     assert.doesNotMatch(sent, /window\.location\.reload/);
 
 });
+
+// ----------------------------------------------------
+// Kundenportal (Design wie vonnebrink.com)
+// ----------------------------------------------------
+
+test("Portal: Anmeldung, Übersicht und Ticketliste im neuen Design", { skip: !pug && "pug nicht installiert" }, () => {
+
+    const login = render("portal/login.pug", { currentPortalUser: null, error: "E-Mail oder Passwort ist falsch.", email: "max@muster.de", title: "Anmelden" });
+
+    assert.match(login, /\/css\/portal\.css/);
+    assert.doesNotMatch(login, /\/css\/vonnebrink\.css/, "CRM-Stylesheet nicht im Portal");
+    assert.match(login, /logo-wordmark-light\.png/);
+    assert.match(login, /E-Mail oder Passwort ist falsch\./, "Fehlermeldung wird angezeigt");
+    assert.match(login, /value="max@muster\.de"/);
+    assert.match(login, /<body class="vb-portal">/);
+    assert.doesNotMatch(login, /Meine Tickets/, "ohne Anmeldung kein Menü");
+
+    const portalUser = { firstName: "Hans", lastName: "Müller", companyName: "Holz Müller GmbH" };
+    const day = (n) => new Date(Date.now() - n * 86400000);
+
+    const tickets = [
+        { _id: "t1", ticketNumber: "TIC-000001", subject: "Drucker", status: "open", priority: "high", createdAt: day(5), updatedAt: day(1) },
+        { _id: "t2", ticketNumber: "TIC-000002", subject: "VPN", status: "in_progress", priority: "normal", createdAt: day(4), updatedAt: day(2) },
+        { _id: "t3", ticketNumber: "TIC-000003", subject: "Alt", status: "closed", priority: "low", createdAt: day(30), updatedAt: day(20) },
+        { _id: "t4", ticketNumber: "TIC-000004", subject: "Komisch", status: "quatsch", priority: "egal", createdAt: day(3) }
+    ];
+
+    const dashboard = render("portal/dashboard.pug", { currentPortalUser: portalUser, currentPath: "/portal", tickets, title: "Übersicht" });
+
+    assert.match(dashboard, /Guten Tag, Hans Müller/);
+    assert.match(dashboard, /Holz Müller GmbH/);
+    assert.match(dashboard, /Sie haben 2 offene Tickets/);
+    assert.match(dashboard, /class="nav-link active" href="\/portal"|href="\/portal" class="nav-link active"/);
+    assert.match(dashboard, /vb-badge vb-badge-open[^>]*>Offen/);
+    assert.match(dashboard, /vb-badge vb-badge-unknown[^>]*>quatsch/);
+    assert.ok(dashboard.indexOf("TIC-000001") < dashboard.indexOf("TIC-000002"), "zuletzt aktualisiert zuerst");
+
+    const empty = render("portal/dashboard.pug", { currentPortalUser: portalUser, tickets: [], title: "Übersicht" });
+    assert.match(empty, /keine offenen Tickets/);
+    assert.match(empty, /Erstes Ticket erstellen/);
+
+    const list = render("portal/tickets/index.pug", { currentPortalUser: portalUser, currentPath: "/portal/tickets", tickets: tickets.slice(0, 2), title: "Meine Tickets" });
+    assert.match(list, /vb-badge-in_progress[^>]*>In Bearbeitung/);
+    assert.match(list, /vb-badge-high[^>]*>Hoch/);
+    assert.doesNotMatch(list, /table-dark/);
+
+});

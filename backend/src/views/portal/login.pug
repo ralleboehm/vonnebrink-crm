@@ -2,64 +2,94 @@ extends layouts/main
 
 block content
 
-    .row.justify-content-center
+    .vb-login
 
-        .col-lg-5.col-md-7
+        .row.g-0
 
-            .card.shadow
+            // =====================================================
+            // Links: Marke und Nutzen (wie vonnebrink.com)
+            // =====================================================
 
-                .card-header.text-center
+            .col-lg-6.vb-login-aside
 
-                    h3.mb-0
+                img.vb-logo(src="/images/logo-wordmark-light.png" alt="Vonnebrink IT Operations" style="height: 30px;")
 
-                        i.bi.bi-shield-lock.me-2
+                h2
+                    | Ihre IT.
+                    br
+                    span Sicher. Betreut.
 
-                        | Kundenportal
+                ul.vb-checks
 
-                .card-body
+                    li
+                        i.bi.bi-check-circle-fill
+                        span Persönlicher IT-Ansprechpartner aus Lampertheim
 
-                    p.text-muted.text-center.mb-4
+                    li
+                        i.bi.bi-check-circle-fill
+                        span Ihre Tickets und deren Stand jederzeit im Blick
 
-                        | Bitte melden Sie sich mit Ihrer E-Mail-Adresse und Ihrem Passwort an.
+                    li
+                        i.bi.bi-check-circle-fill
+                        span Antworten und Dateien direkt hier im Portal
 
-                    form(method="POST" action="/portal/login")
+            // =====================================================
+            // Rechts: Anmeldung
+            // =====================================================
 
-                        .mb-3
+            .col-lg-6.vb-login-form
 
-                            label.form-label(for="email")
+                .vb-eyebrow Kundenportal
 
-                                | E-Mail-Adresse
+                h1.mt-1.mb-2 Anmelden
 
-                            input.form-control(
-                                type="email"
-                                id="email"
-                                name="email"
-                                required
-                                autocomplete="username"
-                            )
+                p.text-muted.mb-4 Mit Ihrer E-Mail-Adresse und Ihrem Passwort.
 
-                        .mb-4
+                if error
 
-                            label.form-label(for="password")
+                    .alert.alert-danger(role="alert")
 
-                                | Passwort
+                        i.bi.bi-exclamation-triangle.me-2
 
-                            input.form-control(
-                                type="password"
-                                id="password"
-                                name="password"
-                                required
-                                autocomplete="current-password"
-                            )
+                        = error
 
-                        button.btn.btn-primary.w-100(type="submit")
+                form(method="POST" action="/portal/login")
 
-                            i.bi.bi-box-arrow-in-right.me-2
+                    .mb-3
 
-                            | Anmelden
+                        label.form-label(for="email") E-Mail-Adresse
 
-                .card-footer.text-center
+                        input.form-control(
+                            type="email"
+                            id="email"
+                            name="email"
+                            value=(typeof email !== "undefined" ? email : "")
+                            required
+                            autocomplete="username"
+                            autofocus
+                        )
 
-                    small.text-muted
+                    .mb-4
 
-                        | © #{new Date().getFullYear()} Vonnebrink IT Operations
+                        label.form-label(for="password") Passwort
+
+                        input.form-control(
+                            type="password"
+                            id="password"
+                            name="password"
+                            required
+                            autocomplete="current-password"
+                        )
+
+                    button.btn.btn-primary.btn-lg.w-100(type="submit")
+
+                        | Anmelden
+
+                        i.bi.bi-arrow-right.ms-2
+
+                p.small.text-muted.mt-4.mb-0
+
+                    | Noch keinen Zugang oder Passwort vergessen? Sprechen Sie uns an –
+                    |
+                    a(href="https://vonnebrink.com/contact-2/" rel="noopener") Kontakt
+                    | .
