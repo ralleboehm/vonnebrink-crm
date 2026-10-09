@@ -611,7 +611,9 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         const deleted = await Document.findById(backup._id);
         assert.equal(deleted.isDeleted, true);
         assert.equal(fakeCloud.file(backup.nextcloud.path), undefined);
-        assert.doesNotMatch((await crm.get(pageUrl)).text, /firewall\.conf/);
+        const afterDelete = (await crm.get(pageUrl)).text;
+        assert.match(afterDelete, /„firewall\.conf“ wurde gelöscht/, "Hinweis");
+        assert.doesNotMatch(afterDelete, new RegExp(`/crm/documents/${backup._id}/`), "nicht mehr in der Liste");
         assert.equal((await crm.get(`/crm/documents/${backup._id}/download`)).status, 404);
 
         // Kaputte Adressen
