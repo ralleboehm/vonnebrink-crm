@@ -1425,7 +1425,7 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         // Auswertung im CRM (Admin)
         const overview = await crm.get("/crm/surveys");
         assertPage(overview, "/crm/surveys");
-        assert.match(overview.text, /Hat zu lange gedauert/);
+        assert.match(overview.text, /class="vb-nps-comment">Hat zu lange gedauert</, "Antwort in der Liste");
         assert.match(overview.text, /TIC-900001/);
         assert.match(overview.text, /class="nav-link" href="\/crm\/surveys"/, "Menü Umfragen");
 
@@ -1433,7 +1433,8 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
             assertPage(await crm.get(`/crm/surveys${query}`), `/crm/surveys${query}`);
         }
 
-        assert.doesNotMatch((await crm.get("/crm/surveys?category=promoter")).text, /Hat zu lange gedauert/, "Filter Promotoren");
+        // (der Kommentar steht auch in der Glocke – deshalb nur die Antwortliste prüfen)
+        assert.doesNotMatch((await crm.get("/crm/surveys?category=promoter")).text, /class="vb-nps-comment">Hat zu lange gedauert</, "Filter Promotoren");
 
         const csv = await crm.get("/crm/surveys/export");
         assert.equal(csv.status, 200);
