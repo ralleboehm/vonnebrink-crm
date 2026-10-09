@@ -430,6 +430,33 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
 
     });
 
+    await t.test("CRM: zugewiesene Assets beim Kontakt", async () => {
+
+        // Ohne Zuweisung: Hinweis statt Liste
+        const before = await crm.get(`/crm/contacts/${contact._id}`);
+        assertPage(before, "Kontakt ohne Assets");
+        assert.match(before.text, /Zugewiesene Assets \(0\)/);
+        assert.match(before.text, /keine Assets zugewiesen/);
+
+        await Asset.updateOne({ _id: manualAsset._id }, { $set: { contact: contact._id } });
+
+        const page = await crm.get(`/crm/contacts/${contact._id}`);
+        assertPage(page, "Kontakt mit Asset");
+        assert.match(page.text, /Zugewiesene Assets \(1\)/);
+        assert.match(page.text, new RegExp(`href="/crm/assets/${manualAsset._id}"`));
+        assert.match(page.text, /SMOKE-PC/);
+        assert.doesNotMatch(page.text, /SMOKE-SRV/, "nur die zugewiesenen");
+        assert.match(page.text, new RegExp(`/crm/assets/new\\?company=${company._id}&amp;contact=${contact._id}`));
+
+        // Neues Asset aus dem Kontakt: Kontakt vorausgewählt
+        const form = await crm.get(`/crm/assets/new?company=${company._id}&contact=${contact._id}`);
+        assertPage(form, "Neues Asset mit Kontakt");
+        assert.match(form.text, new RegExp(`value="${contact._id}"[^>]*selected`));
+
+        await Asset.updateOne({ _id: manualAsset._id }, { $set: { contact: null } });
+
+    });
+
     await t.test("CRM: Firma mit Adresse und Branche / Gruppen", async () => {
 
         const created = await crm.post("/crm/companies", {

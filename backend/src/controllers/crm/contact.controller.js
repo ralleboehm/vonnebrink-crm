@@ -4,6 +4,9 @@ const portalAccountService = require("../../services/portalAccount.service");
 const marketingService = require("../../services/marketing.service");
 const { takeFlash } = require("../../core/http/flash");
 const format = require("../../utils/format");
+const assetService = require("../../services/asset.service");
+const assetLabels = require("../../utils/assetLabels");
+const { can } = require("../../core/permissions");
 
 // Alle Kontakte anzeigen
 exports.index = async (req, res, next) => {
@@ -87,12 +90,18 @@ exports.show = async (req, res, next) => {
             return res.redirect("/crm/contacts");
         }
 
-        const portalAccount = await portalAccountService.getByContact(contact._id);
+        // Zugewiesene Assets nur für Rollen, die Assets sehen dürfen
+        const [portalAccount, assets] = await Promise.all([
+            portalAccountService.getByContact(contact._id),
+            can(req.session.user, "assets.view") ? assetService.getByContact(contact._id) : null
+        ]);
 
         res.render("contacts/show", {
             title: `${contact.firstName} ${contact.lastName}`,
             contact,
             portalAccount,
+            assets,
+            labels: assetLabels,
             generatedPassword: req.session.generatedPortalPassword || null,
             marketing: {
                 consent: marketingService.consentOf(contact),

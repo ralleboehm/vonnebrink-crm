@@ -85,6 +85,7 @@ exports.create = async (req, res, next) => {
             title: "Neues Asset",
             asset: {
                 company: req.query.company || null,
+                contact: req.query.contact || null,
                 type: "workstation",
                 status: "active"
             },
