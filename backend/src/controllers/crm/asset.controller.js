@@ -29,44 +29,6 @@ async function formData() {
 
 }
 
-/**
- * Pflichtfelder prüfen und sicherstellen, dass der Ansprechpartner zur
- * gewählten Firma gehört. Gibt eine Fehlermeldung oder null zurück.
- */
-async function validate(data, { checkName = true } = {}) {
-
-    if (!data.company) {
-        return "Bitte eine Firma auswählen.";
-    }
-
-    if (checkName && !data.name) {
-        return "Bitte einen Gerätenamen angeben.";
-    }
-
-    const company = await companyService.getById(data.company);
-
-    if (!company) {
-        return "Die gewählte Firma existiert nicht.";
-    }
-
-    if (!data.contact) return null;
-
-    const contact = await contactService.getById(data.contact);
-
-    if (!contact) {
-        return "Der gewählte Ansprechpartner existiert nicht.";
-    }
-
-    const contactCompany = contact.company && (contact.company._id || contact.company);
-
-    if (String(contactCompany) !== String(data.company)) {
-        return "Der Ansprechpartner gehört nicht zur gewählten Firma.";
-    }
-
-    return null;
-
-}
-
 function isValidationError(err) {
 
     return err && (err.name === "ValidationError" || err.name === "CastError");
@@ -148,7 +110,7 @@ exports.store = async (req, res, next) => {
 
     try {
 
-        const message = await validate(data);
+        const message = await assetService.validate(data);
 
         if (message) {
             const error = new Error(message);
@@ -270,7 +232,7 @@ exports.update = async (req, res, next) => {
 
         try {
 
-            const message = await validate(
+            const message = await assetService.validate(
                 { ...data, company: companyForCheck },
                 { checkName: !isAction1 }
             );

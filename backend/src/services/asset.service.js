@@ -1,6 +1,8 @@
 const Asset = require("../models/asset.model");
 const counterService = require("./counter.service");
 const { escapeRegex } = require("./search.service");
+const companyService = require("./company.service");
+const contactService = require("./contact.service");
 
 // Felder, die im CRM-Formular bearbeitet werden dürfen
 const EDITABLE_FIELDS = [
@@ -130,6 +132,44 @@ exports.EDITABLE_FIELDS = EDITABLE_FIELDS;
 exports.ACTION1_MANAGED_FIELDS = ACTION1_MANAGED_FIELDS;
 exports.fromForm = fromForm;
 exports.buildQuery = buildQuery;
+
+/**
+ * Pflichtfelder prüfen und sicherstellen, dass der Ansprechpartner zur
+ * gewählten Firma gehört. Gibt eine Fehlermeldung oder null zurück.
+ */
+exports.validate = async (data, { checkName = true } = {}) => {
+
+    if (!data.company) {
+        return "Bitte eine Firma auswählen.";
+    }
+
+    if (checkName && !data.name) {
+        return "Bitte einen Gerätenamen angeben.";
+    }
+
+    const company = await companyService.getById(data.company);
+
+    if (!company) {
+        return "Die gewählte Firma existiert nicht.";
+    }
+
+    if (!data.contact) return null;
+
+    const contact = await contactService.getById(data.contact);
+
+    if (!contact) {
+        return "Der gewählte Ansprechpartner existiert nicht.";
+    }
+
+    const contactCompany = contact.company && (contact.company._id || contact.company);
+
+    if (String(contactCompany) !== String(data.company)) {
+        return "Der Ansprechpartner gehört nicht zur gewählten Firma.";
+    }
+
+    return null;
+
+};
 
 exports.getAll = async (filters = {}) => {
 
