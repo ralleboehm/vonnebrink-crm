@@ -122,6 +122,10 @@ function buildQuery(filters = {}) {
 
 }
 
+exports.TYPES = Asset.TYPES;
+exports.STATUSES = Asset.STATUSES;
+exports.SOURCES = Asset.SOURCES;
+
 exports.EDITABLE_FIELDS = EDITABLE_FIELDS;
 exports.ACTION1_MANAGED_FIELDS = ACTION1_MANAGED_FIELDS;
 exports.fromForm = fromForm;

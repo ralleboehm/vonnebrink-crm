@@ -406,8 +406,60 @@ async function runSync(options = {}) {
 
 }
 
+// ----------------------------------------------------
+// Protokoll lesen
+// ----------------------------------------------------
+
+function syncRunModel() {
+    return require("../../models/syncRun.model");
+}
+
+/**
+ * Letzte Läufe (neueste zuerst) mit Auslöser
+ */
+async function getRecentRuns(limit = 10) {
+
+    return syncRunModel().find({ provider: "action1" })
+        .sort({ startedAt: -1 })
+        .limit(limit)
+        .populate("startedBy", "firstName lastName")
+        .lean();
+
+}
+
+/**
+ * Letzter Lauf, der alle Organisationen zählen konnte (für "gesamt / zugeordnet")
+ */
+async function getLatestCoverageRun() {
+
+    return syncRunModel().findOne({
+        provider: "action1",
+        "stats.action1Total": { $type: "number" }
+    })
+        .sort({ startedAt: -1 })
+        .lean();
+
+}
+
+/**
+ * Letzter abgeschlossener Lauf
+ */
+async function getLatestFinishedRun() {
+
+    return syncRunModel().findOne({
+        provider: "action1",
+        finishedAt: { $ne: null }
+    })
+        .sort({ startedAt: -1 })
+        .lean();
+
+}
+
 module.exports = {
     runSync,
+    getRecentRuns,
+    getLatestCoverageRun,
+    getLatestFinishedRun,
     isRunning,
     buildUpdate,
     buildNewAsset

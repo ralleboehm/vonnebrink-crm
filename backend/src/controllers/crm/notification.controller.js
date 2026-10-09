@@ -1,20 +1,13 @@
 const notificationService = require("../../services/notification.service");
 const labels = require("../../utils/assetLabels");
+const { safeRedirectTarget } = require("../../core/http/redirect");
 
 /**
  * Nur interne Ziele zulassen (kein Weiterleiten auf fremde Seiten)
  */
 function safeTarget(value, fallback = "/crm/notifications") {
 
-    if (typeof value !== "string") return fallback;
-
-    const target = value.trim();
-
-    if (!target.startsWith("/") || target.startsWith("//") || target.startsWith("/\\")) {
-        return fallback;
-    }
-
-    return target;
+    return safeRedirectTarget(value, fallback);
 
 }
 

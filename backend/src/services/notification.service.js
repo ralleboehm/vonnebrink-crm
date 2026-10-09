@@ -25,11 +25,12 @@ const mongoose = require("mongoose");
 const Notification = require("../models/notification.model");
 const User = require("../models/user.model");
 const events = require("./notification/events");
+const { clampLimit, parsePagination, buildPage } = require("../utils/pagination");
+const { internalPath } = require("../core/http/redirect");
 
 const { EVENTS } = events;
 
 const DEFAULT_RECENT_LIMIT = 8;
-const MAX_LIMIT = 100;
 
 // Rollen, die bei neuen Tickets usw. benachrichtigt werden
 const SUPPORT_ROLES = ["admin", "technician"];
@@ -38,29 +39,13 @@ const SUPPORT_ROLES = ["admin", "technician"];
 // Hilfsfunktionen
 // ----------------------------------------------------
 
-function clampLimit(value, fallback) {
-
-    const n = parseInt(value, 10);
-
-    if (!Number.isFinite(n) || n < 1) return fallback;
-
-    return Math.min(n, MAX_LIMIT);
-
-}
-
 /**
  * Nur interne Links ("/crm/…") zulassen, keine fremden Adressen
  * oder "javascript:"-Links.
  */
 function safeLink(link) {
 
-    if (typeof link !== "string") return null;
-
-    const value = link.trim();
-
-    if (!value.startsWith("/") || value.startsWith("//")) return null;
-
-    return value.slice(0, 500);
+    return internalPath(link, 500);
 
 }
 
@@ -227,11 +212,10 @@ async function getRecent(userId, limit = DEFAULT_RECENT_LIMIT) {
  */
 async function getPage(userId, options = {}) {
 
-    const perPage = clampLimit(options.perPage, 25);
-    const page = Math.max(parseInt(options.page, 10) || 1, 1);
+    const { page, perPage, skip } = parsePagination(options, { perPage: 25 });
 
     if (!idOf(userId)) {
-        return { items: [], total: 0, page: 1, pages: 1, perPage };
+        return buildPage([], 0, { page: 1, perPage });
     }
 
     const query = { user: userId };
@@ -241,19 +225,13 @@ async function getPage(userId, options = {}) {
     const [items, total] = await Promise.all([
         Notification.find(query)
             .sort({ createdAt: -1 })
-            .skip((page - 1) * perPage)
+            .skip(skip)
             .limit(perPage)
             .lean(),
         Notification.countDocuments(query)
     ]);
 
-    return {
-        items,
-        total,
-        page,
-        pages: Math.max(Math.ceil(total / perPage), 1),
-        perPage
-    };
+    return buildPage(items, total, { page, perPage });
 
 }
 

@@ -4,22 +4,9 @@ const companyService = require("../../services/company.service");
 const assetService = require("../../services/asset.service");
 const action1Client = require("../../services/action1/client");
 const syncService = require("../../services/action1/sync.service");
-const SyncRun = require("../../models/syncRun.model");
 const labels = require("../../utils/assetLabels");
 
-function setFlash(req, type, text) {
-    req.session.flash = { type, text };
-}
-
-function takeFlash(req) {
-
-    const flash = req.session.flash || null;
-
-    delete req.session.flash;
-
-    return flash;
-
-}
+const { setFlash, takeFlash } = require("../../core/http/flash");
 
 /**
  * Action1: Status, Organisationen, Zuordnung, letzte Syncs
@@ -58,11 +45,7 @@ exports.action1 = async (req, res, next) => {
         const [companies, mapped, runs, summary] = await Promise.all([
             companyService.getAll(),
             companyService.getAction1Mapped(),
-            SyncRun.find({ provider: "action1" })
-                .sort({ startedAt: -1 })
-                .limit(10)
-                .populate("startedBy", "firstName lastName")
-                .lean(),
+            syncService.getRecentRuns(10),
             assetService.summary()
         ]);
 

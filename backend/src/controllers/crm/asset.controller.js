@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 
-const Asset = require("../../models/asset.model");
 const assetService = require("../../services/asset.service");
 const companyService = require("../../services/company.service");
 const contactService = require("../../services/contact.service");
@@ -12,8 +11,8 @@ function viewHelpers() {
 
     return {
         labels,
-        assetTypes: Asset.TYPES,
-        assetStatuses: Asset.STATUSES,
+        assetTypes: assetService.TYPES,
+        assetStatuses: assetService.STATUSES,
         action1Fields: assetService.ACTION1_MANAGED_FIELDS
     };
 
