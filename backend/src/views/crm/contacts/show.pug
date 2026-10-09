@@ -32,12 +32,16 @@ block content
 
                 i.bi.bi-key.me-2
 
-                | Portalzugang erstellt
+                | Vorläufiges Portal-Passwort
 
             p.mb-2
-                | Bitte dieses Passwort sicher an den Kunden weitergeben.
+                | Gilt nur für die erste Anmeldung. Wurde es nicht per E-Mail verschickt, bitte sicher an den Kunden weitergeben.
 
             code.fs-5= generatedPassword
+
+    if flash
+
+        .alert(class=`alert-${flash.type}`)= flash.text
 
     .card.shadow-sm
 
@@ -167,7 +171,7 @@ block content
 
                 .mt-3.d-flex.gap-2
 
-                    form(
+                    form.d-flex.align-items-center.gap-2(
                         method="POST"
                         action=`/crm/contacts/${contact._id}/portal/reset-password`
                     )
@@ -177,6 +181,12 @@ block content
                             i.bi.bi-key.me-2
 
                             | Passwort zurücksetzen
+
+                        .form-check.mb-0.small
+
+                            input.form-check-input#resetSendEmail(type="checkbox" name="sendEmail" checked=Boolean(contact.email))
+
+                            label.form-check-label(for="resetSendEmail") per E-Mail schicken
 
                     if portalAccount.active
 
@@ -217,6 +227,12 @@ block content
                         action=`/crm/contacts/${contact._id}/portal/create`
                     )
 
+                        .form-check.mb-3
+
+                            input.form-check-input#welcomeSendEmail(type="checkbox" name="sendEmail" checked=Boolean(contact.email))
+
+                            label.form-check-label(for="welcomeSendEmail") Zugangsdaten per Willkommens-E-Mail an #{contact.email || "den Kontakt"} schicken
+
                         button.btn.btn-primary(type="submit")
 
                             i.bi.bi-person-plus.me-2
@@ -234,10 +250,6 @@ block content
                 i.bi.bi-envelope-paper.me-2
 
                 | Marketing
-
-            if flash
-
-                .alert(class=`alert-${flash.type}`)= flash.text
 
             - const consent = marketing.consent
 

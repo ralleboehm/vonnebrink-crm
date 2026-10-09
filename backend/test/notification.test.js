@@ -78,7 +78,7 @@ test("Vorlagen: Kopf mit Betreff wird erkannt", () => {
 
 });
 
-test("Vorlagen: alle sieben Vorlagen lassen sich rendern", async () => {
+test("Vorlagen: alle neun Vorlagen lassen sich rendern", async () => {
 
     const names = await templates.list();
 
@@ -89,7 +89,9 @@ test("Vorlagen: alle sieben Vorlagen lassen sich rendern", async () => {
         "ticket-assigned",
         "ticket-closed",
         "ticket-created",
-        "ticket-created-internal"
+        "ticket-created-internal",
+        "ticket-reply",
+        "ticket-reply-internal"
     ]);
 
     const data = {
@@ -102,7 +104,9 @@ test("Vorlagen: alle sieben Vorlagen lassen sich rendern", async () => {
         ticketLink: "https://crm.example.de/crm/tickets/1",
         email: "hans@example.de",
         temporaryPassword: "Abc123xyz",
-        confirmLink: "https://crm.example.de/email/bestaetigen/abc"
+        confirmLink: "https://crm.example.de/email/bestaetigen/abc",
+        message: "Bitte den Drucker\neinmal neu starten.",
+        author: "Hans Müller"
     };
 
     for (const name of names) {
@@ -227,7 +231,7 @@ function fakeContext(overrides = {}) {
             priority: "urgent",
             category: "hardware",
             company: { companyName: "Holz Müller GmbH" },
-            contact: { salutation: "mr", firstName: "Hans", lastName: "Müller", email: "hans@example.de" }
+            contact: { _id: "p1", salutation: "mr", firstName: "Hans", lastName: "Müller", email: "hans@example.de" }
         }),
         getSupportStaff: async () => [
             { _id: "u1", firstName: "Ralf", lastName: "V", email: "ralf@vonnebrink.com" },
@@ -235,6 +239,8 @@ function fakeContext(overrides = {}) {
         ],
         notifyUsers: async (ids, data) => { calls.notifications.push({ ids: ids.map(String), data }); return ids.length; },
         queueTemplateEmail: (template, to, data) => { calls.emails.push({ template, to, data }); },
+        hasActivePortalAccount: async () => true,
+        loadContact: async () => ({ _id: "p1", salutation: "mrs", firstName: "Eva", lastName: "Kraus", email: "eva@example.de", company: { companyName: "Kraus KG" } }),
         ...overrides
     };
 
@@ -325,7 +331,7 @@ test("ticket.updated: Antwort geht nur an den zugewiesenen Bearbeiter", async ()
         authorName: "Hans Müller", message: "  Drucker   geht\nwieder nicht  "
     }, ctx);
 
-    assert.deepEqual(result, { ticketNumber: "TIC-000007", notified: 1 });
+    assert.deepEqual(result, { ticketNumber: "TIC-000007", notified: 1, staffEmails: 1 });
     assert.deepEqual(calls.notifications[0].ids, ["u2"]);
 
     const data = calls.notifications[0].data;
@@ -335,7 +341,15 @@ test("ticket.updated: Antwort geht nur an den zugewiesenen Bearbeiter", async ()
     assert.equal(data.icon, "bi-chat-left-text");
     assert.equal(data.link, "/crm/tickets/t1");
     assert.equal(data.event, "ticket.updated");
-    assert.equal(calls.emails.length, 0, "keine E-Mail");
+
+    // E-Mail nur an den zuständigen Techniker, mit vollem Text
+    assert.equal(calls.emails.length, 1);
+    assert.equal(calls.emails[0].template, "ticket-reply-internal");
+    assert.equal(calls.emails[0].to, "tom@vonnebrink.com");
+    assert.equal(calls.emails[0].data.agent, "Tom");
+    assert.equal(calls.emails[0].data.author, "Hans Müller");
+    assert.equal(calls.emails[0].data.message, "Drucker   geht\nwieder nicht");
+    assert.equal(calls.emails[0].data.ticketLink, "https://crm.example.de/crm/tickets/t1");
 
 });
 
@@ -361,16 +375,142 @@ test("ticket.updated: ohne (aktiven) Bearbeiter bekommt das ganze Team die Glock
 
 });
 
-test("ticket.updated: nur Portal, unbekannte Art wird abgelehnt", async () => {
+test("ticket.updated aus dem CRM: Antwort per E-Mail an den Kunden, interne Notizen nicht", async () => {
 
-    const { ctx, calls } = fakeContext();
+    let { ctx, calls } = fakeContext();
 
-    const crm = await ticketHandlers.ticketUpdated({ ticket: "t1", kind: "message", source: "crm" }, ctx);
-    assert.equal(crm.notified, 0);
-    assert.equal(calls.notifications.length, 0);
+    const reply = await ticketHandlers.ticketUpdated({ ticket: "t1", kind: "message", source: "crm", authorName: "Ralf Böhm", message: "Bitte neu starten." }, ctx);
+
+    assert.deepEqual(reply, { ticketNumber: "TIC-000007", customerEmail: true });
+    assert.equal(calls.notifications.length, 0, "keine Glocke für Mitarbeiter-Antworten");
+    assert.equal(calls.emails.length, 1);
+
+    const mail = calls.emails[0];
+
+    assert.equal(mail.template, "ticket-reply");
+    assert.equal(mail.to, "hans@example.de");
+    assert.equal(mail.data.customerName, "Herr Müller");
+    assert.equal(mail.data.agent, "Ralf Böhm");
+    assert.equal(mail.data.message, "Bitte neu starten.");
+    assert.equal(mail.data.portalLink, "https://crm.example.de/portal/tickets/t1");
+    assert.equal(mail.data.noPortal, "");
+
+    // Datei
+    ({ ctx, calls } = fakeContext());
+    await ticketHandlers.ticketUpdated({ ticket: "t1", kind: "attachment", source: "crm", fileName: "anleitung.pdf" }, ctx);
+    assert.equal(calls.emails[0].data.fileName, "anleitung.pdf");
+    assert.equal(calls.emails[0].data.message, "");
+
+    // ohne Portalzugang: kein Portal-Link, Hinweis auf Antwort per E-Mail
+    ({ ctx, calls } = fakeContext({ hasActivePortalAccount: async () => false }));
+    await ticketHandlers.ticketUpdated({ ticket: "t1", kind: "message", source: "crm", message: "x" }, ctx);
+    assert.equal(calls.emails[0].data.portalLink, undefined);
+    assert.equal(calls.emails[0].data.noPortal, "ja");
+
+    // interne Notiz: nichts
+    ({ ctx, calls } = fakeContext());
+    const internal = await ticketHandlers.ticketUpdated({ ticket: "t1", kind: "message", source: "crm", isInternal: true, message: "geheim" }, ctx);
+    assert.equal(internal.customerEmail, false);
+    assert.equal(calls.emails.length, 0);
+
+    // ohne Kontakt-E-Mail: nichts, aber im Log
+    ({ ctx, calls } = fakeContext({ loadTicket: async () => ({ _id: "t2", ticketNumber: "TIC-2", contact: null }) }));
+    const noMail = await ticketHandlers.ticketUpdated({ ticket: "t2", kind: "message", source: "crm", message: "x" }, ctx);
+    assert.equal(noMail.customerEmail, false);
+    assert.match(calls.logs[0], /keine Mail zur Antwort/);
 
     await assert.rejects(ticketHandlers.ticketUpdated({ ticket: "t1", kind: "status", source: "portal" }, ctx), /unbekannte Art/);
     await assert.rejects(ticketHandlers.ticketUpdated({ kind: "message", source: "portal" }, ctx), /ohne Ticket/);
+
+});
+
+test("ticket.assigned: Glocke für den Bearbeiter, Kunden-Mail nur beim ersten Zuweisen", async () => {
+
+    const ticket = {
+        _id: "t1", ticketNumber: "TIC-000007", subject: "Drucker", priority: "high", status: "open",
+        company: { companyName: "Holz Müller GmbH" },
+        contact: { _id: "p1", salutation: "mr", lastName: "Müller", email: "hans@example.de" },
+        assignedTo: { _id: "u2", firstName: "Tom", lastName: "Tech" }
+    };
+
+    let { ctx, calls } = fakeContext({ loadTicket: async () => ticket });
+
+    const first = await ticketHandlers.ticketAssigned({ ticket: "t1", assignedTo: "u2", previousAssignedTo: null, assignedByUserId: "u1" }, ctx);
+
+    assert.deepEqual(first, { ticketNumber: "TIC-000007", notified: 1, customerEmail: true });
+    assert.deepEqual(calls.notifications[0].ids, ["u2"]);
+    assert.equal(calls.notifications[0].data.title, "Ticket TIC-000007 zugewiesen");
+    assert.equal(calls.notifications[0].data.event, "ticket.assigned");
+    assert.equal(calls.emails[0].template, "ticket-assigned");
+    assert.equal(calls.emails[0].data.agent, "Tom Tech");
+    assert.equal(calls.emails[0].data.portalLink, "https://crm.example.de/portal/tickets/t1");
+
+    // selbst zugewiesen: keine Glocke, Kunde trotzdem informiert
+    ({ ctx, calls } = fakeContext({ loadTicket: async () => ticket }));
+    const self = await ticketHandlers.ticketAssigned({ ticket: "t1", assignedTo: "u2", previousAssignedTo: null, assignedByUserId: "u2" }, ctx);
+    assert.equal(self.notified, 0);
+    assert.equal(self.customerEmail, true);
+
+    // umverteilen: Glocke ja, Kunde nicht noch einmal
+    ({ ctx, calls } = fakeContext({ loadTicket: async () => ticket }));
+    const moved = await ticketHandlers.ticketAssigned({ ticket: "t1", assignedTo: "u2", previousAssignedTo: "u1", assignedByUserId: "u1" }, ctx);
+    assert.equal(moved.notified, 1);
+    assert.equal(moved.customerEmail, false);
+    assert.equal(calls.emails.length, 0);
+
+    // entfernt oder unverändert: nichts
+    ({ ctx, calls } = fakeContext({ loadTicket: async () => ticket }));
+    assert.equal((await ticketHandlers.ticketAssigned({ ticket: "t1", assignedTo: null, previousAssignedTo: "u2" }, ctx)).notified, 0);
+    assert.equal((await ticketHandlers.ticketAssigned({ ticket: "t1", assignedTo: "u2", previousAssignedTo: "u2" }, ctx)).notified, 0);
+    assert.equal(calls.emails.length + calls.notifications.length, 0);
+
+});
+
+test("ticket.closed: Abschluss-Mail an den Kunden", async () => {
+
+    let { ctx, calls } = fakeContext();
+
+    const result = await ticketHandlers.ticketClosed({ ticket: "t1", closedByName: "Ralf Böhm" }, ctx);
+
+    assert.deepEqual(result, { ticketNumber: "TIC-000007", customerEmail: true });
+    assert.equal(calls.emails[0].template, "ticket-closed");
+    assert.equal(calls.emails[0].to, "hans@example.de");
+    assert.equal(calls.emails[0].data.agent, "Ralf Böhm");
+    assert.equal(calls.notifications.length, 0);
+
+    ({ ctx, calls } = fakeContext({ loadTicket: async () => ({ _id: "t2", ticketNumber: "TIC-2", contact: { lastName: "X" } }) }));
+    assert.equal((await ticketHandlers.ticketClosed({ ticket: "t2" }, ctx)).customerEmail, false);
+    assert.match(calls.logs[0], /keine Abschluss-Mail/);
+
+});
+
+test("Portalzugang: Willkommens- und Passwort-Mail mit vorläufigem Passwort", async () => {
+
+    const portalHandlers = require("../src/services/notification/handlers/portal.handlers");
+
+    let { ctx, calls } = fakeContext();
+
+    const welcome = await portalHandlers.portalWelcome({ contact: "p1", temporaryPassword: "Xy12abc", agentName: "Ralf" }, ctx);
+
+    assert.deepEqual(welcome, { email: "eva@example.de" });
+    assert.equal(calls.emails[0].template, "portal-welcome");
+    assert.equal(calls.emails[0].data.customerName, "Frau Kraus");
+    assert.equal(calls.emails[0].data.company, "Kraus KG");
+    assert.equal(calls.emails[0].data.temporaryPassword, "Xy12abc");
+
+    ({ ctx, calls } = fakeContext());
+    await portalHandlers.passwordReset({ contact: "p1", temporaryPassword: "Neu99" }, ctx);
+    assert.equal(calls.emails[0].template, "password-reset");
+
+    ({ ctx, calls } = fakeContext({ loadContact: async () => ({ _id: "p2", lastName: "Ohne" }) }));
+    assert.deepEqual(await portalHandlers.portalWelcome({ contact: "p2", temporaryPassword: "x" }, ctx), { email: null });
+    assert.equal(calls.emails.length, 0);
+
+    await assert.rejects(portalHandlers.portalWelcome({ contact: "p1" }, ctx), /ohne vorläufiges Passwort/);
+
+    for (const event of ["ticket.assigned", "ticket.closed", "portal.welcome", "password.reset"]) {
+        assert.equal(events.hasHandler(event), true, event);
+    }
 
 });
 

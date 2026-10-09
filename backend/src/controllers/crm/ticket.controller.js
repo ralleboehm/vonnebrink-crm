@@ -10,6 +10,16 @@ const userService = require("../../services/user.service");
 const notificationService = require("../../services/notification.service");
 const formatFileSize = require("../../utils/formatFileSize");
 
+function staffName(req) {
+
+    const user = req.session.user || {};
+
+    return `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.username || "";
+
+}
+
+const CLOSED_STATUSES = ["resolved", "closed"];
+
 /**
  * Hilfsfunktion zum Erstellen des Ticket-Objekts
  */
@@ -189,11 +199,13 @@ exports.addMessage = async (req, res, next) => {
 
         }
 
+        const isInternal = req.body.isInternal === "on";
+
         await ticketMessageService.create({
             ticket: req.params.id,
             author: req.session.user.id,
             message,
-            isInternal: req.body.isInternal === "on"
+            isInternal
         });
 
         await activityService.log({
@@ -202,6 +214,16 @@ exports.addMessage = async (req, res, next) => {
             action: "message_added",
             description: "Neue Nachricht hinzugefügt."
         });
+
+        // Antwort an den Kunden per E-Mail (interne Notizen nicht)
+        if (!isInternal) {
+            await notificationService.ticketUpdated(req.params.id, {
+                kind: "message",
+                source: "crm",
+                authorName: staffName(req),
+                message
+            });
+        }
 
         res.redirect(`/crm/tickets/${req.params.id}`);
 
@@ -236,6 +258,8 @@ exports.uploadAttachment = async (req, res, next) => {
 
         }
 
+        const isInternal = req.body.isInternal === "on";
+
         await attachmentService.storeUpload({
 
             ticket,
@@ -244,9 +268,19 @@ exports.uploadAttachment = async (req, res, next) => {
 
             uploadedBy: req.session.user.id,
 
-            isInternal: req.body.isInternal === "on"
+            isInternal
 
         });
+
+        // Kunde per E-Mail informieren (interne Dateien nicht)
+        if (!isInternal) {
+            await notificationService.ticketUpdated(ticket._id, {
+                kind: "attachment",
+                source: "crm",
+                authorName: staffName(req),
+                fileName: req.file.originalname
+            });
+        }
 
         await activityService.log({
 
@@ -317,10 +351,17 @@ exports.update = async (req, res, next) => {
 
     try {
 
-        await ticketService.update(
+        const before = await ticketService.getById(req.params.id);
+
+        const updated = await ticketService.update(
             req.params.id,
             getTicketData(req.body)
         );
+
+        // Gelöst / geschlossen: Kunde bekommt eine Abschluss-Mail (einmal)
+        if (before && updated && CLOSED_STATUSES.includes(updated.status) && !CLOSED_STATUSES.includes(before.status)) {
+            await notificationService.ticketClosed(updated._id, { closedByName: staffName(req) });
+        }
 
         res.redirect(`/crm/tickets/${req.params.id}`);
 
@@ -361,10 +402,19 @@ exports.assign = async (req, res, next) => {
 
         }
 
+        const previousAssignedTo = ticket.assignedTo ? String(ticket.assignedTo._id || ticket.assignedTo) : null;
+
         await ticketService.assign(
             req.params.id,
             req.body.assignedTo || null
         );
+
+        // Glocke für den Bearbeiter, beim ersten Zuweisen Mail an den Kunden
+        await notificationService.ticketAssigned(req.params.id, {
+            assignedTo: req.body.assignedTo || null,
+            previousAssignedTo,
+            assignedByUserId: req.session.user.id
+        });
 
         await activityService.log({
 

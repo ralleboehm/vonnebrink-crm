@@ -212,8 +212,29 @@ die globale Suche findet Assets auch über Seriennummer, IP und Benutzer, und
   `{{ticketNumber}}` und Abschnitten `{{#if agent}} … {{/if}}`.
 - **Neues Ticket** (CRM oder Portal): Glocke + E-Mail an Admins/Techniker, Eingangsbestätigung
   an den Ansprechpartner. Wer ein Ticket selbst im CRM anlegt, wird darüber nicht benachrichtigt.
-- **Antwort oder Datei vom Kunden** (Portal): Glocke für den zugewiesenen Bearbeiter mit Auszug
-  der Antwort bzw. Dateinamen; ist niemand (aktiv) zugewiesen, für alle Admins/Techniker. Keine E-Mail.
+- **Antwort oder Datei vom Kunden** (Portal): Glocke **und E-Mail** (`ticket-reply-internal`) an den
+  zugewiesenen Bearbeiter; ist niemand (aktiv) zugewiesen, an alle Admins/Techniker.
+- **Antwort oder Datei im CRM**: E-Mail „Neue Antwort zu Ihrem Ticket“ (`ticket-reply`) an den
+  Ansprechpartner – mit Link ins Portal, wenn er einen aktiven Zugang hat. Interne Notizen und
+  interne Dateien lösen keine Mail aus.
+- **Bearbeiter zugewiesen**: Glocke für den Bearbeiter (außer bei Selbstzuweisung); beim ersten
+  Zuweisen E-Mail an den Kunden „Ihr Ticket wird bearbeitet“ (`ticket-assigned`).
+- **Gelöst / Geschlossen**: E-Mail an den Kunden (`ticket-closed`), einmal je Abschluss.
+- **Portalzugang anlegen / Passwort zurücksetzen** (Kontakt): mit Haken „per E-Mail schicken“
+  gehen die Zugangsdaten an den Kontakt (`portal-welcome`, `password-reset`). Das vorläufige
+  Passwort gilt nur für die erste Anmeldung.
+
+| Vorlage | Empfänger | Auslöser |
+|---|---|---|
+| `ticket-created` | Kunde | neues Ticket |
+| `ticket-created-internal` | Admins, Techniker | neues Ticket |
+| `ticket-reply` | Kunde | Antwort / Datei im CRM (nicht intern) |
+| `ticket-reply-internal` | zuständiger Techniker (sonst Team) | Antwort / Datei im Portal |
+| `ticket-assigned` | Kunde | erstes Zuweisen |
+| `ticket-closed` | Kunde | Status Gelöst / Geschlossen |
+| `portal-welcome` | Kunde | Portalzugang angelegt (mit Haken) |
+| `password-reset` | Kunde | Passwort zurückgesetzt (mit Haken) |
+| `marketing-confirm` | Kunde | Double-Opt-In angefordert |
 - **E-Mail-Protokoll** (Benutzermenü → E-Mail-Protokoll, nur Admins): jede Vorlagen-Mail mit
   Ergebnis (verschickt / fehlgeschlagen mit Grund / nicht verschickt), Verbindungstest und
   Test-Mail an sich selbst. Einträge werden nach 180 Tagen gelöscht.

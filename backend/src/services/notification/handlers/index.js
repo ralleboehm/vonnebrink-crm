@@ -9,3 +9,4 @@
 // action1.handlers.js) hier eintragen.
 
 require("./ticket.handlers");
+require("./portal.handlers");

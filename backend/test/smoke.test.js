@@ -1280,6 +1280,88 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
 
     });
 
+    await t.test("E-Mails zu Ticket-Ereignissen und Portalzugang", async () => {
+
+        // Ohne SMTP werden Mails nicht verschickt, aber mit Vorlage im E-Mail-Protokoll festgehalten
+        const emailService = require("../src/services/email.service");
+
+        // Mails aus früheren Schritten erst abarbeiten, dann zählen
+        await emailService.flush();
+        await new Promise((resolve) => setTimeout(resolve, 20));
+
+        const since = new Date();
+
+        const logged = async (template, to) => {
+            await emailService.flush();
+            return EmailLog.find({ template, to, createdAt: { $gte: since } }).lean();
+        };
+
+        await Ticket.updateOne({ _id: ticket._id }, { $set: { assignedTo: null, status: "open" } });
+
+        // Interne Notiz: keine Mail an den Kunden
+        assertRedirect(await crm.post(`/crm/tickets/${ticket._id}/messages`, { message: "Nur intern", isInternal: "on" }), "interne Notiz");
+        assert.equal((await logged("ticket-reply", "hans@smoke.test")).length, 0, "interne Notiz: keine Mail");
+
+        // Antwort im CRM: Mail an den Kunden
+        assertRedirect(await crm.post(`/crm/tickets/${ticket._id}/messages`, { message: "Wir kümmern uns darum." }), "Antwort");
+        const replies = await logged("ticket-reply", "hans@smoke.test");
+        assert.equal(replies.length, 1, "Antwort an den Kunden");
+        assert.equal(replies[0].subject, "Neue Antwort zu Ihrem Ticket TIC-900001");
+
+        // Zuweisen: Glocke für den Techniker, Mail an den Kunden nur beim ersten Mal
+        const techBefore = await Notification.countDocuments({ user: technician._id, event: "ticket.assigned" });
+
+        assertRedirect(await crm.post(`/crm/tickets/${ticket._id}/assign`, { assignedTo: String(technician._id) }), "zuweisen");
+        assert.equal(await Notification.countDocuments({ user: technician._id, event: "ticket.assigned" }), techBefore + 1, "Techniker: Glocke");
+        assert.equal((await logged("ticket-assigned", "hans@smoke.test")).length, 1, "Kunde: in Bearbeitung");
+
+        assertRedirect(await crm.post(`/crm/tickets/${ticket._id}/assign`, { assignedTo: String(admin._id) }), "umverteilen");
+        assertRedirect(await crm.post(`/crm/tickets/${ticket._id}/assign`, { assignedTo: String(technician._id) }), "zurück");
+        assert.equal((await logged("ticket-assigned", "hans@smoke.test")).length, 1, "Umverteilen: keine neue Kunden-Mail");
+
+        // Kunde antwortet im Portal: Mail an den zuständigen Techniker, nicht an alle
+        assertRedirect(await portal.post(`/portal/tickets/${ticket._id}/messages`, { message: "Geht immer noch nicht" }), "Portal-Antwort");
+        const internal = await logged("ticket-reply-internal", "tech@smoke.test");
+        assert.equal(internal.length, 1, "Techniker: Mail zur Kundenantwort");
+        assert.match(internal[0].subject, /^Antwort vom Kunden: TIC-900001/);
+        assert.equal((await logged("ticket-reply-internal", "admin@smoke.test")).length, 0, "nur der Zuständige");
+
+        // Abschließen: Mail an den Kunden, nur einmal
+        const ticketForm = {
+            subject: "Smoke Drucker",
+            description: "Druckt nicht",
+            company: String(company._id),
+            contact: String(contact._id),
+            category: "support",
+            priority: "normal",
+            status: "resolved"
+        };
+
+        assertRedirect(await crm.post(`/crm/tickets/${ticket._id}/update`, ticketForm), "gelöst");
+        assertRedirect(await crm.post(`/crm/tickets/${ticket._id}/update`, { ...ticketForm, status: "closed" }), "geschlossen");
+        const closed = await logged("ticket-closed", "hans@smoke.test");
+        assert.equal(closed.length, 1, "Abschluss-Mail genau einmal");
+        assert.equal(closed[0].subject, "Ihr Ticket TIC-900001 wurde abgeschlossen");
+
+        await Ticket.updateOne({ _id: ticket._id }, { $set: { status: "open" } });
+
+        // Portalzugang mit Willkommens-Mail, Passwort zurücksetzen mit/ohne Mail
+        const paula = await Contact.create({ company: company._id, contactNumber: "CON-900077", salutation: "mrs", firstName: "Paula", lastName: "Portal", email: "paula@smoke.test" });
+
+        assertRedirect(await crm.post(`/crm/contacts/${paula._id}/portal/create`, { sendEmail: "on" }), "Portalzugang", `/crm/contacts/${paula._id}`);
+        assert.equal((await logged("portal-welcome", "paula@smoke.test")).length, 1, "Willkommens-Mail");
+
+        const paulaPage = await crm.get(`/crm/contacts/${paula._id}`);
+        assertPage(paulaPage, "Kontakt mit neuem Zugang");
+        assert.match(paulaPage.text, /Vorläufiges Portal-Passwort/);
+        assert.match(paulaPage.text, /Mailversand ist nicht eingerichtet/, "Hinweis ohne SMTP");
+
+        assertRedirect(await crm.post(`/crm/contacts/${paula._id}/portal/reset-password`, { sendEmail: "on" }), "Reset mit Mail");
+        assertRedirect(await crm.post(`/crm/contacts/${paula._id}/portal/reset-password`, {}), "Reset ohne Mail");
+        assert.equal((await logged("password-reset", "paula@smoke.test")).length, 1, "nur der Reset mit Haken verschickt eine Mail");
+
+    });
+
     await t.test("Abmelden", async () => {
 
         assertRedirect(await portal.get("/portal/logout"), "/portal/logout");

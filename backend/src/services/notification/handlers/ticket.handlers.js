@@ -9,10 +9,24 @@
 //   2. E-Mail an alle Support-Mitarbeiter (Vorlage ticket-created-internal)
 //   3. Eingangsbestätigung an den Kunden (Vorlage ticket-created)
 //
-// ticket.updated (Kunde antwortet oder lädt eine Datei im Portal hoch)
-//   Interne Benachrichtigung (Glocke) für den zugewiesenen Bearbeiter.
-//   Ist niemand (aktiv) zugewiesen, bekommt das ganze Support-Team sie.
-//   Keine E-Mail.
+// ticket.updated
+//   Kunde antwortet oder lädt eine Datei im Portal hoch (source "portal"):
+//     Glocke + E-Mail (Vorlage ticket-reply-internal) an den zugewiesenen
+//     Bearbeiter. Ist niemand (aktiv) zugewiesen, an das ganze Support-Team.
+//   Mitarbeiter antwortet oder lädt eine Datei im CRM hoch (source "crm"):
+//     E-Mail an den Kunden (Vorlage ticket-reply). Interne Notizen und
+//     interne Dateien lösen nichts aus.
+//
+// ticket.assigned
+//   Glocke für den neuen Bearbeiter (außer er hat sich selbst zugewiesen).
+//   Beim ERSTEN Zuweisen zusätzlich eine E-Mail an den Kunden
+//   (Vorlage ticket-assigned) – bei späterem Umverteilen nicht.
+//
+// ticket.closed (Status wechselt auf „Gelöst“ oder „Geschlossen“)
+//   E-Mail an den Kunden (Vorlage ticket-closed), einmal je Abschluss.
+//
+// Links ins Kundenportal stehen nur in Kunden-Mails, wenn der Kontakt einen
+// aktiven Portalzugang hat – sonst „antworten Sie auf diese E-Mail“.
 //
 // Wer ein Ticket selbst im CRM anlegt, wird darüber nicht benachrichtigt.
 // Tickets aus dem Kundenportal benachrichtigen immer das ganze Team.
@@ -41,6 +55,17 @@ const CATEGORY_LABELS = {
     security: "Sicherheit",
     other: "Sonstiges"
 };
+
+const STATUS_LABELS = {
+    open: "Offen",
+    in_progress: "In Bearbeitung",
+    waiting: "Wartend",
+    resolved: "Gelöst",
+    closed: "Geschlossen"
+};
+
+// Längere Texte in E-Mails kürzen (die ganze Nachricht steht im Ticket)
+const EMAIL_MESSAGE_LENGTH = 4000;
 
 const SALUTATIONS = {
     mr: "Herr",
@@ -243,6 +268,27 @@ function updateRecipients(ticket, staff) {
 
 }
 
+function contactOf(ticket) {
+
+    return ticket.contact && typeof ticket.contact === "object" ? ticket.contact : null;
+
+}
+
+/**
+ * Link ins Kundenportal nur, wenn der Kontakt sich dort auch anmelden kann
+ */
+async function portalLinkFor(ticket, ctx) {
+
+    const contact = contactOf(ticket);
+
+    if (!contact || !contact._id || typeof ctx.hasActivePortalAccount !== "function") return undefined;
+
+    return (await ctx.hasActivePortalAccount(contact._id))
+        ? ctx.appUrl(`/portal/tickets/${ticket._id}`)
+        : undefined;
+
+}
+
 async function ticketUpdated(payload, ctx) {
 
     const ticketId = idString(payload.ticket);
@@ -257,9 +303,12 @@ async function ticketUpdated(payload, ctx) {
         throw new Error(`ticket.updated: unbekannte Art "${payload.kind}".`);
     }
 
-    // Vorerst nur Änderungen aus dem Kundenportal
+    if (payload.source === "crm") {
+        return staffReplied(ticketId, payload, ctx);
+    }
+
     if (payload.source !== "portal") {
-        return { ticketNumber: null, notified: 0, skipped: "nicht aus dem Portal" };
+        return { ticketNumber: null, notified: 0, skipped: "unbekannte Quelle" };
     }
 
     const ticket = await ctx.loadTicket(ticketId);
@@ -269,7 +318,7 @@ async function ticketUpdated(payload, ctx) {
     }
 
     const company = ticket.company && typeof ticket.company === "object" ? ticket.company.companyName : "";
-    const author = payload.authorName || customerName(ticket.contact && typeof ticket.contact === "object" ? ticket.contact : null);
+    const author = payload.authorName || customerName(contactOf(ticket));
 
     const detail = payload.kind === "attachment"
         ? excerpt(payload.fileName, 120)
@@ -277,6 +326,7 @@ async function ticketUpdated(payload, ctx) {
 
     const recipients = updateRecipients(ticket, await ctx.getSupportStaff());
 
+    // 1. Glocke
     const notified = await ctx.notifyUsers(recipients.map((user) => user._id), {
         title: `${kind.title} – ${ticket.ticketNumber}`,
         message: [[author, company].filter(Boolean).join(", "), detail].filter(Boolean).join(": "),
@@ -286,16 +336,203 @@ async function ticketUpdated(payload, ctx) {
         event: EVENTS.TICKET_UPDATED
     });
 
+    // 2. E-Mail an den zuständigen Techniker (sonst an das Team)
+    let staffEmails = 0;
+
+    for (const user of recipients) {
+
+        if (!user.email) continue;
+
+        ctx.queueTemplateEmail("ticket-reply-internal", user.email, {
+            agent: user.firstName || fullName(user),
+            author: author || "Der Kunde",
+            company,
+            ticketNumber: ticket.ticketNumber,
+            subject: ticket.subject,
+            priority: PRIORITY_LABELS[ticket.priority] || "",
+            status: STATUS_LABELS[ticket.status] || "",
+            message: payload.kind === "message" ? String(payload.message || "").trim().slice(0, EMAIL_MESSAGE_LENGTH) : "",
+            fileName: payload.kind === "attachment" ? String(payload.fileName || "").slice(0, 200) : "",
+            ticketLink: ctx.appUrl(`/crm/tickets/${ticket._id}`)
+        });
+
+        staffEmails++;
+
+    }
+
     return {
         ticketNumber: ticket.ticketNumber,
-        notified
+        notified,
+        staffEmails
     };
+
+}
+
+/**
+ * Mitarbeiter hat im CRM geantwortet oder eine Datei hochgeladen:
+ * E-Mail an den Kunden (nicht bei internen Notizen/Dateien)
+ */
+async function staffReplied(ticketId, payload, ctx) {
+
+    if (payload.isInternal) {
+        return { ticketNumber: null, customerEmail: false, skipped: "intern" };
+    }
+
+    const ticket = await ctx.loadTicket(ticketId);
+
+    if (!ticket) {
+        throw new Error(`Ticket ${ticketId} nicht gefunden.`);
+    }
+
+    const contact = contactOf(ticket);
+
+    if (!contact || !contact.email) {
+
+        ctx.log(`Ticket ${ticket.ticketNumber}: kein Ansprechpartner mit E-Mail – keine Mail zur Antwort.`);
+
+        return { ticketNumber: ticket.ticketNumber, customerEmail: false };
+
+    }
+
+    const portalLink = await portalLinkFor(ticket, ctx);
+
+    ctx.queueTemplateEmail("ticket-reply", contact.email, {
+        customerName: customerName(contact),
+        ticketNumber: ticket.ticketNumber,
+        subject: ticket.subject,
+        agent: payload.authorName || "",
+        message: payload.kind === "message" ? String(payload.message || "").trim().slice(0, EMAIL_MESSAGE_LENGTH) : "",
+        fileName: payload.kind === "attachment" ? String(payload.fileName || "").slice(0, 200) : "",
+        portalLink,
+        noPortal: portalLink ? "" : "ja"
+    });
+
+    return { ticketNumber: ticket.ticketNumber, customerEmail: true };
 
 }
 
 register(EVENTS.TICKET_UPDATED, ticketUpdated);
 
+// ----------------------------------------------------
+// ticket.assigned
+// ----------------------------------------------------
+
+async function ticketAssigned(payload, ctx) {
+
+    const ticketId = idString(payload.ticket);
+
+    if (!ticketId) {
+        throw new Error("ticket.assigned ohne Ticket aufgerufen.");
+    }
+
+    const assignedId = idString(payload.assignedTo);
+
+    // Bearbeiter entfernt oder unverändert: nichts zu tun
+    if (!assignedId || assignedId === idString(payload.previousAssignedTo)) {
+        return { ticketNumber: null, notified: 0, customerEmail: false, skipped: "keine Änderung" };
+    }
+
+    const ticket = await ctx.loadTicket(ticketId);
+
+    if (!ticket) {
+        throw new Error(`Ticket ${ticketId} nicht gefunden.`);
+    }
+
+    const staff = await ctx.getSupportStaff();
+    const assignee = ticket.assignedTo && typeof ticket.assignedTo === "object" && ticket.assignedTo.firstName
+        ? ticket.assignedTo
+        : staff.find((user) => String(user._id) === assignedId) || null;
+
+    const company = ticket.company && typeof ticket.company === "object" ? ticket.company.companyName : "";
+
+    // 1. Glocke für den neuen Bearbeiter (nicht, wenn er es selbst war)
+    let notified = 0;
+
+    if (assignedId !== idString(payload.assignedByUserId)) {
+
+        notified = await ctx.notifyUsers([assignedId], {
+            title: `Ticket ${ticket.ticketNumber} zugewiesen`,
+            message: [company, ticket.subject].filter(Boolean).join(" – "),
+            type: notificationType(ticket.priority),
+            icon: "bi-person-check",
+            link: `/crm/tickets/${ticket._id}`,
+            event: EVENTS.TICKET_ASSIGNED
+        });
+
+    }
+
+    // 2. Kunde: nur beim ersten Zuweisen
+    let customerEmail = false;
+    const contact = contactOf(ticket);
+
+    if (!idString(payload.previousAssignedTo) && contact && contact.email && !["resolved", "closed"].includes(ticket.status)) {
+
+        ctx.queueTemplateEmail("ticket-assigned", contact.email, {
+            customerName: customerName(contact),
+            ticketNumber: ticket.ticketNumber,
+            subject: ticket.subject,
+            agent: fullName(assignee),
+            portalLink: await portalLinkFor(ticket, ctx)
+        });
+
+        customerEmail = true;
+
+    }
+
+    return { ticketNumber: ticket.ticketNumber, notified, customerEmail };
+
+}
+
+register(EVENTS.TICKET_ASSIGNED, ticketAssigned);
+
+// ----------------------------------------------------
+// ticket.closed
+// ----------------------------------------------------
+
+async function ticketClosed(payload, ctx) {
+
+    const ticketId = idString(payload.ticket);
+
+    if (!ticketId) {
+        throw new Error("ticket.closed ohne Ticket aufgerufen.");
+    }
+
+    const ticket = await ctx.loadTicket(ticketId);
+
+    if (!ticket) {
+        throw new Error(`Ticket ${ticketId} nicht gefunden.`);
+    }
+
+    const contact = contactOf(ticket);
+
+    if (!contact || !contact.email) {
+
+        ctx.log(`Ticket ${ticket.ticketNumber}: kein Ansprechpartner mit E-Mail – keine Abschluss-Mail.`);
+
+        return { ticketNumber: ticket.ticketNumber, customerEmail: false };
+
+    }
+
+    ctx.queueTemplateEmail("ticket-closed", contact.email, {
+        customerName: customerName(contact),
+        ticketNumber: ticket.ticketNumber,
+        subject: ticket.subject,
+        agent: payload.closedByName || "",
+        resolution: payload.resolution ? String(payload.resolution).trim().slice(0, EMAIL_MESSAGE_LENGTH) : "",
+        portalLink: await portalLinkFor(ticket, ctx)
+    });
+
+    return { ticketNumber: ticket.ticketNumber, customerEmail: true };
+
+}
+
+register(EVENTS.TICKET_CLOSED, ticketClosed);
+
 module.exports = {
+    STATUS_LABELS,
+    ticketAssigned,
+    ticketClosed,
+    staffReplied,
     customerName,
     ticketData,
     notificationType,

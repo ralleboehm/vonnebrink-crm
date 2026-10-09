@@ -283,6 +283,17 @@ function buildContext(overrides = {}) {
             return require("./ticket.service").getById(id);
         },
 
+        // Kontakt mit Firma laden
+        loadContact(id) {
+            return require("./contact.service").getById(id);
+        },
+
+        // Kann sich der Kontakt im Kundenportal anmelden? (für Links in Mails)
+        async hasActivePortalAccount(contactId) {
+            const account = await require("./portalAccount.service").getByContact(contactId);
+            return Boolean(account && account.active);
+        },
+
         // E-Mail mit Vorlage im Hintergrund verschicken (wartet nicht auf den Mailserver)
         queueTemplateEmail(template, to, data) {
             return require("./email.service").queueTemplate(template, to, data);
@@ -390,12 +401,79 @@ async function ticketUpdated(ticket, details = {}) {
         source: details.source || "portal",
         authorName: details.authorName || "",
         message: details.message || "",
-        fileName: details.fileName || ""
+        fileName: details.fileName || "",
+        isInternal: Boolean(details.isInternal)
     });
 
     const own = results.find((entry) => entry.listener === BUS_LISTENER_NAME);
 
     return own && own.result ? own.result : { ok: true, event: EVENTS.TICKET_UPDATED, result: null };
+
+}
+
+function ownResult(results, event) {
+
+    const own = results.find((entry) => entry.listener === BUS_LISTENER_NAME);
+
+    return own && own.result ? own.result : { ok: true, event, result: null };
+
+}
+
+/**
+ * Bearbeiter zugewiesen: Glocke für ihn, beim ersten Zuweisen Mail an den Kunden
+ *
+ * @param {object} ticket
+ * @param {{assignedTo, previousAssignedTo, assignedByUserId}} details
+ */
+async function ticketAssigned(ticket, details = {}) {
+
+    const results = await bus.emit(EVENTS.TICKET_ASSIGNED, {
+        ticket,
+        assignedTo: details.assignedTo || null,
+        previousAssignedTo: details.previousAssignedTo || null,
+        assignedByUserId: details.assignedByUserId || null
+    });
+
+    return ownResult(results, EVENTS.TICKET_ASSIGNED);
+
+}
+
+/**
+ * Ticket gelöst/geschlossen: Mail an den Kunden
+ *
+ * @param {object} ticket
+ * @param {{closedByName?: string, resolution?: string}} details
+ */
+async function ticketClosed(ticket, details = {}) {
+
+    const results = await bus.emit(EVENTS.TICKET_CLOSED, {
+        ticket,
+        closedByName: details.closedByName || "",
+        resolution: details.resolution || ""
+    });
+
+    return ownResult(results, EVENTS.TICKET_CLOSED);
+
+}
+
+/**
+ * Portalzugang angelegt bzw. Passwort zurückgesetzt: Zugangsdaten an den Kontakt
+ *
+ * @param {"welcome"|"reset"} kind
+ * @param {object} contact  Kontakt oder ID
+ * @param {{temporaryPassword: string, agentName?: string}} details
+ */
+async function portalAccess(kind, contact, details = {}) {
+
+    const event = kind === "reset" ? EVENTS.PASSWORD_RESET : EVENTS.PORTAL_WELCOME;
+
+    const results = await bus.emit(event, {
+        contact,
+        temporaryPassword: details.temporaryPassword,
+        agentName: details.agentName || ""
+    });
+
+    return ownResult(results, event);
 
 }
 
@@ -452,6 +530,9 @@ module.exports = {
 
     ticketCreated,
     ticketUpdated,
+    ticketAssigned,
+    ticketClosed,
+    portalAccess,
 
     // für Tests
     _buildNotification: buildNotification,
