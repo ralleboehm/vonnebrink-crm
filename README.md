@@ -93,7 +93,7 @@ npm install
 npm run dev
 ```
 
-`npm run dev` und `npm run start` schreiben alle Meldungen zusätzlich in
+`npm run dev` und `npm run start` schreiben alle Meldungen (mit Datum und Uhrzeit) zusätzlich in
 `backend/logs/crm.log` (E-Mail-Fehler finden: `grep -E "E-Mail|✉️" logs/crm.log`).
 Ohne Log-Datei: `npm run dev:plain` / `npm run start:plain` – z. B. für pm2
 oder systemd, die selbst protokollieren.
@@ -209,6 +209,9 @@ die globale Suche findet Assets auch über Seriennummer, IP und Benutzer, und
   `{{ticketNumber}}` und Abschnitten `{{#if agent}} … {{/if}}`.
 - **Neues Ticket** (CRM oder Portal): Glocke + E-Mail an Admins/Techniker, Eingangsbestätigung
   an den Ansprechpartner. Wer ein Ticket selbst im CRM anlegt, wird darüber nicht benachrichtigt.
+- **E-Mail-Protokoll** (Benutzermenü → E-Mail-Protokoll, nur Admins): jede Vorlagen-Mail mit
+  Ergebnis (verschickt / fehlgeschlagen mit Grund / nicht verschickt), Verbindungstest und
+  Test-Mail an sich selbst. Einträge werden nach 180 Tagen gelöscht.
 
 ### Neues Ereignis hinzufügen
 

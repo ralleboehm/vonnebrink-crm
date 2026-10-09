@@ -1,5 +1,8 @@
 require("dotenv").config();
 
+// Alle Log-Zeilen mit Datum und Uhrzeit (auch in logs/crm.log)
+require("./core/logging/timestamps").install();
+
 const app = require("./app");
 const connectDatabase = require("./config/database");
 const integrations = require("./integrations");

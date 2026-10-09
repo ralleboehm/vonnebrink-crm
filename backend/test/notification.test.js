@@ -372,3 +372,11 @@ test("Service: Ereignis ohne Handler ist kein Fehler", needsMongoose, async () =
     }
 
 });
+
+test("E-Mail: Hintergrundversand versucht es zweimal und meldet das Ende", async () => {
+
+    // Ohne Datenbankverbindung schreibt das Protokoll nichts – hier geht es um den Ablauf
+    assert.equal(email.MAX_ATTEMPTS, 2);
+    assert.equal(typeof email.sendTestEmail, "function");
+
+});

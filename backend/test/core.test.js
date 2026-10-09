@@ -193,3 +193,21 @@ test("CRUD-Aliase ergänzen, überschreiben aber nichts", async () => {
     assert.equal(await instance.findById(1), "K1");
 
 });
+
+// ----------------------------------------------------
+// Zeitstempel im Log
+// ----------------------------------------------------
+
+test("Log-Zeitstempel: Format und morgan-Kanal", () => {
+
+    const logging = require("../src/core/logging/timestamps");
+
+    assert.equal(logging.timestamp(new Date("2026-10-09T10:44:03Z")), "2026-10-09 12:44:03");
+    assert.equal(logging.timestamp(new Date("2026-01-15T08:00:00Z")), "2026-01-15 09:00:00", "Winterzeit");
+
+    let written = "";
+    logging.morganStream({ write: (s) => { written += s; } }).write("GET /crm 200\n");
+
+    assert.match(written, /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} GET \/crm 200\n$/);
+
+});

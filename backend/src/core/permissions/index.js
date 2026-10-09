@@ -50,6 +50,7 @@ const PERMISSIONS = Object.freeze({
     USERS_MANAGE: "users.manage",
     IMPORT_RUN: "import.run",
     INTEGRATIONS_MANAGE: "integrations.manage",
+    EMAIL_LOG_VIEW: "email.log",
 
     // Allgemein
     SEARCH_USE: "search.use",

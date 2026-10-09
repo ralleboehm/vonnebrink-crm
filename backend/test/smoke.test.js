@@ -210,6 +210,7 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
     const Attachment = require("../src/models/attachment.model");
     const Notification = require("../src/models/notification.model");
     const SyncRun = require("../src/models/syncRun.model");
+    const EmailLog = require("../src/models/emailLog.model");
 
     await Promise.all([User, Company, Contact, PortalAccount, Ticket, Asset].map((m) => m.init()));
 
@@ -328,7 +329,9 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
             "/crm/profile/password",
             "/crm/notifications",
             "/crm/notifications?filter=unread",
-            "/crm/integrations/action1"
+            "/crm/integrations/action1",
+            "/crm/email-log",
+            "/crm/email-log?status=skipped&search=smoke"
         ];
 
         for (const url of pages) {
@@ -416,6 +419,25 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         assert.equal((await Notification.findById(notification._id)).isRead, true);
 
         assertRedirect(await crm.post("/crm/notifications/read-all", { returnTo: "https://boese.example.com" }), "read-all", "/crm/notifications");
+
+    });
+
+    await t.test("CRM: E-Mail-Protokoll und Test-Mail", async () => {
+
+        // Ohne SMTP: Test-Mail wird nicht verschickt, aber protokolliert
+        assertRedirect(await crm.post("/crm/email-log/test", {}), "Test-Mail", "/crm/email-log");
+
+        const entry = await EmailLog.findOne({ to: "admin@smoke.test" }).sort({ createdAt: -1 });
+        assert.ok(entry, "Protokolleintrag für die Test-Mail");
+        assert.equal(entry.status, "skipped");
+        assert.match(entry.error, /nicht konfiguriert/);
+
+        const page = await crm.get("/crm/email-log");
+        assertPage(page, "/crm/email-log");
+        assert.match(page.text, /Test-Mail nicht verschickt/, "Hinweis nach der Test-Mail");
+        assert.match(page.text, /admin@smoke\.test/);
+
+        assertRedirect(await crm.post("/crm/email-log/verify", {}), "Verbindung prüfen", "/crm/email-log");
 
     });
 

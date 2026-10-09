@@ -221,6 +221,16 @@ html(lang="de")
 
                                             | Passwort ändern
 
+                                    if can("email.log")
+
+                                        li
+
+                                            a.dropdown-item(href="/crm/email-log")
+
+                                                i.bi.bi-envelope-check.me-2
+
+                                                | E-Mail-Protokoll
+
                                     li
 
                                         hr.dropdown-divider

@@ -60,6 +60,12 @@ router.use("/integrations", require("./integration.routes"));
 router.use("/notifications", require("./notification.routes"));
 
 // ----------------------------------------------------
+// E-Mail-Protokoll (Admins)
+// ----------------------------------------------------
+
+router.use("/email-log", require("./emailLog.routes"));
+
+// ----------------------------------------------------
 // Globale Suche
 // ----------------------------------------------------
 

@@ -18,6 +18,9 @@
 // queueTemplate() wie sendTemplate(), aber im Hintergrund: kehrt sofort
 //                 zurück, Fehler landen im Log, ein Wiederholversuch nach
 //                 30 Sekunden. Für Benachrichtigungen gedacht.
+//
+// Jede Vorlagen-Mail landet mit ihrem endgültigen Ergebnis im
+// E-Mail-Protokoll (CRM: Benutzermenü → E-Mail-Protokoll, nur Admins).
 
 const RETRY_DELAY_MS = 30 * 1000;
 
@@ -185,8 +188,64 @@ async function send(message) {
 
 }
 
+const MAX_ATTEMPTS = 2;
+
+function recipientsOf(to) {
+
+    return [].concat(to || []).filter((v) => typeof v === "string");
+
+}
+
+function emailLog() {
+    return require("./emailLog.service");
+}
+
 /**
- * Vorlage rendern und sofort verschicken.
+ * Vorlage rendern und verschicken (ohne Protokoll).
+ * Gibt das Versandergebnis und den Betreff zurück.
+ */
+async function deliverTemplate(template, to, data) {
+
+    const emailTemplates = require("./emailTemplate.service");
+
+    const rendered = await emailTemplates.render(template, data);
+
+    const result = await send({
+        to,
+        subject: rendered.subject,
+        html: rendered.html,
+        text: rendered.text
+    });
+
+    return { ...result, subject: rendered.subject };
+
+}
+
+/**
+ * Ergebnis ins E-Mail-Protokoll schreiben
+ */
+async function recordResult({ template, to, subject, result, error, attempts }) {
+
+    let status = "sent";
+
+    if (error) status = "failed";
+    else if (!result.sent) status = "skipped";
+
+    await emailLog().record({
+        template,
+        to: result && result.recipients && result.recipients.length ? result.recipients : recipientsOf(to),
+        subject,
+        status,
+        error: error ? error.message : (result && result.skipped) || null,
+        attempts,
+        messageId: result && result.messageId
+    });
+
+}
+
+/**
+ * Vorlage rendern und sofort verschicken (wartet auf den Mailserver).
+ * Das Ergebnis landet im E-Mail-Protokoll.
  *
  * @param {string} template  Name der Vorlage, z. B. "ticket-created"
  * @param {string|string[]} to
@@ -194,21 +253,28 @@ async function send(message) {
  */
 async function sendTemplate(template, to, data = {}) {
 
-    const emailTemplates = require("./emailTemplate.service");
+    try {
 
-    const rendered = await emailTemplates.render(template, data);
+        const result = await deliverTemplate(template, to, data);
 
-    return send({
-        to,
-        subject: rendered.subject,
-        html: rendered.html,
-        text: rendered.text
-    });
+        await recordResult({ template, to, subject: result.subject, result, attempts: 1 });
+
+        return result;
+
+    } catch (err) {
+
+        await recordResult({ template, to, subject: "(Vorlage nicht erzeugt)", result: null, error: err, attempts: 1 });
+
+        throw err;
+
+    }
 
 }
 
 /**
  * Vorlage im Hintergrund verschicken. Kehrt sofort zurück und wirft nie.
+ * Bei einem Fehler gibt es nach 30 Sekunden einen zweiten Versuch; ins
+ * Protokoll kommt das endgültige Ergebnis.
  */
 function queueTemplate(template, to, data = {}) {
 
@@ -218,18 +284,34 @@ function queueTemplate(template, to, data = {}) {
 
         try {
 
-            await sendTemplate(template, to, data);
+            for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
 
-        } catch (err) {
+                try {
 
-            console.error(`❌ E-Mail "${template}" an ${[].concat(to).join(", ")} fehlgeschlagen: ${err.message} – neuer Versuch in 30 Sekunden.`);
+                    const result = await deliverTemplate(template, to, data);
 
-            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS).unref());
+                    await recordResult({ template, to, subject: result.subject, result, attempts: attempt });
 
-            try {
-                await sendTemplate(template, to, data);
-            } catch (retryErr) {
-                console.error(`❌ E-Mail "${template}" endgültig fehlgeschlagen: ${retryErr.message}`);
+                    return;
+
+                } catch (err) {
+
+                    if (attempt < MAX_ATTEMPTS) {
+
+                        console.error(`❌ E-Mail "${template}" an ${recipientsOf(to).join(", ")} fehlgeschlagen: ${err.message} – neuer Versuch in 30 Sekunden.`);
+
+                        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS).unref());
+
+                    } else {
+
+                        console.error(`❌ E-Mail "${template}" an ${recipientsOf(to).join(", ")} endgültig fehlgeschlagen: ${err.message}`);
+
+                        await recordResult({ template, to, subject: "(Vorlage nicht erzeugt)", result: null, error: err, attempts: attempt });
+
+                    }
+
+                }
+
             }
 
         } finally {
@@ -241,6 +323,21 @@ function queueTemplate(template, to, data = {}) {
     };
 
     queueTail = queueTail.then(job, job);
+
+}
+
+/**
+ * Test-Mail an eine Adresse (für die Seite E-Mail-Protokoll)
+ */
+async function sendTestEmail(to) {
+
+    return sendTemplate("ticket-created", to, {
+        customerName: "Test-Empfänger",
+        ticketNumber: "TIC-TEST",
+        subject: "Test-Mail aus dem Vonnebrink CRM",
+        company: "Testfirma",
+        priority: "Normal"
+    });
 
 }
 
@@ -279,6 +376,8 @@ async function verify() {
 }
 
 module.exports = {
+    MAX_ATTEMPTS,
+    sendTestEmail,
     configFromEnv,
     isConfigured,
     appUrl,

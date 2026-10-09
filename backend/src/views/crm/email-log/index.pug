@@ -1,0 +1,205 @@
+extends ../layouts/main
+
+block content
+
+    - const STATUS = { sent: ["bg-success", "Verschickt"], failed: ["bg-danger", "Fehlgeschlagen"], skipped: ["bg-secondary", "Nicht verschickt"] }
+    - const query = (extra) => { const p = new URLSearchParams(); if (filters.status) p.set("status", filters.status); if (filters.search) p.set("search", filters.search); for (const [k, v] of Object.entries(extra)) { if (v) p.set(k, v); else p.delete(k); } const s = p.toString(); return "/crm/email-log" + (s ? "?" + s : ""); }
+
+    .d-flex.justify-content-between.align-items-center.mb-4.flex-wrap.gap-2
+
+        div
+
+            h1.mb-0
+
+                i.bi.bi-envelope-check.me-2
+
+                | E-Mail-Protokoll
+
+            small.text-muted Jede verschickte Vorlagen-Mail mit Ergebnis · Einträge werden nach 180 Tagen gelöscht
+
+        div.d-flex.gap-2
+
+            form.m-0(method="POST" action="/crm/email-log/verify")
+
+                button.btn.btn-outline-secondary(type="submit")
+
+                    i.bi.bi-plug.me-2
+
+                    | Verbindung prüfen
+
+            form.m-0(method="POST" action="/crm/email-log/test")
+
+                button.btn.btn-primary(type="submit")
+
+                    i.bi.bi-send.me-2
+
+                    | Test-Mail an mich
+
+    if flash
+
+        .alert(class=`alert-${flash.type}`)= flash.text
+
+    // =====================================================
+    // Mailserver & Zahlen
+    // =====================================================
+
+    .row.g-3.mb-4
+
+        .col-lg-6
+
+            .card.shadow-sm.h-100
+
+                .card-body
+
+                    .text-muted.small.mb-1 Mailserver
+
+                    if smtp.configured
+
+                        .fw-semibold #{smtp.host}:#{smtp.port}
+
+                        .small.text-muted Absender: #{smtp.from}
+
+                    else
+
+                        .fw-semibold.text-warning Nicht eingerichtet
+
+                        .small.text-muted
+                            | SMTP_HOST und MAIL_FROM in der .env fehlen – E-Mails werden nur protokolliert, nicht verschickt.
+
+        .col-lg-6
+
+            .row.g-3.h-100
+
+                each key in ["sent", "failed", "skipped"]
+
+                    .col-4
+
+                        a.card.shadow-sm.h-100.text-decoration-none.text-reset(href=query({ status: key, page: "" }))
+
+                            .card-body
+
+                                .text-muted.small= STATUS[key][1]
+
+                                .fs-3.fw-semibold(class=key === "failed" && stats.failed ? "text-danger" : "")= stats[key]
+
+                                .small.text-muted letzte #{stats.days} Tage
+
+    // =====================================================
+    // Filter
+    // =====================================================
+
+    form.row.g-2.mb-3(method="GET" action="/crm/email-log")
+
+        .col-md-5
+
+            input.form-control(
+                type="search"
+                name="search"
+                value=filters.search
+                placeholder="Empfänger, Betreff oder Vorlage …"
+                maxlength="100"
+            )
+
+        .col-md-3
+
+            select.form-select(name="status")
+
+                option(value="") Alle
+
+                each key in ["sent", "failed", "skipped"]
+
+                    option(value=key selected=filters.status === key)= STATUS[key][1]
+
+        .col-md-4.d-flex.gap-2
+
+            button.btn.btn-primary(type="submit")
+
+                i.bi.bi-funnel.me-2
+
+                | Filtern
+
+            a.btn.btn-outline-secondary(href="/crm/email-log") Zurücksetzen
+
+    // =====================================================
+    // Liste
+    // =====================================================
+
+    if result.items.length
+
+        .card.shadow-sm
+
+            .table-responsive
+
+                table.table.table-hover.align-middle.mb-0
+
+                    thead.table-light
+
+                        tr
+                            th Zeitpunkt
+                            th Status
+                            th Empfänger
+                            th Betreff
+                            th Vorlage
+                            th.text-end Versuche
+
+                    tbody
+
+                        each entry in result.items
+
+                            tr
+
+                                td.text-nowrap.small= format.formatDateTime(entry.createdAt)
+
+                                td
+
+                                    span.badge(class=STATUS[entry.status][0])= STATUS[entry.status][1]
+
+                                td.small= entry.to.join(", ") || "-"
+
+                                td
+
+                                    = entry.subject || "-"
+
+                                    if entry.error
+
+                                        .small(class=entry.status === "failed" ? "text-danger" : "text-muted")= entry.error
+
+                                td
+
+                                    code.small= entry.template || "-"
+
+                                td.text-end= entry.attempts
+
+        if result.pages > 1
+
+            nav.mt-3(aria-label="Seiten")
+
+                ul.pagination.justify-content-center
+
+                    li.page-item(class=result.page <= 1 ? "disabled" : "")
+
+                        a.page-link(href=query({ page: result.page - 1 })) Zurück
+
+                    li.page-item.disabled
+
+                        span.page-link Seite #{result.page} von #{result.pages} (#{result.total} Einträge)
+
+                    li.page-item(class=result.page >= result.pages ? "disabled" : "")
+
+                        a.page-link(href=query({ page: result.page + 1 })) Weiter
+
+    else
+
+        .card.shadow-sm
+
+            .card-body.text-center.text-muted.py-5
+
+                i.bi.bi-envelope.display-6.d-block.mb-2
+
+                if filters.status || filters.search
+
+                    | Keine Einträge für diese Filter.
+
+                else
+
+                    | Noch keine E-Mails protokolliert. Mit „Test-Mail an mich“ können Sie den Versand ausprobieren.

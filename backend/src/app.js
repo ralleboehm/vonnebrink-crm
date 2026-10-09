@@ -2,6 +2,7 @@ const express = require("express");
 const path = require("path");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const { morganStream } = require("./core/logging/timestamps");
 const session = require("express-session");
 
 const crmRoutes = require("./routes/crm");
@@ -37,7 +38,8 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(morgan("dev"));
+// Request-Zeilen mit Datum und Uhrzeit
+app.use(morgan("dev", { stream: morganStream() }));
 
 // ----------------------------------------------------
 // View Engine
