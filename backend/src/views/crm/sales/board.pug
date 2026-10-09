@@ -1,0 +1,291 @@
+extends ../layouts/main
+
+include _mixins
+
+block content
+
+    - const totals = pipeline.summary.totals
+    - const editable = can("sales.edit")
+
+    .d-flex.justify-content-between.align-items-center.mb-3.flex-wrap.gap-2
+
+        div
+
+            h1.mb-0
+
+                i.bi.bi-kanban.me-2
+
+                | Pipeline
+
+            small.text-muted Offene Verkaufschancen nach Phase#{editable ? " – Karten per Ziehen in eine andere Phase verschieben" : ""}
+
+        .d-flex.gap-2
+
+            a.btn.btn-outline-secondary(href="/crm/sales/list")
+
+                i.bi.bi-list-ul.me-2
+
+                | Liste
+
+            if editable
+
+                a.btn.btn-primary(href="/crm/sales/new")
+
+                    i.bi.bi-plus-lg.me-2
+
+                    | Neue Verkaufschance
+
+    if flash
+
+        .alert(class=`alert-${flash.type}`)= flash.text
+
+    // =====================================================
+    // Kennzahlen
+    // =====================================================
+
+    .row.g-3.mb-3
+
+        each tile in [["Offene Chancen", String(totals.open), "", "bi-briefcase"], ["Pipeline (monatlich)", euro(totals.mrr), "", "bi-graph-up"], ["Prognose (gewichtet)", euro(totals.weightedMrr), "text-primary", "bi-bullseye"], ["Gewonnen, 90 Tage", euro(pipeline.wonMrr90), "text-success", "bi-trophy"]]
+
+            .col-6.col-lg-3
+
+                .card.h-100
+
+                    .card-body
+
+                        .text-muted.small
+
+                            i.bi.me-1(class=tile[3])
+
+                            = tile[0]
+
+                        .fs-4.fw-semibold(class=tile[2])= tile[1]
+
+                        if tile[0] !== "Offene Chancen"
+
+                            .small.text-muted pro Monat
+
+    // =====================================================
+    // Fällige Schritte
+    // =====================================================
+
+    if pipeline.due.length
+
+        .card.mb-3.border-warning
+
+            .card-header.d-flex.justify-content-between.align-items-center
+
+                span.fw-semibold
+
+                    i.bi.bi-alarm.me-2.text-warning
+
+                    | Heute zu tun (#{pipeline.due.length})
+
+                small.text-muted Überfällig, heute fällig oder ohne nächsten Schritt
+
+            ul.list-group.list-group-flush
+
+                each item in pipeline.due.slice(0, 8)
+
+                    li.list-group-item.d-flex.justify-content-between.align-items-center.flex-wrap.gap-2
+
+                        div
+
+                            a.fw-semibold.text-decoration-none(href=`/crm/sales/${item._id}`)= item.title
+
+                            span.text-muted.small.ms-2= item.company ? item.company.companyName : ""
+
+                        div.small
+
+                            +nextStep(item)
+
+                if pipeline.due.length > 8
+
+                    li.list-group-item.small.text-muted und #{pipeline.due.length - 8} weitere – siehe Liste
+
+    // =====================================================
+    // Filter
+    // =====================================================
+
+    form.row.g-2.mb-3(method="GET" action="/crm/sales")
+
+        .col-md-4
+
+            input.form-control(type="search" name="search" value=filters.search placeholder="Titel, Firma, Nummer …" maxlength="100")
+
+        .col-md-3
+
+            select.form-select(name="owner")
+
+                option(value="") Alle Zuständigen
+
+                each user in owners
+
+                    option(value=String(user._id) selected=filters.owner === String(user._id)) #{user.firstName} #{user.lastName}
+
+                option(value="none" selected=filters.owner === "none") Ohne Zuständigen
+
+        .col-md-3.d-flex.gap-2
+
+            button.btn.btn-primary(type="submit")
+
+                i.bi.bi-funnel.me-1
+
+                | Filtern
+
+            if filters.search || filters.owner
+
+                a.btn.btn-outline-secondary(href="/crm/sales") Zurücksetzen
+
+    // =====================================================
+    // Tafel
+    // =====================================================
+
+    .vb-board(data-editable=editable ? "1" : "0")
+
+        each column in pipeline.columns
+
+            - const sum = column.items.reduce((total, item) => total + (item.mrr || 0), 0)
+
+            section.vb-board-col(data-stage=column.key class=column.open ? "" : "is-closed")
+
+                header.vb-board-col-head
+
+                    .d-flex.justify-content-between.align-items-center
+
+                        span.fw-semibold= column.label
+
+                        span.badge.rounded-pill.text-bg-light.border= column.items.length
+
+                    .small.text-muted
+
+                        if column.open
+
+                            | #{euro(sum)} / Monat · #{column.probability} %
+
+                        else
+
+                            | letzte 90 Tage · #{euro(sum)} / Monat
+
+                .vb-board-items
+
+                    each item in column.items
+
+                        article.vb-deal(
+                            draggable=editable ? "true" : "false"
+                            data-id=String(item._id)
+                            data-title=item.title
+                        )
+
+                            a.vb-deal-title(href=`/crm/sales/${item._id}`)= item.title
+
+                            .small.text-muted.text-truncate= item.company ? item.company.companyName : "—"
+
+                            .d-flex.justify-content-between.align-items-center.mt-2
+
+                                span.fw-semibold
+
+                                    = euro(item.mrr)
+
+                                    span.text-muted.fw-normal.small  / Monat
+
+                                if item.oneTime
+
+                                    span.small.text-muted + #{euro(item.oneTime)} einmalig
+
+                            if column.open
+
+                                .vb-deal-step.small.mt-2
+
+                                    +nextStep(item)
+
+                            else if item.stage === "lost" && item.lostReason
+
+                                .small.text-muted.mt-2= item.lostReason
+
+                            if item.owner
+
+                                .vb-deal-owner(title=`Zuständig: ${item.owner.firstName} ${item.owner.lastName}`)= String(item.owner.firstName || "").charAt(0) + String(item.owner.lastName || "").charAt(0)
+
+                    if !column.items.length
+
+                        .vb-board-empty.small.text-muted Keine Chancen
+
+block scripts
+
+    if can("sales.edit")
+
+        script.
+            (function () {
+                var board = document.querySelector(".vb-board");
+                if (!board) return;
+
+                var dragged = null;
+
+                board.addEventListener("dragstart", function (event) {
+                    var card = event.target.closest(".vb-deal");
+                    if (!card) return;
+                    dragged = card;
+                    card.classList.add("is-dragging");
+                    event.dataTransfer.effectAllowed = "move";
+                    event.dataTransfer.setData("text/plain", card.getAttribute("data-id"));
+                });
+
+                board.addEventListener("dragend", function () {
+                    if (dragged) dragged.classList.remove("is-dragging");
+                    board.querySelectorAll(".is-over").forEach(function (col) { col.classList.remove("is-over"); });
+                    dragged = null;
+                });
+
+                board.querySelectorAll(".vb-board-col").forEach(function (column) {
+                    column.addEventListener("dragover", function (event) {
+                        if (!dragged) return;
+                        event.preventDefault();
+                        column.classList.add("is-over");
+                    });
+
+                    column.addEventListener("dragleave", function (event) {
+                        if (!column.contains(event.relatedTarget)) column.classList.remove("is-over");
+                    });
+
+                    column.addEventListener("drop", function (event) {
+                        event.preventDefault();
+                        column.classList.remove("is-over");
+                        if (!dragged) return;
+
+                        var card = dragged;
+                        var id = card.getAttribute("data-id");
+                        var stage = column.getAttribute("data-stage");
+                        var body = { stage: stage };
+
+                        if (card.closest(".vb-board-col") === column) return;
+
+                        if (stage === "lost") {
+                            var reason = window.prompt("Warum ist „" + card.getAttribute("data-title") + "“ verloren?\n(z. B. Preis, Anderer Anbieter, Kein Bedarf)", "");
+                            if (reason === null) return;
+                            if (!reason.trim()) { alert("Bitte einen Grund angeben."); return; }
+                            body.lostReason = reason.trim();
+                        }
+
+                        column.querySelector(".vb-board-items").prepend(card);
+                        card.classList.add("is-saving");
+
+                        fetch("/crm/sales/" + encodeURIComponent(id) + "/stage", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                            body: JSON.stringify(body)
+                        })
+                            .then(function (response) {
+                                return response.json().then(function (data) { return { ok: response.ok, data: data }; });
+                            })
+                            .then(function (result) {
+                                if (!result.ok || !result.data.ok) throw new Error(result.data.error || "Speichern fehlgeschlagen");
+                                window.location.reload();
+                            })
+                            .catch(function (error) {
+                                alert(error.message);
+                                window.location.reload();
+                            });
+                    });
+                });
+            })();

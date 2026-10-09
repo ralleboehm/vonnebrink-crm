@@ -554,3 +554,136 @@ test("CRM: dunkler Kopf mit CRM-Kennung, Portal hell", { skip: !pug && "pug nich
     assert.match(message, /logo-wordmark\.png/);
 
 });
+
+// ----------------------------------------------------
+// Vertrieb
+// ----------------------------------------------------
+
+const salesRules = require("../src/utils/salesRules");
+
+const salesHelpers = {
+    stages: salesRules.STAGES,
+    stageLabels: salesRules.STAGE_LABELS,
+    sources: salesRules.SOURCES,
+    lostReasons: salesRules.LOST_REASONS,
+    euro: salesRules.formatEuro,
+    stepState: salesRules.nextStepState
+};
+
+function dealOf(extra = {}) {
+
+    return {
+        _id: "o1",
+        opportunityNumber: "VK-000001",
+        title: "Managed IT 12 Plätze",
+        company: { _id: "c1", companyName: "Holz Müller GmbH", status: "prospect" },
+        contact: { _id: "p1", firstName: "Anna", lastName: "Jung", email: "anna@holz.de", phone: "06206 123" },
+        owner: { _id: "u1", firstName: "Ralf", lastName: "Böhm" },
+        stage: "proposal",
+        probability: 60,
+        mrr: 890,
+        oneTime: 2500,
+        nextStep: { text: "Angebot nachfassen", dueDate: new Date(Date.now() - 86400000) },
+        source: "campaign",
+        campaign: { _id: "k1", campaignNumber: "KAM-000001", name: "Herbst" },
+        history: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        ...extra
+    };
+
+}
+
+test("Vertrieb: Pipeline-Tafel, Liste, Detail, Formular", { skip: !pug && "pug nicht installiert" }, () => {
+
+    const open = dealOf();
+    const noStep = dealOf({ _id: "o2", title: "Backup", stage: "new", probability: 10, mrr: 120, oneTime: 0, nextStep: { text: "", dueDate: null }, owner: null });
+    const won = dealOf({ _id: "o3", title: "Gewonnen", stage: "won", probability: 100, closedAt: new Date() });
+    const lost = dealOf({ _id: "o4", title: "Verloren", stage: "lost", probability: 0, lostReason: "Preis", closedAt: new Date() });
+
+    const columns = salesRules.STAGES.map((stage) => ({ ...stage, items: [open, noStep, won, lost].filter((o) => o.stage === stage.key) }));
+
+    const pipeline = {
+        columns,
+        summary: salesRules.summarize([open, noStep]),
+        wonMrr90: 890,
+        due: [{ ...open, stepState: "overdue" }, { ...noStep, stepState: "none" }]
+    };
+
+    const locals = { pipeline, owners: [{ _id: "u1", firstName: "Ralf", lastName: "Böhm" }], filters: { search: "", owner: "", stage: "", state: "open" }, flash: null, ...salesHelpers };
+
+    const board = render("crm/sales/board.pug", locals);
+
+    assert.match(board, /data-stage="proposal"/);
+    assert.match(board, /draggable="true"/);
+    assert.match(board, /Heute zu tun \(2\)/);
+    assert.match(board, /Kein nächster Schritt/);
+    assert.match(board, /\(überfällig\)/);
+    assert.match(board, /Preis/, "Verlustgrund auf der Karte");
+    assert.match(board, /\/crm\/sales\/new/);
+    assert.match(board, /href="\/crm\/sales"/, "Menü Vertrieb");
+
+    // Vertrieb darf alles im Vertrieb
+    assert.match(render("crm/sales/board.pug", locals, "sales"), /draggable="true"/);
+
+    // Techniker: kein Menüpunkt Vertrieb
+    const tech = render("crm/tickets/index.pug", { tickets: [], filters: { search: "", status: "", priority: "", company: "" } }, "technician");
+    assert.doesNotMatch(tech, /href="\/crm\/sales"/);
+
+    const list = render("crm/sales/index.pug", {
+        opportunities: [open, won],
+        summary: salesRules.summarize([open, won]),
+        owners: locals.owners,
+        filters: { search: "", owner: "", stage: "", state: "all" },
+        flash: null,
+        ...salesHelpers
+    });
+
+    assert.match(list, /VK-000001/);
+    assert.match(list, /Gewonnen/);
+    assert.match(list, /2 Chancen/);
+
+    const history = [
+        { type: "note", text: "Telefonat: Interesse an Backup", at: new Date(), by: "Ralf Böhm" },
+        { type: "stage", text: "Neu → Angebot", at: new Date(), by: "Ralf Böhm" }
+    ];
+
+    const show = render("crm/sales/show.pug", { opportunity: dealOf({ history }), history, flash: null, ...salesHelpers });
+
+    assert.match(show, /Angebot nachfassen/);
+    assert.match(show, /Interessent/);
+    assert.match(show, /Telefonat: Interesse an Backup/);
+    assert.match(show, /KAM-000001 · Herbst/);
+    assert.match(show, /action="\/crm\/sales\/o1\/stage"/);
+    assert.match(show, /action="\/crm\/sales\/o1\/step"/);
+    assert.match(show, /Als verloren markieren/);
+
+    const lostShow = render("crm/sales/show.pug", { opportunity: lost, history: [], flash: null, ...salesHelpers });
+    assert.match(lostShow, /Verloren: Preis/);
+    assert.doesNotMatch(lostShow, /Als verloren markieren/);
+
+    const formLocals = {
+        companies: [{ _id: "c1", companyName: "Holz Müller GmbH", status: "prospect" }],
+        contacts: [{ _id: "p1", firstName: "Anna", lastName: "Jung", company: { _id: "c1" } }],
+        owners: locals.owners,
+        campaigns: [{ _id: "k1", campaignNumber: "KAM-000001", name: "Herbst" }],
+        error: null,
+        ...salesHelpers
+    };
+
+    const create = render("crm/sales/create.pug", { ...formLocals, opportunity: { company: "c1", owner: "u1", stage: "new", probability: 10, mrr: 0, oneTime: 0, nextStep: { text: "Erstgespräch vereinbaren", dueDate: new Date("2026-10-12") } } });
+
+    assert.match(create, /action="\/crm\/sales"/);
+    assert.match(create, /value="c1" selected/);
+    assert.match(create, /\(Interessent\)/);
+    assert.match(create, /data-company="c1"/);
+    assert.match(create, /value="2026-10-12"/);
+    assert.match(create, /data-probability="40"/);
+
+    const edit = render("crm/sales/edit.pug", { ...formLocals, opportunity: { ...dealOf(), company: "c1", contact: "p1", owner: "u1", campaign: "k1", mrr: 890.5 }, error: "Bitte einen Titel angeben." });
+
+    assert.match(edit, /action="\/crm\/sales\/o1\/update"/);
+    assert.match(edit, /value="890,5"/);
+    assert.match(edit, /Bitte einen Titel angeben/);
+
+});

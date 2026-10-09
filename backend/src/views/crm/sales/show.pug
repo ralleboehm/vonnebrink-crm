@@ -1,0 +1,363 @@
+extends ../layouts/main
+
+include _mixins
+
+block content
+
+    - const opp = opportunity
+    - const base = `/crm/sales/${opp._id}`
+    - const editable = can("sales.edit")
+    - const isOpenStage = ["new", "meeting", "assessment", "proposal", "negotiation"].includes(opp.stage)
+    - const formatDay = (date) => date ? new Date(date).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" }) : "—"
+    - const formatTime = (date) => date ? new Date(date).toLocaleString("de-DE", { timeZone: "Europe/Berlin", dateStyle: "short", timeStyle: "short" }) : ""
+    - const tomorrow = new Date(Date.now() + 86400000).toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" })
+    - const historyIcons = { created: "bi-plus-circle", stage: "bi-flag", note: "bi-chat-left-text", step_done: "bi-check2-circle", step_set: "bi-arrow-right-circle", updated: "bi-pencil" }
+    - const historyLabels = { created: "Angelegt", stage: "Phase", note: "Notiz", step_done: "Erledigt", step_set: "Nächster Schritt", updated: "Geändert" }
+    - const state = stepState(opp)
+
+    .mb-4
+
+        a.text-decoration-none.small(href="/crm/sales")
+
+            i.bi.bi-arrow-left.me-1
+
+            | Pipeline
+
+        .d-flex.justify-content-between.align-items-start.flex-wrap.gap-2.mt-1
+
+            div
+
+                h1.mb-1= opp.title
+
+                .d-flex.align-items-center.gap-2.flex-wrap
+
+                    code= opp.opportunityNumber
+
+                    +stageBadge(opp.stage)
+
+                    if opp.company
+
+                        a.text-decoration-none(href=`/crm/companies/${opp.company._id}`)
+
+                            i.bi.bi-buildings.me-1
+
+                            = opp.company.companyName
+
+                        if opp.company.status === "prospect"
+
+                            span.badge.text-bg-light.border Interessent
+
+            if editable
+
+                .d-flex.gap-2
+
+                    a.btn.btn-outline-primary(href=`${base}/edit`)
+
+                        i.bi.bi-pencil.me-2
+
+                        | Bearbeiten
+
+                    form(method="POST" action=`${base}/delete` onsubmit="return confirm('Verkaufschance wirklich löschen?');")
+
+                        button.btn.btn-outline-danger(type="submit" title="Löschen")
+
+                            i.bi.bi-trash
+
+    if flash
+
+        .alert(class=`alert-${flash.type}`)= flash.text
+
+    // =====================================================
+    // Phasen
+    // =====================================================
+
+    .card.mb-4
+
+        .card-body
+
+            .vb-stages
+
+                each stage in stages
+
+                    - const reached = stages.findIndex((s) => s.key === stage.key) <= stages.findIndex((s) => s.key === opp.stage)
+                    - const current = stage.key === opp.stage
+
+                    if editable && !current && stage.key !== "lost"
+
+                        form.vb-stage-form(method="POST" action=`${base}/stage`)
+
+                            input(type="hidden" name="stage" value=stage.key)
+
+                            button.vb-stage(type="submit" class=(reached && opp.stage !== "lost" ? "is-reached" : "") title=`In Phase „${stage.label}“ verschieben`)= stage.label
+
+                    else if stage.key !== "lost" || current
+
+                        span.vb-stage(class=current ? `is-current is-${stage.key}` : (reached && opp.stage !== "lost" ? "is-reached" : ""))= stage.label
+
+            if editable && opp.stage !== "lost"
+
+                details.mt-3
+
+                    summary.small.text-muted Als verloren markieren …
+
+                    form.row.g-2.mt-1(method="POST" action=`${base}/stage`)
+
+                        input(type="hidden" name="stage" value="lost")
+
+                        .col-md-8
+
+                            input.form-control.form-control-sm(type="text" name="lostReason" required maxlength="300" list="lostReasonsShow" placeholder="Grund, z. B. Preis")
+
+                            datalist#lostReasonsShow
+
+                                each reason in lostReasons
+
+                                    option(value=reason)
+
+                        .col-md-4.d-grid
+
+                            button.btn.btn-sm.btn-outline-danger(type="submit") Verloren
+
+            if opp.stage === "lost" && opp.lostReason
+
+                .small.text-danger.mt-2
+
+                    i.bi.bi-x-circle.me-1
+
+                    | Verloren: #{opp.lostReason}
+
+    .row.g-4
+
+        .col-lg-8
+
+            // =====================================================
+            // Nächster Schritt
+            // =====================================================
+
+            .card.mb-4(class=state === "overdue" || state === "none" ? "border-warning" : "")
+
+                .card-header.fw-semibold
+
+                    i.bi.bi-arrow-right-circle.me-2
+
+                    | Nächster Schritt
+
+                .card-body
+
+                    if opp.nextStep && opp.nextStep.text
+
+                        .d-flex.justify-content-between.align-items-start.gap-3.mb-3
+
+                            div
+
+                                .fs-5= opp.nextStep.text
+
+                                .small
+
+                                    +nextStep({ stage: opp.stage, nextStep: { dueDate: opp.nextStep.dueDate } })
+
+                    else if isOpenStage
+
+                        p.text-warning.mb-3
+
+                            i.bi.bi-exclamation-circle.me-1
+
+                            | Noch kein nächster Schritt – was passiert als Nächstes?
+
+                    else
+
+                        p.text-muted.mb-3 Abgeschlossen – kein nächster Schritt nötig.
+
+                    if editable
+
+                        form(method="POST" action=`${base}/step`)
+
+                            .row.g-2.align-items-end
+
+                                .col-md-7
+
+                                    label.form-label.small.mb-1(for="nextStepText")
+
+                                        = opp.nextStep && opp.nextStep.text ? "Erledigt – und dann?" : "Nächster Schritt"
+
+                                    input.form-control#nextStepText(type="text" name="nextStepText" maxlength="300" placeholder="z. B. Termin für IT-Check vereinbaren")
+
+                                .col-md-3
+
+                                    label.form-label.small.mb-1(for="nextStepDue") Bis
+
+                                    input.form-control#nextStepDue(type="date" name="nextStepDue" value=tomorrow)
+
+                                .col-md-2.d-grid
+
+                                    button.btn.btn-primary(type="submit" title=opp.nextStep && opp.nextStep.text ? "Aktuellen Schritt als erledigt markieren" : "Speichern")
+
+                                        i.bi.bi-check2
+
+                            if opp.nextStep && opp.nextStep.text
+
+                                .form-text Leer lassen und abschicken = nur als erledigt markieren.
+
+            // =====================================================
+            // Notizen und Verlauf
+            // =====================================================
+
+            .card
+
+                .card-header.fw-semibold
+
+                    i.bi.bi-clock-history.me-2
+
+                    | Verlauf
+
+                .card-body
+
+                    if editable
+
+                        form.mb-4(method="POST" action=`${base}/notes`)
+
+                            textarea.form-control.mb-2(name="note" rows="2" maxlength="2000" required placeholder="Notiz, z. B. Telefonat: Interesse an Backup und M365 …")
+
+                            button.btn.btn-sm.btn-outline-primary(type="submit")
+
+                                i.bi.bi-plus-lg.me-1
+
+                                | Notiz speichern
+
+                    if history.length
+
+                        ul.list-unstyled.mb-0.vb-timeline
+
+                            each entry in history
+
+                                li.d-flex.gap-3.mb-3
+
+                                    i.bi.mt-1(class=historyIcons[entry.type] || "bi-dot")
+
+                                    div
+
+                                        .small.text-muted
+
+                                            strong= historyLabels[entry.type] || entry.type
+
+                                            |  · #{formatTime(entry.at)}
+                                            if entry.by
+                                                |  · #{entry.by}
+
+                                        if entry.text
+
+                                            div(style="white-space: pre-line;")= entry.text
+
+                    else
+
+                        p.text-muted.mb-0 Noch keine Einträge.
+
+        .col-lg-4
+
+            .card.mb-4
+
+                .card-header.fw-semibold
+
+                    i.bi.bi-currency-euro.me-2
+
+                    | Wert
+
+                .card-body
+
+                    .fs-3.fw-semibold= euro(opp.mrr)
+
+                    .small.text-muted.mb-3 pro Monat
+
+                    dl.row.small.mb-0
+
+                        dt.col-7 Einmalig
+                        dd.col-5.text-end= euro(opp.oneTime)
+
+                        dt.col-7 Wert im 1. Jahr
+                        dd.col-5.text-end= euro((opp.mrr || 0) * 12 + (opp.oneTime || 0))
+
+                        dt.col-7 Wahrscheinlichkeit
+                        dd.col-5.text-end #{opp.probability} %
+
+                        dt.col-7 Gewichtet / Monat
+                        dd.col-5.text-end= euro((opp.mrr || 0) * (opp.probability || 0) / 100)
+
+            .card.mb-4
+
+                .card-header.fw-semibold
+
+                    i.bi.bi-info-circle.me-2
+
+                    | Angaben
+
+                .card-body
+
+                    dl.row.small.mb-0
+
+                        dt.col-5 Ansprechpartner
+                        dd.col-7
+
+                            if opp.contact
+
+                                a(href=`/crm/contacts/${opp.contact._id}`) #{opp.contact.firstName} #{opp.contact.lastName}
+
+                                if opp.contact.email
+
+                                    br
+
+                                    a(href=`mailto:${opp.contact.email}`)= opp.contact.email
+
+                                if opp.contact.phone || opp.contact.mobile
+
+                                    br
+
+                                    a(href=`tel:${opp.contact.phone || opp.contact.mobile}`)= opp.contact.phone || opp.contact.mobile
+
+                            else
+
+                                span.text-muted —
+
+                        dt.col-5 Zuständig
+                        dd.col-7
+
+                            +contactName(opp.owner)
+
+                        dt.col-5 Erw. Abschluss
+                        dd.col-7= formatDay(opp.expectedCloseDate)
+
+                        if opp.closedAt
+
+                            dt.col-5 Abgeschlossen
+                            dd.col-7= formatDay(opp.closedAt)
+
+                        dt.col-5 Quelle
+                        dd.col-7
+
+                            = opp.source ? sources[opp.source] : "—"
+
+                            if opp.campaign
+
+                                br
+
+                                a(href=`/crm/marketing/campaigns/${opp.campaign._id}`) #{opp.campaign.campaignNumber} · #{opp.campaign.name}
+
+                        dt.col-5 Angelegt
+                        dd.col-7
+
+                            = formatDay(opp.createdAt)
+
+                            if opp.createdBy
+
+                                |  · #{opp.createdBy}
+
+            if opp.notes
+
+                .card
+
+                    .card-header.fw-semibold
+
+                        i.bi.bi-card-text.me-2
+
+                        | Beschreibung
+
+                    .card-body(style="white-space: pre-line;")= opp.notes

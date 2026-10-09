@@ -16,6 +16,7 @@ const Attachment = require("../models/attachment.model");
 const Counter = require("../models/counter.model");
 const Asset = require("../models/asset.model");
 const Campaign = require("../models/campaign.model");
+const Opportunity = require("../models/opportunity.model");
 const Activity = require("../models/activity.model");
 const Notification = require("../models/notification.model");
 const SyncRun = require("../models/syncRun.model");
@@ -221,6 +222,14 @@ async function resetBusinessData() {
 
     console.log(
         `✔ Kampagnen: ${campaigns.deletedCount}`
+    );
+
+    // Verkaufschancen verweisen auf Firmen und Kontakte
+    const opportunities =
+        await Opportunity.deleteMany({});
+
+    console.log(
+        `✔ Verkaufschancen: ${opportunities.deletedCount}`
     );
 
     const notifications =

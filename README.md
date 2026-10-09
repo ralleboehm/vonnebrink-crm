@@ -283,6 +283,20 @@ Ein Portalzugang ist nicht nötig – jede Kampagnen-Mail enthält einen persön
 
 Rechtlicher Hinweis: Das CRM hilft beim Nachweis, ersetzt aber keine Rechtsberatung (DSGVO, UWG).
 
+## Vertrieb
+
+Menü **Vertrieb** (Rollen: Admin und Vertrieb, nicht Techniker).
+
+- **Pipeline** (`/crm/sales`): Tafel mit einer Spalte je Phase – Karten per Ziehen verschieben.
+  Oben: offene Chancen, Monatsumsatz der Pipeline, **Prognose** (Monatsumsatz × Wahrscheinlichkeit),
+  gewonnener Monatsumsatz der letzten 90 Tage und „Heute zu tun“ (überfällige, heute fällige
+  Chancen und Chancen ohne nächsten Schritt).
+- **Verkaufschance**: Firma (auch Interessent), Ansprechpartner, Zuständiger, Wert monatlich und
+  einmalig, Wahrscheinlichkeit, erwarteter Abschluss, Quelle (auch Kampagne), **nächster Schritt mit
+  Datum**, Verlauf mit Notizen. Phasen: Neu → Erstgespräch → IT-Check → Angebot → Verhandlung →
+  Gewonnen / Verloren (mit Grund). Gewonnen macht aus einer Firma mit Status „Interessent“ einen Kunden.
+- Die Firmenseite zeigt ihre Verkaufschancen. Regeln: `utils/salesRules.js`.
+
 ## Rollen
 
 | Bereich | Administrator | Techniker | Vertrieb |
@@ -290,8 +304,8 @@ Rechtlicher Hinweis: Das CRM hilft beim Nachweis, ersetzt aber keine Rechtsberat
 | Firmen, Kontakte | ✔ | ✔ | ✔ |
 | Tickets | ✔ | ✔ | nur Liste (Nummer, Betreff, Firma, Status) – kein Öffnen, keine Nachrichten/Anhänge |
 | Assets | ✔ | ✔ | nur ansehen |
-| Marketing | ✔ | – | ✔ |
-| Sales / Angebote (später) | ✔ | – | ✔ |
+| Marketing (Kampagnen, Empfänger, Gruppen) | ✔ | – | ✔ |
+| Vertrieb (Pipeline, Verkaufschancen; Angebote später) | ✔ | – | ✔ |
 | Benutzer, Import & Export, Action1, E-Mail-Protokoll | ✔ | – | – |
 
 Die Rechte stehen in `backend/src/core/permissions/index.js`. Die globale Suche zeigt nur Bereiche,

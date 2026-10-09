@@ -60,6 +60,12 @@ router.use("/integrations", require("./integration.routes"));
 router.use("/notifications", require("./notification.routes"));
 
 // ----------------------------------------------------
+// Vertrieb (Pipeline, Verkaufschancen)
+// ----------------------------------------------------
+
+router.use("/sales", require("./sales.routes"));
+
+// ----------------------------------------------------
 // Marketing (Kampagnen, Empfänger, Gruppen)
 // ----------------------------------------------------
 

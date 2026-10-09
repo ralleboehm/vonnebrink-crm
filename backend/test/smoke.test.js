@@ -104,6 +104,7 @@ function createClient(baseUrl) {
     }
 
     return {
+        cookie: () => cookie,
         get: (url) => request("GET", url),
         post: (url, form) => request("POST", url, { form }),
         upload: (url, formData) => request("POST", url, { formData })
@@ -921,6 +922,166 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         assertPage(await sales.get(`${base}/${campaign._id}`), "Vertrieb Kampagne");
 
         await Company.updateOne({ _id: company._id }, { $set: { tags: [] } });
+
+    });
+
+    await t.test("Vertrieb: Verkaufschancen und Pipeline", async () => {
+
+        const Opportunity = require("../src/models/opportunity.model");
+        const base = "/crm/sales";
+
+        const prospect = await Company.create({ companyName: "Smoke Interessent GmbH", customerNumber: "CUS-900099", status: "prospect" });
+        const prospectContact = await Contact.create({ company: prospect._id, contactNumber: "CON-900099", salutation: "mrs", firstName: "Petra", lastName: "Prospekt", email: "petra@smoke.test" });
+
+        for (const url of [base, `${base}/list`, `${base}/list?state=all`, `${base}/list?state=closed&stage=won`, `${base}/new`, `${base}/new?company=${prospect._id}`, `${base}?owner=none&search=x`]) {
+            assertPage(await crm.get(url), url);
+        }
+
+        assert.match((await crm.get("/crm")).text, /href="\/crm\/sales"/, "Navigation: Vertrieb");
+
+        // Fehler: Formular mit Meldung, nichts gespeichert
+        const noTitle = await crm.post(base, { title: "", company: String(prospect._id), stage: "new" });
+        assert.equal(noTitle.status, 422);
+        assert.match(noTitle.text, /Titel/);
+
+        const badMoney = await crm.post(base, { title: "Geld", company: String(prospect._id), stage: "new", mrr: "viel" });
+        assert.equal(badMoney.status, 422);
+        assert.match(badMoney.text, /bitte eine Zahl/);
+
+        const wrongContact = await crm.post(base, { title: "Falscher Kontakt", company: String(prospect._id), contact: String(contact._id), stage: "new" });
+        assert.equal(wrongContact.status, 422);
+        assert.match(wrongContact.text, /gehört nicht zur gewählten Firma/);
+
+        assert.equal(await Opportunity.countDocuments(), 0);
+
+        // Anlegen mit deutschen Zahlen
+        const created = await crm.post(base, {
+            title: "Managed IT für 8 Arbeitsplätze",
+            company: String(prospect._id),
+            contact: String(prospectContact._id),
+            stage: "meeting",
+            probability: "",
+            mrr: "1.250,50",
+            oneTime: "2.500",
+            source: "referral",
+            nextStepText: "IT-Check vereinbaren",
+            nextStepDue: new Date(Date.now() - 86400000).toISOString().slice(0, 10),
+            notes: "Kommt über Empfehlung"
+        });
+
+        assert.equal(created.status, 302, `Anlegen: Status ${created.status}`);
+
+        const opp = await Opportunity.findOne({ title: "Managed IT für 8 Arbeitsplätze" });
+        assert.ok(opp);
+        assert.equal(created.location, `${base}/${opp._id}`);
+        assert.match(opp.opportunityNumber, /^VK-\d{6}$/);
+        assert.equal(opp.mrr, 1250.5);
+        assert.equal(opp.oneTime, 2500);
+        assert.equal(opp.probability, 20, "Standard der Phase Erstgespräch");
+        assert.equal(String(opp.owner), String(admin._id), "Ersteller ist zuständig");
+        assert.deepEqual(opp.history.map((h) => h.type), ["created", "step_set"]);
+
+        const show = await crm.get(`${base}/${opp._id}`);
+        assertPage(show, "Verkaufschance");
+        assert.match(show.text, /IT-Check vereinbaren/);
+        assert.match(show.text, /überfällig/);
+
+        // Pipeline: Karte, Kennzahlen, Heute zu tun
+        const board = await crm.get(base);
+        assert.match(board.text, /Managed IT für 8 Arbeitsplätze/);
+        assert.match(board.text, /Heute zu tun/);
+
+        // Phase per Tafel (JSON)
+        const moveResponse = await fetch(`${baseUrl}${base}/${opp._id}/stage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json", Cookie: crm.cookie() },
+            body: JSON.stringify({ stage: "proposal" })
+        });
+        assert.equal(moveResponse.status, 200);
+        assert.deepEqual(await moveResponse.json(), { ok: true, stage: "proposal", probability: 60 });
+
+        const lostWithoutReason = await fetch(`${baseUrl}${base}/${opp._id}/stage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json", Cookie: crm.cookie() },
+            body: JSON.stringify({ stage: "lost" })
+        });
+        assert.equal(lostWithoutReason.status, 422);
+        assert.match((await lostWithoutReason.json()).error, /Grund/);
+        assert.equal((await Opportunity.findById(opp._id)).stage, "proposal");
+
+        // Schritt erledigen + neuen setzen, Notiz
+        assertRedirect(await crm.post(`${base}/${opp._id}/step`, { nextStepText: "Angebot nachfassen", nextStepDue: "2099-01-15" }), "Schritt", `${base}/${opp._id}`);
+        assertRedirect(await crm.post(`${base}/${opp._id}/notes`, { note: "Telefonat: will auch Backup" }), "Notiz", `${base}/${opp._id}`);
+
+        let current = await Opportunity.findById(opp._id);
+        assert.equal(current.nextStep.text, "Angebot nachfassen");
+        assert.equal(current.nextStep.dueDate.toISOString().slice(0, 10), "2099-01-15");
+        assert.deepEqual(current.history.map((h) => h.type), ["created", "step_set", "stage", "step_done", "step_set", "note"]);
+        assert.equal(current.history[3].text, "IT-Check vereinbaren");
+
+        // Bearbeiten
+        assertPage(await crm.get(`${base}/${opp._id}/edit`), "Bearbeiten");
+        assertRedirect(await crm.post(`${base}/${opp._id}/update`, {
+            title: "Managed IT für 10 Arbeitsplätze",
+            company: String(prospect._id),
+            contact: String(prospectContact._id),
+            stage: "proposal",
+            probability: "70",
+            mrr: "1.490",
+            oneTime: "0",
+            nextStepText: "Angebot nachfassen",
+            nextStepDue: "2099-01-15"
+        }), "Speichern", `${base}/${opp._id}`);
+
+        current = await Opportunity.findById(opp._id);
+        assert.equal(current.title, "Managed IT für 10 Arbeitsplätze");
+        assert.equal(current.probability, 70, "eigene Wahrscheinlichkeit bleibt");
+        assert.equal(current.mrr, 1490);
+
+        // Gewonnen: aus Interessent wird Kunde
+        assertRedirect(await crm.post(`${base}/${opp._id}/stage`, { stage: "won" }), "Gewonnen", `${base}/${opp._id}`);
+        current = await Opportunity.findById(opp._id);
+        assert.equal(current.stage, "won");
+        assert.equal(current.probability, 100);
+        assert.ok(current.closedAt);
+        assert.equal((await Company.findById(prospect._id)).status, "active");
+        assert.match((await crm.get(`${base}/${opp._id}`)).text, /Glückwunsch/);
+
+        // Firmenseite zeigt die Chance
+        const companyPage = await crm.get(`/crm/companies/${prospect._id}`);
+        assertPage(companyPage, "Firma mit Verkaufschance");
+        assert.match(companyPage.text, /Managed IT für 10 Arbeitsplätze/);
+
+        // Verloren mit Grund (Formular)
+        const second = await Opportunity.create({ opportunityNumber: "VK-999999", title: "Zweite Chance", company: prospect._id, stage: "new" });
+        assertRedirect(await crm.post(`${base}/${second._id}/stage`, { stage: "lost", lostReason: "Preis" }), "Verloren");
+        current = await Opportunity.findById(second._id);
+        assert.equal(current.stage, "lost");
+        assert.equal(current.lostReason, "Preis");
+        assert.equal(current.probability, 0);
+
+        assertPage(await crm.get(`${base}/list?state=closed`), "Liste abgeschlossen");
+        assert.match((await crm.get(`${base}/list?state=closed`)).text, /Zweite Chance/);
+
+        // Löschen
+        assertRedirect(await crm.post(`${base}/${second._id}/delete`, {}), "Löschen", base);
+        assert.equal((await crm.get(`${base}/${second._id}`)).status, 404);
+        assert.equal((await crm.get(`${base}/kaputt`)).status, 404);
+
+        // Rechte
+        const tech = createClient(baseUrl);
+        assertRedirect(await tech.post("/crm/login", { username: "smoke-tech", password: PASSWORD }), "Login Techniker");
+        assert.equal((await tech.get(base)).status, 403, "Techniker: kein Vertrieb");
+        assert.equal((await tech.post(`${base}/${opp._id}/stage`, { stage: "lost", lostReason: "x" })).status, 403);
+        assert.doesNotMatch((await tech.get("/crm")).text, /href="\/crm\/sales"/, "Techniker: kein Menü Vertrieb");
+        assert.doesNotMatch((await tech.get(`/crm/companies/${prospect._id}`)).text, /Verkaufschancen/, "Techniker: keine Chancen auf der Firmenseite");
+
+        const sales = createClient(baseUrl);
+        assertRedirect(await sales.post("/crm/login", { username: "smoke-sales", password: PASSWORD }), "Login Vertrieb");
+        for (const url of [base, `${base}/list`, `${base}/new`, `${base}/${opp._id}`, "/crm/marketing/campaigns"]) {
+            assertPage(await sales.get(url), `Vertrieb ${url}`);
+        }
+        assert.equal((await sales.get("/crm/users")).status, 403, "Vertrieb: keine Benutzerverwaltung");
 
     });
 

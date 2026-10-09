@@ -103,6 +103,29 @@ html(lang="de")
                                                 i.bi.bi-pc-display.me-2
                                                 | Assets
 
+                        if can("sales.view")
+
+                            li.nav-item.dropdown
+                                a.nav-link.dropdown-toggle(href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false")
+                                    i.bi.bi-briefcase.me-1
+                                    | Vertrieb
+                                ul.dropdown-menu.shadow
+                                    li
+                                        a.dropdown-item(href="/crm/sales")
+                                            i.bi.bi-kanban.me-2
+                                            | Pipeline
+                                    li
+                                        a.dropdown-item(href="/crm/sales/list")
+                                            i.bi.bi-list-ul.me-2
+                                            | Alle Verkaufschancen
+                                    if can("sales.edit")
+                                        li
+                                            hr.dropdown-divider
+                                        li
+                                            a.dropdown-item(href="/crm/sales/new")
+                                                i.bi.bi-plus-lg.me-2
+                                                | Neue Verkaufschance
+
                         if can("marketing.view")
 
                             li.nav-item.dropdown

@@ -1,0 +1,172 @@
+extends ../layouts/main
+
+include _mixins
+
+block content
+
+    - const totals = summary.totals
+    - const formatDay = (date) => date ? new Date(date).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" }) : "—"
+
+    .d-flex.justify-content-between.align-items-center.mb-3.flex-wrap.gap-2
+
+        div
+
+            h1.mb-0
+
+                i.bi.bi-briefcase.me-2
+
+                | Verkaufschancen
+
+            small.text-muted Alle Chancen als Liste – auch gewonnene und verlorene
+
+        .d-flex.gap-2
+
+            a.btn.btn-outline-secondary(href="/crm/sales")
+
+                i.bi.bi-kanban.me-2
+
+                | Pipeline
+
+            if can("sales.edit")
+
+                a.btn.btn-primary(href="/crm/sales/new")
+
+                    i.bi.bi-plus-lg.me-2
+
+                    | Neue Verkaufschance
+
+    if flash
+
+        .alert(class=`alert-${flash.type}`)= flash.text
+
+    form.row.g-2.mb-3(method="GET" action="/crm/sales/list")
+
+        .col-md-2
+
+            select.form-select(name="state")
+
+                option(value="open" selected=filters.state === "open") Offene
+
+                option(value="closed" selected=filters.state === "closed") Abgeschlossene
+
+                option(value="all" selected=filters.state === "all") Alle
+
+        .col-md-2
+
+            select.form-select(name="stage")
+
+                option(value="") Alle Phasen
+
+                each stage in stages
+
+                    option(value=stage.key selected=filters.stage === stage.key)= stage.label
+
+        .col-md-3
+
+            select.form-select(name="owner")
+
+                option(value="") Alle Zuständigen
+
+                each user in owners
+
+                    option(value=String(user._id) selected=filters.owner === String(user._id)) #{user.firstName} #{user.lastName}
+
+                option(value="none" selected=filters.owner === "none") Ohne Zuständigen
+
+        .col-md-3
+
+            input.form-control(type="search" name="search" value=filters.search placeholder="Titel, Firma, Nummer …" maxlength="100")
+
+        .col-md-2.d-grid
+
+            button.btn.btn-primary(type="submit")
+
+                i.bi.bi-funnel.me-1
+
+                | Filtern
+
+    if opportunities.length
+
+        .card
+
+            .table-responsive
+
+                table.table.table-hover.align-middle.mb-0
+
+                    thead.table-light
+
+                        tr
+                            th Chance
+                            th Phase
+                            th.text-end Monatlich
+                            th.text-end Einmalig
+                            th.text-end %
+                            th Nächster Schritt
+                            th Abschluss
+                            th Zuständig
+
+                    tbody
+
+                        each item in opportunities
+
+                            tr
+
+                                td
+
+                                    a.fw-semibold.text-decoration-none(href=`/crm/sales/${item._id}`)= item.title
+
+                                    .small.text-muted
+
+                                        code.me-2= item.opportunityNumber
+
+                                        if item.company
+
+                                            a.text-reset(href=`/crm/companies/${item.company._id}`)= item.company.companyName
+
+                                td
+
+                                    +stageBadge(item.stage)
+
+                                td.text-end.text-nowrap= euro(item.mrr)
+
+                                td.text-end.text-nowrap= item.oneTime ? euro(item.oneTime) : "—"
+
+                                td.text-end= item.probability
+
+                                td.small
+
+                                    +nextStep(item)
+
+                                td.small.text-nowrap= formatDay(item.closedAt || item.expectedCloseDate)
+
+                                td.small
+
+                                    +contactName(item.owner)
+
+                    tfoot.table-light
+
+                        tr
+                            th #{opportunities.length} #{opportunities.length === 1 ? "Chance" : "Chancen"}
+                            th
+                            th.text-end.text-nowrap= euro(opportunities.reduce((sum, o) => sum + (o.mrr || 0), 0))
+                            th.text-end.text-nowrap= euro(opportunities.reduce((sum, o) => sum + (o.oneTime || 0), 0))
+                            th
+                            th.small.fw-normal.text-muted(colspan="3")
+
+                                if totals.open
+
+                                    | Prognose offene Chancen: #{euro(totals.weightedMrr)} / Monat
+
+    else
+
+        .card
+
+            .card-body.text-center.text-muted.py-5
+
+                i.bi.bi-briefcase.display-6.d-block.mb-2
+
+                | Keine Verkaufschancen für diesen Filter.
+
+                if can("sales.edit")
+
+                    a.ms-1(href="/crm/sales/new") Jetzt eine anlegen

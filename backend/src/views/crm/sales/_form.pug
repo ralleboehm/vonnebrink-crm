@@ -1,0 +1,287 @@
+//- Formular für Neu und Bearbeiten
+//- Erwartet: opportunity, action, cancelUrl, companies, contacts, owners, campaigns, stages, sources, lostReasons, error
+
+- const opp = opportunity || {}
+- const idOf = (value) => value && value._id ? String(value._id) : (value ? String(value) : "")
+- const dateValue = (value) => { if (!value) return ""; const d = new Date(value); return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10); }
+- const numberValue = (value) => Number.isFinite(value) ? String(value).replace(".", ",") : ""
+- const step = opp.nextStep || {}
+- const companyStatus = { prospect: "Interessent", active: "Kunde", inactive: "Inaktiv" }
+
+if error
+
+    .alert.alert-danger
+
+        i.bi.bi-exclamation-triangle.me-2
+
+        = error
+
+form#opportunityForm(method="POST" action=action)
+
+    .row.g-4
+
+        .col-lg-8
+
+            .card.mb-4
+
+                .card-header.fw-semibold
+
+                    i.bi.bi-briefcase.me-2
+
+                    | Worum geht es?
+
+                .card-body
+
+                    .mb-3
+
+                        label.form-label(for="title") Titel
+
+                        input.form-control#title(type="text" name="title" value=opp.title required maxlength="150" placeholder="z. B. Managed IT für 12 Arbeitsplätze")
+
+                    .row.g-3
+
+                        .col-md-6
+
+                            label.form-label(for="company") Firma
+
+                            select.form-select#company(name="company" required)
+
+                                option(value="") — Firma wählen —
+
+                                each company in companies
+
+                                    option(value=String(company._id) selected=idOf(opp.company) === String(company._id))
+
+                                        = company.companyName
+
+                                        if company.status && company.status !== "active"
+
+                                            |  (#{companyStatus[company.status] || company.status})
+
+                            .form-text
+
+                                | Neuer Interessent?
+                                |
+                                a(href="/crm/companies/new" target="_blank") Firma anlegen
+                                |  (Status „Interessent“), dann hier auswählen.
+
+                        .col-md-6
+
+                            label.form-label(for="contact") Ansprechpartner
+
+                            select.form-select#contact(name="contact")
+
+                                option(value="") — keiner —
+
+                                each contact in contacts
+
+                                    option(
+                                        value=String(contact._id)
+                                        data-company=idOf(contact.company)
+                                        selected=idOf(opp.contact) === String(contact._id)
+                                    ) #{contact.firstName} #{contact.lastName}
+
+                    .mt-3
+
+                        label.form-label(for="notes") Beschreibung
+
+                        textarea.form-control#notes(name="notes" rows="4" maxlength="2000" placeholder="Bedarf, Ausgangslage, Besonderheiten …")= opp.notes
+
+            .card.mb-4
+
+                .card-header.fw-semibold
+
+                    i.bi.bi-arrow-right-circle.me-2
+
+                    | Nächster Schritt
+
+                .card-body
+
+                    .row.g-3
+
+                        .col-md-8
+
+                            label.form-label(for="nextStepText") Was ist als Nächstes zu tun?
+
+                            input.form-control#nextStepText(type="text" name="nextStepText" value=step.text maxlength="300" placeholder="z. B. Angebot nachfassen")
+
+                        .col-md-4
+
+                            label.form-label(for="nextStepDue") Bis wann?
+
+                            input.form-control#nextStepDue(type="date" name="nextStepDue" value=dateValue(step.dueDate))
+
+                    .form-text.mt-2 Jede offene Chance sollte einen nächsten Schritt mit Datum haben – sonst taucht sie unter „Heute zu tun“ auf.
+
+        .col-lg-4
+
+            .card.mb-4
+
+                .card-header.fw-semibold
+
+                    i.bi.bi-flag.me-2
+
+                    | Stand
+
+                .card-body
+
+                    .mb-3
+
+                        label.form-label(for="stage") Phase
+
+                        select.form-select#stage(name="stage")
+
+                            each stage in stages
+
+                                option(value=stage.key data-probability=stage.probability selected=(opp.stage || "new") === stage.key) #{stage.label} (#{stage.probability} %)
+
+                    #lostReasonGroup.mb-3
+
+                        label.form-label(for="lostReason") Grund für den Verlust
+
+                        input.form-control#lostReason(type="text" name="lostReason" value=opp.lostReason maxlength="300" list="lostReasons")
+
+                        datalist#lostReasons
+
+                            each reason in lostReasons
+
+                                option(value=reason)
+
+                    .mb-3
+
+                        label.form-label(for="probability") Wahrscheinlichkeit (%)
+
+                        input.form-control#probability(type="number" name="probability" min="0" max="100" step="5" value=Number.isFinite(opp.probability) ? opp.probability : "")
+
+                        .form-text Leer = Standard der Phase. Bei Phasenwechsel wird der Standard gesetzt.
+
+                    .mb-3
+
+                        label.form-label(for="owner") Zuständig
+
+                        select.form-select#owner(name="owner")
+
+                            option(value="") — niemand —
+
+                            each user in owners
+
+                                option(value=String(user._id) selected=idOf(opp.owner) === String(user._id)) #{user.firstName} #{user.lastName}
+
+                    .mb-0
+
+                        label.form-label(for="expectedCloseDate") Erwarteter Abschluss
+
+                        input.form-control#expectedCloseDate(type="date" name="expectedCloseDate" value=dateValue(opp.expectedCloseDate))
+
+            .card.mb-4
+
+                .card-header.fw-semibold
+
+                    i.bi.bi-currency-euro.me-2
+
+                    | Wert
+
+                .card-body
+
+                    .mb-3
+
+                        label.form-label(for="mrr") Monatlich (€)
+
+                        input.form-control#mrr(type="text" inputmode="decimal" name="mrr" value=numberValue(opp.mrr) placeholder="z. B. 890")
+
+                        .form-text Laufende Pauschale, z. B. Managed Services
+
+                    .mb-0
+
+                        label.form-label(for="oneTime") Einmalig (€)
+
+                        input.form-control#oneTime(type="text" inputmode="decimal" name="oneTime" value=numberValue(opp.oneTime) placeholder="z. B. 2.500")
+
+                        .form-text Einrichtung, Hardware, Projekt
+
+            .card.mb-4
+
+                .card-header.fw-semibold
+
+                    i.bi.bi-signpost.me-2
+
+                    | Herkunft
+
+                .card-body
+
+                    .mb-3
+
+                        label.form-label(for="source") Quelle
+
+                        select.form-select#source(name="source")
+
+                            option(value="") — unbekannt —
+
+                            each label, key in sources
+
+                                option(value=key selected=opp.source === key)= label
+
+                    #campaignGroup.mb-0
+
+                        label.form-label(for="campaign") Aus Kampagne
+
+                        select.form-select#campaign(name="campaign")
+
+                            option(value="") — wählen —
+
+                            each campaign in campaigns
+
+                                option(value=String(campaign._id) selected=idOf(opp.campaign) === String(campaign._id)) #{campaign.campaignNumber} · #{campaign.name}
+
+            .card
+
+                .card-body.d-grid.gap-2
+
+                    button.btn.btn-primary(type="submit")
+
+                        i.bi.bi-check-lg.me-2
+
+                        | Speichern
+
+                    a.btn.btn-outline-secondary(href=cancelUrl) Abbrechen
+
+script.
+    (function () {
+        var company = document.getElementById("company");
+        var contact = document.getElementById("contact");
+        var stage = document.getElementById("stage");
+        var probability = document.getElementById("probability");
+        var source = document.getElementById("source");
+
+        // Ansprechpartner nur der gewählten Firma anzeigen
+        function filterContacts() {
+            var id = company.value;
+            Array.prototype.forEach.call(contact.options, function (option) {
+                if (!option.value) return;
+                var match = !id || option.getAttribute("data-company") === id;
+                option.hidden = !match;
+                option.disabled = !match;
+                if (!match && option.selected) contact.value = "";
+            });
+        }
+
+        function toggle(id, visible) {
+            document.getElementById(id).style.display = visible ? "" : "none";
+        }
+
+        company.addEventListener("change", filterContacts);
+        filterContacts();
+
+        var initialStage = stage.value;
+
+        stage.addEventListener("change", function () {
+            var option = stage.options[stage.selectedIndex];
+            probability.value = option.getAttribute("data-probability");
+            toggle("lostReasonGroup", stage.value === "lost");
+        });
+
+        toggle("lostReasonGroup", initialStage === "lost");
+
+        source.addEventListener("change", function () { toggle("campaignGroup", source.value === "campaign"); });
+        toggle("campaignGroup", source.value === "campaign");
+    })();

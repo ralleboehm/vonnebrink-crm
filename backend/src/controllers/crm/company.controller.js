@@ -4,6 +4,9 @@ const ticketService = require("../../services/ticket.service");
 const assetService = require("../../services/asset.service");
 const assetLabels = require("../../utils/assetLabels");
 const tagUtils = require("../../utils/tags");
+const opportunityService = require("../../services/opportunity.service");
+const salesRules = require("../../utils/salesRules");
+const { can } = require("../../core/permissions");
 
 // Alle Firmen anzeigen
 exports.index = async (req, res, next) => {
@@ -74,10 +77,14 @@ exports.show = async (req, res, next) => {
 
         const contacts = await contactService.getByCompany(company._id);
 
-        const [recentTickets, assets, assetSummary] = await Promise.all([
+        // Verkaufschancen nur für Admin und Vertrieb
+        const showSales = can(req.session.user, "sales.view");
+
+        const [recentTickets, assets, assetSummary, opportunities] = await Promise.all([
             ticketService.getRecentByCompany(company._id, 5),
             assetService.getByCompany(company._id),
-            assetService.summary(company._id)
+            assetService.summary(company._id),
+            showSales ? opportunityService.findByCompany(company._id) : null
         ]);
 
         res.render("companies/show", {
@@ -87,7 +94,10 @@ exports.show = async (req, res, next) => {
             recentTickets,
             assets,
             assetSummary,
-            labels: assetLabels
+            labels: assetLabels,
+            opportunities,
+            salesStageLabels: salesRules.STAGE_LABELS,
+            salesEuro: salesRules.formatEuro
         });
 
     } catch (err) {

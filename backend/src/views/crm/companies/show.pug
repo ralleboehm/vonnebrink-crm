@@ -259,6 +259,84 @@ block content
 
             | Für diese Firma sind noch keine Ansprechpartner vorhanden.
 
+    //- =====================================================
+    //- Vertrieb (nur Admin und Vertrieb)
+    //- =====================================================
+
+    if opportunities
+
+        .card.shadow-sm.mb-4
+
+            .card-header.d-flex.justify-content-between.align-items-center.flex-wrap.gap-2
+
+                h5.mb-0
+
+                    i.bi.bi-briefcase.me-2
+
+                    | Verkaufschancen
+
+                if can("sales.edit")
+
+                    a.btn.btn-sm.btn-primary(href=`/crm/sales/new?company=${company._id}`)
+
+                        i.bi.bi-plus-circle.me-2
+
+                        | Neue Verkaufschance
+
+            if opportunities.length
+
+                .table-responsive
+
+                    table.table.table-hover.align-middle.mb-0
+
+                        thead.table-light
+
+                            tr
+                                th Chance
+                                th Phase
+                                th.text-end Monatlich
+                                th Nächster Schritt
+
+                        tbody
+
+                            each item in opportunities
+
+                                - const due = item.nextStep && item.nextStep.dueDate
+
+                                tr
+
+                                    td
+
+                                        a.fw-semibold.text-decoration-none(href=`/crm/sales/${item._id}`)= item.title
+
+                                        .small.text-muted= item.opportunityNumber
+
+                                    td
+
+                                        span.badge.text-bg-light.border= salesStageLabels[item.stage] || item.stage
+
+                                    td.text-end.text-nowrap= salesEuro(item.mrr)
+
+                                    td.small
+
+                                        if item.nextStep && item.nextStep.text
+
+                                            = item.nextStep.text
+
+                                            if due
+
+                                                span.text-muted  · #{new Date(due).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" })}
+
+                                        else
+
+                                            span.text-muted —
+
+            else
+
+                .card-body.text-muted.small
+
+                    | Noch keine Verkaufschancen für diese Firma.
+
     // =====================================================
     // Assets
     // =====================================================

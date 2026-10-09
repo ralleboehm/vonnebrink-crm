@@ -1,0 +1,51 @@
+//- Vertrieb: wiederkehrende Bausteine
+//- Erwartet: stageLabels, stepState (aus opportunity.controller viewHelpers)
+
+mixin stageBadge(stage)
+
+    - const colors = { new: "secondary", meeting: "info", assessment: "dark", proposal: "primary", negotiation: "warning", won: "success", lost: "danger" }
+
+    span.badge(class=`text-bg-${colors[stage] || "secondary"}`)= stageLabels[stage] || stage
+
+//- Nächster Schritt mit Fälligkeit (kompakt für Karten und Listen)
+mixin nextStep(opportunity)
+
+    - const state = stepState(opportunity)
+    - const step = opportunity.nextStep || {}
+    - const day = step.dueDate ? new Date(step.dueDate).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" }) : ""
+
+    if state === null
+
+        span.text-muted —
+
+    else if state === "none"
+
+        span.text-warning.fw-semibold
+
+            i.bi.bi-exclamation-circle.me-1
+
+            | Kein nächster Schritt
+
+    else
+
+        span(class=state === "overdue" ? "text-danger fw-semibold" : (state === "today" ? "text-primary fw-semibold" : ""))
+
+            i.bi.me-1(class=state === "overdue" ? "bi-alarm" : "bi-calendar-event")
+
+            | #{state === "today" ? "Heute" : day}
+            if state === "overdue"
+                |  (überfällig)
+
+        if step.text
+
+            .small.text-muted.text-truncate(style="max-width: 260px;")= step.text
+
+mixin contactName(contact)
+
+    if contact
+
+        = `${contact.firstName || ""} ${contact.lastName || ""}`.trim()
+
+    else
+
+        span.text-muted —

@@ -1,0 +1,22 @@
+extends ../layouts/main
+
+block content
+
+    .mb-4
+
+        a.text-decoration-none.small(href=`/crm/sales/${opportunity._id}`)
+
+            i.bi.bi-arrow-left.me-1
+
+            | Zurück zur Verkaufschance
+
+        h1.mb-0.mt-1
+
+            i.bi.bi-pencil-square.me-2
+
+            | Verkaufschance bearbeiten
+
+    - const action = `/crm/sales/${opportunity._id}/update`
+    - const cancelUrl = `/crm/sales/${opportunity._id}`
+
+    include _form
