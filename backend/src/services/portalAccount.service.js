@@ -113,7 +113,7 @@ exports.activate = async (contactId) => {
         },
 
         {
-            new: true
+            returnDocument: "after"
         }
 
     );
@@ -137,7 +137,7 @@ exports.deactivate = async (contactId) => {
         },
 
         {
-            new: true
+            returnDocument: "after"
         }
 
     );
@@ -222,7 +222,7 @@ exports.updateLastLogin = async (id) => {
         },
 
         {
-            new: true
+            returnDocument: "after"
         }
 
     );
@@ -246,7 +246,7 @@ exports.updateEmail = async (contactId, email) => {
         },
 
         {
-            new: true
+            returnDocument: "after"
         }
 
     );

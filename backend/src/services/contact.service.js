@@ -123,7 +123,7 @@ exports.update = async (id, contactData) => {
 
         {
 
-            new: true,
+            returnDocument: "after",
             runValidators: true
 
         }
@@ -158,7 +158,7 @@ exports.softDelete = async (id) => {
 
         {
 
-            new: true
+            returnDocument: "after"
 
         }
 

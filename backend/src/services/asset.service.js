@@ -252,7 +252,7 @@ exports.update = async (id, data) => {
     return await Asset.findOneAndUpdate(
         { _id: id, isDeleted: false },
         { $set: data },
-        { new: true, runValidators: true }
+        { returnDocument: "after", runValidators: true }
     );
 
 };
@@ -262,7 +262,7 @@ exports.softDelete = async (id) => {
     return await Asset.findOneAndUpdate(
         { _id: id, isDeleted: false },
         { isDeleted: true },
-        { new: true }
+        { returnDocument: "after" }
     );
 
 };

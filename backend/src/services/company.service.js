@@ -85,7 +85,7 @@ exports.update = async (id, companyData) => {
 
         {
 
-            new: true,
+            returnDocument: "after",
 
             runValidators: true
 
@@ -115,7 +115,7 @@ exports.softDelete = async (id) => {
 
         {
 
-            new: true
+            returnDocument: "after"
 
         }
 

@@ -13,7 +13,7 @@ exports.next = async (name, prefix) => {
         },
 
         {
-            new: true,
+            returnDocument: "after",
             upsert: true
         }
 

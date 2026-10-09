@@ -147,7 +147,7 @@ async function markAsRead(notificationId, userId) {
     return Notification.findOneAndUpdate(
         { _id: notificationId, user: userId },
         { $set: { isRead: true, readAt: new Date() } },
-        { new: true }
+        { returnDocument: "after" }
     );
 
 }

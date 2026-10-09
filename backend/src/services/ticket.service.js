@@ -203,7 +203,7 @@ class TicketService {
             updateData,
 
             {
-                new: true,
+                returnDocument: "after",
                 runValidators: true
             }
 
@@ -228,7 +228,7 @@ class TicketService {
             },
 
             {
-                new: true,
+                returnDocument: "after",
                 runValidators: true
             }
 
@@ -253,7 +253,7 @@ class TicketService {
             },
 
             {
-                new: true,
+                returnDocument: "after",
                 runValidators: true
             }
 
@@ -278,7 +278,7 @@ class TicketService {
             },
 
             {
-                new: true
+                returnDocument: "after"
             }
 
         );

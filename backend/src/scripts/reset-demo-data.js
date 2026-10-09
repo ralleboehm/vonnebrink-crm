@@ -305,7 +305,7 @@ async function resetCounters() {
             },
 
             {
-                new: true
+                returnDocument: "after"
             }
 
         );
