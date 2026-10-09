@@ -1,10 +1,6 @@
-const fs = require("fs");
-const path = require("path");
-
 const ticketService = require("../../services/ticket.service");
 const ticketMessageService = require("../../services/ticketMessage.service");
 const attachmentService = require("../../services/attachment.service");
-const storageService = require("../../services/storage.service");
 const formatFileSize = require("../../utils/formatFileSize");
 const notificationService = require("../../services/notification.service");
 
@@ -107,34 +103,18 @@ exports.show = async (req, res, next) => {
 
     try {
 
-        const ticket = await ticketService.getById(req.params.id);
-
-        if (!ticket) {
-
-            return res.redirect("/portal/tickets");
-
-        }
-
-        if (
-
-            ticket.company._id.toString() !==
-            req.session.portalUser.company.toString()
-
-        ) {
-
-            return res.redirect("/portal/tickets");
-
-        }
+        // req.ticket: geladen und geprüft von loadOwnTicket()
+        const ticket = req.ticket;
 
         const [messages, attachments] = await Promise.all([
 
             ticketMessageService.getByTicket(
-                req.params.id,
+                ticket._id,
                 false
             ),
 
             attachmentService.getByTicket(
-                req.params.id,
+                ticket._id,
                 false
             )
 
@@ -169,36 +149,19 @@ exports.addMessage = async (req, res, next) => {
 
     try {
 
-        const ticket = await ticketService.getById(req.params.id);
-
-        if (!ticket) {
-
-            return res.redirect("/portal/tickets");
-
-        }
-
-        if (
-
-            ticket.company._id.toString() !==
-            req.session.portalUser.company.toString()
-
-        ) {
-
-            return res.redirect("/portal/tickets");
-
-        }
+        const ticket = req.ticket;
 
         const message = req.body.message?.trim();
 
         if (!message) {
 
-            return res.redirect(`/portal/tickets/${req.params.id}`);
+            return res.redirect(`/portal/tickets/${ticket._id}`);
 
         }
 
         await ticketMessageService.create({
 
-            ticket: req.params.id,
+            ticket: ticket._id,
 
             author: req.session.portalUser.id,
 
@@ -206,7 +169,7 @@ exports.addMessage = async (req, res, next) => {
 
         });
 
-        res.redirect(`/portal/tickets/${req.params.id}`);
+        res.redirect(`/portal/tickets/${ticket._id}`);
 
     } catch (err) {
 
@@ -224,70 +187,31 @@ exports.uploadAttachment = async (req, res, next) => {
 
     try {
 
-        const ticket = await ticketService.getById(req.params.id);
-
-        if (!ticket) {
-
-            return res.redirect("/portal/tickets");
-
-        }
-
-        if (
-
-            ticket.company._id.toString() !==
-            req.session.portalUser.company.toString()
-
-        ) {
-
-            return res.redirect("/portal/tickets");
-
-        }
+        const ticket = req.ticket;
 
         if (!req.file) {
 
-            return res.redirect(`/portal/tickets/${req.params.id}`);
+            return res.redirect(`/portal/tickets/${ticket._id}`);
 
         }
 
-        const storedFile = await storageService.storeFile({
+        await attachmentService.storeUpload({
 
-            ticketId: req.params.id,
+            ticket,
 
-            tempFile: req.file.path,
-
-            originalName: req.file.originalname
-
-        });
-
-        await attachmentService.create({
-
-            ticket: req.params.id,
+            file: req.file,
 
             uploadedBy: req.session.portalUser.id,
-
-            originalName: req.file.originalname,
-
-            fileName: storedFile.filename,
-
-            path: storedFile.relativePath,
-
-            mimeType: req.file.mimetype,
-
-            size: req.file.size,
 
             isInternal: false
 
         });
 
-        if (fs.existsSync(req.file.path)) {
-
-            fs.unlinkSync(req.file.path);
-
-        }
-
-        res.redirect(`/portal/tickets/${req.params.id}`);
+        res.redirect(`/portal/tickets/${ticket._id}`);
 
     } catch (err) {
+
+        await attachmentService.discardUpload(req.file);
 
         next(err);
 
@@ -302,57 +226,21 @@ exports.downloadAttachment = async (req, res, next) => {
 
     try {
 
-        const ticket = await ticketService.getById(
-            req.params.ticketId
+        const ticket = req.ticket;
+
+        // Nur Anhänge dieses Tickets, keine internen
+        const attachment = await attachmentService.findForTicket(
+            req.params.attachmentId,
+            ticket._id,
+            { includeInternal: false }
         );
 
-        if (!ticket) {
+        const filePath = attachment && attachmentService.getFilePath(attachment);
 
-            return res.redirect("/portal/tickets");
-
-        }
-
-        if (
-
-            ticket.company._id.toString() !==
-            req.session.portalUser.company.toString()
-
-        ) {
-
-            return res.redirect("/portal/tickets");
-
-        }
-
-        const attachment = await attachmentService.getById(
-            req.params.attachmentId
-        );
-
-        if (
-
-            !attachment ||
-            attachment.ticket.toString() !== req.params.ticketId ||
-            attachment.isInternal
-
-        ) {
+        if (!filePath) {
 
             return res.redirect(
-                `/portal/tickets/${req.params.ticketId}`
-            );
-
-        }
-
-        const filePath = path.join(
-
-            process.cwd(),
-            "storage",
-            attachment.path
-
-        );
-
-        if (!fs.existsSync(filePath)) {
-
-            return res.redirect(
-                `/portal/tickets/${req.params.ticketId}`
+                `/portal/tickets/${ticket._id}`
             );
 
         }
@@ -374,59 +262,28 @@ exports.downloadAttachment = async (req, res, next) => {
 // Dateianhang löschen
 // ----------------------------------------------------
 
+// Hinweis: derzeit nicht verdrahtet. Beim Einbinden in die Routen
+// loadOwnTicket("ticketId") davorsetzen (stellt req.ticket bereit).
 exports.deleteAttachment = async (req, res, next) => {
 
     try {
 
-        const ticket = await ticketService.getById(
-            req.params.ticketId
+        const ticket = req.ticket;
+
+        const attachment = await attachmentService.findForTicket(
+            req.params.attachmentId,
+            ticket._id,
+            { includeInternal: false }
         );
 
-        if (!ticket) {
+        if (attachment) {
 
-            return res.redirect("/portal/tickets");
+            await attachmentService.removeWithFile(attachment);
 
         }
-
-        if (
-
-            ticket.company._id.toString() !==
-            req.session.portalUser.company.toString()
-
-        ) {
-
-            return res.redirect("/portal/tickets");
-
-        }
-
-        const attachment = await attachmentService.getById(
-            req.params.attachmentId
-        );
-
-        if (
-
-            !attachment ||
-            attachment.ticket.toString() !== req.params.ticketId ||
-            attachment.isInternal
-
-        ) {
-
-            return res.redirect(
-                `/portal/tickets/${req.params.ticketId}`
-            );
-
-        }
-
-        storageService.deleteFile(
-            attachment.path
-        );
-
-        await attachmentService.delete(
-            attachment._id
-        );
 
         res.redirect(
-            `/portal/tickets/${req.params.ticketId}`
+            `/portal/tickets/${ticket._id}`
         );
 
     } catch (err) {

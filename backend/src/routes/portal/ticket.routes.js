@@ -6,6 +6,7 @@ const upload = require("../../config/multer");
 
 const ticketController = require("../../controllers/portal/ticket.controller");
 const { requirePortalAuth } = require("../../middleware/auth/portalAuth.middleware");
+const { loadOwnTicket } = require("../../middleware/portal/ticketAccess.middleware");
 
 // Ticketübersicht
 router.get("/", requirePortalAuth, ticketController.index);
@@ -15,16 +16,17 @@ router.get("/new", requirePortalAuth, ticketController.create);
 router.post("/new", requirePortalAuth, ticketController.store);
 
 // Ticket anzeigen
-router.get("/:id", requirePortalAuth, ticketController.show);
+router.get("/:id", requirePortalAuth, loadOwnTicket(), ticketController.show);
 
 // Antwort hinzufügen
-router.post("/:id/messages", requirePortalAuth, ticketController.addMessage);
+router.post("/:id/messages", requirePortalAuth, loadOwnTicket(), ticketController.addMessage);
 
 // Dateianhang hochladen
 router.post(
     "/:id/attachments",
     requirePortalAuth,
     upload.single("attachment"),
+    loadOwnTicket(),
     ticketController.uploadAttachment
 );
 
@@ -32,6 +34,7 @@ router.post(
 router.get(
     "/:ticketId/attachments/:attachmentId",
     requirePortalAuth,
+    loadOwnTicket("ticketId"),
     ticketController.downloadAttachment
 );
 

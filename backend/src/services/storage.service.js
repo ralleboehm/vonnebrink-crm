@@ -1,6 +1,5 @@
 const fs = require("fs");
 const path = require("path");
-const crypto = require("crypto");
 
 class StorageService {
 
@@ -37,45 +36,6 @@ class StorageService {
         this.ensureDirectory(directory);
 
         return directory;
-
-    }
-
-    async storeFile({
-
-        ticketId,
-        tempFile,
-        originalName
-
-    }) {
-
-        const ticketDirectory = this.getTicketDirectory(ticketId);
-
-        const extension = path.extname(originalName);
-
-        const filename =
-            crypto.randomUUID() + extension.toLowerCase();
-
-        const destination = path.join(
-            ticketDirectory,
-            filename
-        );
-
-        await fs.promises.rename(
-            tempFile,
-            destination
-        );
-
-        return {
-
-            filename,
-
-            relativePath: path.join(
-                "tickets",
-                ticketId,
-                filename
-            )
-
-        };
 
     }
 

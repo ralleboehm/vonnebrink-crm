@@ -1,11 +1,7 @@
-const fs = require("fs");
-const path = require("path");
-
 const ticketService = require("../../services/ticket.service");
 const ticketMessageService = require("../../services/ticketMessage.service");
 const authorService = require("../../services/author.service");
 const attachmentService = require("../../services/attachment.service");
-const storageService = require("../../services/storage.service");
 const activityService = require("../../services/activity.service");
 const companyService = require("../../services/company.service");
 const contactService = require("../../services/contact.service");
@@ -228,49 +224,19 @@ exports.uploadAttachment = async (req, res, next) => {
 
         if (!ticket) {
 
-            if (fs.existsSync(req.file.path)) {
-
-                fs.unlinkSync(req.file.path);
-
-            }
+            await attachmentService.discardUpload(req.file);
 
             return res.redirect("/crm/tickets");
 
         }
 
-        const ticketDirectory = storageService.getTicketDirectory(
-            ticket.ticketNumber
-        );
+        await attachmentService.storeUpload({
 
-        const destination = path.join(
-            ticketDirectory,
-            req.file.filename
-        );
+            ticket,
 
-        fs.renameSync(
-            req.file.path,
-            destination
-        );
-
-        await attachmentService.create({
-
-            ticket: ticket._id,
+            file: req.file,
 
             uploadedBy: req.session.user.id,
-
-            originalName: req.file.originalname,
-
-            fileName: req.file.filename,
-
-            mimeType: req.file.mimetype,
-
-            size: req.file.size,
-
-            path: path.join(
-                "tickets",
-                ticket.ticketNumber,
-                req.file.filename
-            ),
 
             isInternal: req.body.isInternal === "on"
 
@@ -291,6 +257,8 @@ exports.uploadAttachment = async (req, res, next) => {
         res.redirect(`/crm/tickets/${ticket._id}`);
 
     } catch (err) {
+
+        await attachmentService.discardUpload(req.file);
 
         next(err);
 
@@ -465,30 +433,21 @@ exports.downloadAttachment = async (req, res, next) => {
 
     try {
 
-        const attachment = await attachmentService.getById(
-            req.params.attachmentId
+        const attachment = await attachmentService.findForTicket(
+            req.params.attachmentId,
+            req.params.id
         );
 
-        if (!attachment) {
+        const filePath = attachment && attachmentService.getFilePath(attachment);
 
-            return res.redirect(`/crm/tickets/${req.params.id}`);
-
-        }
-
-        const absolutePath = path.join(
-            process.cwd(),
-            "storage",
-            attachment.path
-        );
-
-        if (!fs.existsSync(absolutePath)) {
+        if (!filePath) {
 
             return res.redirect(`/crm/tickets/${req.params.id}`);
 
         }
 
         return res.download(
-            absolutePath,
+            filePath,
             attachment.originalName
         );
 
@@ -507,8 +466,9 @@ exports.deleteAttachment = async (req, res, next) => {
 
     try {
 
-        const attachment = await attachmentService.getById(
-            req.params.attachmentId
+        const attachment = await attachmentService.findForTicket(
+            req.params.attachmentId,
+            req.params.id
         );
 
         if (!attachment) {
@@ -517,21 +477,7 @@ exports.deleteAttachment = async (req, res, next) => {
 
         }
 
-        const absolutePath = path.join(
-            process.cwd(),
-            "storage",
-            attachment.path
-        );
-
-        if (fs.existsSync(absolutePath)) {
-
-            fs.unlinkSync(absolutePath);
-
-        }
-
-        await attachmentService.delete(
-            attachment._id
-        );
+        await attachmentService.removeWithFile(attachment);
 
         await activityService.log({
 
