@@ -177,6 +177,16 @@ block content
 
                                 | Der Mailversand ist nicht eingerichtet (SMTP_HOST und MAIL_FROM in der .env). Versenden ist erst danach möglich.
 
+                        else if appUrlProblem
+
+                            .alert.alert-warning.small.mb-0
+
+                                strong.d-block.mb-1 Abmeldelinks nicht erreichbar
+
+                                = appUrlProblem
+
+                                .mt-2 Versenden geht, sobald das CRM öffentlich erreichbar ist und in der .env z. B. APP_URL=https://crm.vonnebrink.com steht. Test-Mails an Sie selbst funktionieren schon jetzt.
+
                         else if !recipientCount
 
                             .alert.alert-warning.small.mb-0

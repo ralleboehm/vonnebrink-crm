@@ -239,7 +239,11 @@ Menü **Marketing** (Rollen: Admin und Vertrieb).
 ### Kampagnen
 
 1. **Neue Kampagne**: Name, Betreff, Text, Zielgruppe (Gruppen; keine Auswahl = alle erreichbaren Kontakte).
-   Der Text ist normaler Text – Leerzeile = neuer Absatz, `https://…` wird ein Link.
+   Der Editor arbeitet wie Word: Überschriften, Fett/Kursiv, Farbe, Listen, Ausrichtung, Zitat, Links und
+   **Bilder** (Knopf, Hineinziehen oder Einfügen mit Strg+V; große Bilder werden auf E-Mail-Breite verkleinert).
+   Bilder werden in die Mail eingebettet (Anhang mit Content-ID) – sie brauchen keinen öffentlichen Server.
+   Grenzen: 2 MB je Bild, 4 MB alle Bilder zusammen, 20 Bilder. Das HTML wird beim Speichern bereinigt
+   (`utils/htmlSanitizer.js`). Der Editor (Quill) kommt von cdn.jsdelivr.net, ohne Verbindung erscheint ein HTML-Feld.
 2. **Platzhalter** je Empfänger: `{{anrede}}` („Sehr geehrter Herr Müller“ / „Sehr geehrte Frau Müller“),
    `{{vorname}}`, `{{nachname}}`, `{{firma}}`, `{{position}}`, `{{email}}` (englisch geht auch:
    `{{firstName}}`, `{{lastName}}`, `{{company}}`). Unbekannte Platzhalter werden beim Speichern gemeldet.
@@ -251,6 +255,10 @@ Menü **Marketing** (Rollen: Admin und Vertrieb).
    Startet der Server während eines Versands neu, geht es danach mit den offenen Empfängern weiter.
 
 Ohne Mailserver (`SMTP_HOST`, `MAIL_FROM` in der `.env`) lässt sich alles vorbereiten, aber nicht versenden.
+
+**Öffentliche Adresse nötig:** Kampagnen werden nur verschickt, wenn `APP_URL` eine aus dem Internet
+erreichbare Adresse ist (z. B. `APP_URL=https://crm.vonnebrink.com`), denn daraus entsteht der Abmeldelink.
+Mit `localhost`, `192.168.…` usw. ist „Senden“ gesperrt; Test-Mails an sich selbst gehen trotzdem.
 
 ### Wer ist erreichbar?
 

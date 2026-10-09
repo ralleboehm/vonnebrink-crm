@@ -130,7 +130,8 @@ exports.create = async (req, res, next) => {
                 name: "",
                 description: "",
                 subject: "",
-                content: "{{anrede}},\n\n\n\nMit freundlichen Grüßen\n",
+                format: "html",
+                content: "<p>{{anrede}},</p><p><br></p><p><br></p><p>Mit freundlichen Grüßen</p>",
                 audience: { tags: [] }
             }
         });
@@ -202,6 +203,7 @@ exports.show = async (req, res, next) => {
             campaign,
             recipientCount,
             mailConfigured: emailService.isConfigured(),
+            appUrlProblem: emailService.publicAppUrlProblem(),
             testAddress: await ownEmail(req),
             flash: takeFlash(req),
             ...viewHelpers()
@@ -254,6 +256,7 @@ exports.previewDraft = async (req, res, next) => {
 
         sendPreview(res, await campaignService.render({
             subject: data.subject || "(ohne Betreff)",
+            format: data.format,
             content: data.content
         }));
 
@@ -281,7 +284,7 @@ exports.edit = async (req, res, next) => {
             return res.redirect(`${BASE}/${campaign._id}`);
         }
 
-        await renderForm(res, "campaigns/edit", { title: "Kampagne bearbeiten", campaign, flash: takeFlash(req) });
+        await renderForm(res, "campaigns/edit", { title: "Kampagne bearbeiten", campaign: campaignService.forEditor(campaign), flash: takeFlash(req) });
 
     } catch (err) {
 

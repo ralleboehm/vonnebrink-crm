@@ -6,14 +6,13 @@
 //
 // Ohne Datenbank, damit alles in test/campaign.test.js prüfbar ist.
 //
-// Der Inhalt einer Kampagne ist normaler Text:
-//   - Leerzeile           = neuer Absatz
-//   - einfacher Umbruch   = neue Zeile
-//   - https://…           = wird automatisch ein Link
-//   - {{platzhalter}}     = wird je Empfänger ersetzt
+// Zwei Formate:
+//   html  (Standard)  aus dem Editor; wird mit utils/htmlSanitizer.js
+//                     bereinigt, Bilder sind eingebettet (data:…)
+//   text  (ältere Kampagnen)  normaler Text:
+//                     Leerzeile = neuer Absatz, https://… wird ein Link
 //
-// Kein HTML im Editor: so kann nichts das Layout der E-Mail zerstören,
-// und die Vorschau zeigt genau das, was der Kunde bekommt.
+// {{platzhalter}} werden je Empfänger ersetzt.
 
 const PLACEHOLDERS = [
     { key: "anrede", label: "Briefanrede", example: "Sehr geehrter Herr Mustermann" },
@@ -34,15 +33,25 @@ const ALIASES = {
 
 const KEYS = PLACEHOLDERS.map((p) => p.key);
 
+const sanitizer = require("./htmlSanitizer");
+
+const FORMATS = ["html", "text"];
+
 // Alles zwischen {{ und }} – so fallen auch Tippfehler wie {{#if firma}} auf
 const PLACEHOLDER_PATTERN = /\{\{\s*([^{}]*?)\s*\}\}/g;
+
+const MB = 1024 * 1024;
 
 const LIMITS = {
     name: 150,
     description: 500,
     subject: 200,
-    content: 20000,
-    minContent: 10
+    content: 20000,           // Textformat: Zeichen
+    html: 6 * 1024 * 1024,    // HTML inkl. eingebetteter Bilder: Zeichen
+    minContent: 10,
+    images: 20,               // Bilder je Kampagne
+    imageBytes: 2 * MB,       // je Bild
+    imagesTotalBytes: 4 * MB  // alle Bilder zusammen (geht an jeden Empfänger)
 };
 
 function canonicalKey(key) {
@@ -199,6 +208,43 @@ function sampleValues() {
 
 }
 
+function formatOf(data) {
+
+    return data && data.format === "html" ? "html" : "text";
+
+}
+
+/**
+ * Inhalt als sicheres E-Mail-HTML (Platzhalter noch nicht ersetzt)
+ */
+function contentHtml(data) {
+
+    return formatOf(data) === "html"
+        ? sanitizer.sanitize(data.content)
+        : textToHtml(data.content);
+
+}
+
+/**
+ * Inhalt als reiner Text (für Länge und Platzhalter-Prüfung)
+ */
+function contentText(data) {
+
+    // Übergroße Eingaben gar nicht erst bereinigen (validate() meldet sie)
+    if (String((data && data.content) || "").length > LIMITS.html) return "";
+
+    return formatOf(data) === "html"
+        ? sanitizer.toPlainText(sanitizer.sanitize(data.content))
+        : String(data.content || "").trim();
+
+}
+
+function megabytes(bytes) {
+
+    return `${(bytes / MB).toLocaleString("de-DE", { maximumFractionDigits: 1 })} MB`;
+
+}
+
 /**
  * Formulardaten prüfen. Gibt eine Fehlermeldung (Deutsch) oder null zurück.
  */
@@ -206,7 +252,8 @@ function validate(data) {
 
     const name = String(data.name || "").trim();
     const subject = String(data.subject || "").trim();
-    const content = String(data.content || "").trim();
+    const isHtml = formatOf(data) === "html";
+    const content = contentText(data);
 
     if (!name) return "Bitte einen Namen für die Kampagne angeben.";
     if (name.length > LIMITS.name) return `Der Name darf höchstens ${LIMITS.name} Zeichen lang sein.`;
@@ -218,8 +265,37 @@ function validate(data) {
     if (!subject) return "Bitte eine Betreffzeile angeben.";
     if (subject.length > LIMITS.subject) return `Die Betreffzeile darf höchstens ${LIMITS.subject} Zeichen lang sein.`;
 
+    if (isHtml && String(data.content || "").length > LIMITS.html) {
+        return `Die E-Mail ist zu groß (höchstens ${megabytes(LIMITS.html)} inklusive Bilder).`;
+    }
+
     if (content.length < LIMITS.minContent) return `Bitte einen E-Mail-Text eingeben (mindestens ${LIMITS.minContent} Zeichen).`;
-    if (content.length > LIMITS.content) return `Der E-Mail-Text darf höchstens ${LIMITS.content} Zeichen lang sein.`;
+
+    if (isHtml) {
+
+        const html = sanitizer.sanitize(data.content);
+        const images = sanitizer.inlineImageStats(html);
+
+        if (images.count > LIMITS.images) return `Höchstens ${LIMITS.images} Bilder je E-Mail.`;
+        if (images.largest > LIMITS.imageBytes) return `Ein Bild ist zu groß (höchstens ${megabytes(LIMITS.imageBytes)} je Bild). Bitte verkleinern.`;
+        if (images.bytes > LIMITS.imagesTotalBytes) return `Die Bilder sind zusammen zu groß (höchstens ${megabytes(LIMITS.imagesTotalBytes)}). Jeder Empfänger bekommt sie mit.`;
+
+        // {{an<strong>rede</strong>}} – Platzhalter, die nur teilweise formatiert sind, würden nicht ersetzt
+        const split = findPlaceholders(html).filter((key) => key.includes("<"));
+
+        if (split.length) {
+
+            const shown = split.map((key) => `{{${sanitizer.toPlainText(key)}}}`).join(", ");
+
+            return `Platzhalter teilweise formatiert: ${shown}. Bitte den Platzhalter komplett markieren und die Formatierung einheitlich setzen oder entfernen.`;
+
+        }
+
+    } else if (content.length > LIMITS.content) {
+
+        return `Der E-Mail-Text darf höchstens ${LIMITS.content} Zeichen lang sein.`;
+
+    }
 
     const unknown = [...unknownPlaceholders(subject), ...unknownPlaceholders(content)];
 
@@ -240,6 +316,10 @@ module.exports = {
     PLACEHOLDERS,
     ALIASES,
     LIMITS,
+    FORMATS,
+    formatOf,
+    contentHtml,
+    contentText,
     findPlaceholders,
     unknownPlaceholders,
     escapeHtml,

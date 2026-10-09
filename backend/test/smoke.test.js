@@ -672,23 +672,27 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         assert.match((await crm.get("/crm")).text, /\/crm\/marketing\/campaigns/, "Navigation: Kampagnen");
 
         // Fehler: Formular mit Meldung statt JSON
-        const short = await crm.post(base, { name: "Kurz", subject: "Hallo", content: "kurz" });
+        const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+        const short = await crm.post(base, { name: "Kurz", subject: "Hallo", format: "html", content: "<p><strong>kurz</strong></p>" });
         assert.equal(short.status, 422);
         assert.match(short.text, /mindestens 10 Zeichen/);
         assert.match(short.text, /<form/);
 
-        const unknown = await crm.post(base, { name: "Tippfehler", subject: "Hallo", content: "Hallo {{vornahme}}, wie geht es?" });
+        const unknown = await crm.post(base, { name: "Tippfehler", subject: "Hallo", format: "html", content: "<p>Hallo {{vornahme}}, wie geht es?</p>" });
         assert.equal(unknown.status, 422);
         assert.match(unknown.text, /Unbekannter Platzhalter/);
 
         assert.equal(await Campaign.countDocuments(), 0, "nichts gespeichert");
 
-        // Genau die Eingabe, die früher gescheitert ist
+        // Genau die Eingabe, die früher gescheitert ist – so, wie der Editor sie schickt (mit Bild)
         const form = {
             name: "Email an Holzhändler",
             description: "Herbstausgabe",
             subject: "Hallo {{firstName}} {{lastName}} Für eure {{company}} gibt es tolle Herbstangebote",
-            content: "{{anrede}},\n\n{{firstName}} {{lastName}} Jetzt im Herbst sollte {{company}} unbedingt an so etwas denken: https://vonnebrink.com",
+            format: "html",
+            content: "<p>{{anrede}},</p><p><br></p><p>{{firstName}} {{lastName}} Jetzt im Herbst sollte <strong>{{company}}</strong> unbedingt an so etwas denken: https://vonnebrink.com</p>"
+                + `<p><img src="data:image/png;base64,${PNG}"></p><script>alert(1)</script>`,
             tags: "Holzhandel"
         };
 
@@ -701,6 +705,9 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         assert.match(campaign.campaignNumber, /^KAM-\d{6}$/);
         assert.deepEqual([...campaign.audience.tags], ["Holzhandel"]);
         assert.equal(campaign.status, "draft");
+        assert.equal(campaign.format, "html");
+        assert.doesNotMatch(campaign.content, /<script/, "beim Speichern bereinigt");
+        assert.match(campaign.content, /<img src="data:image\/png;base64,/);
 
         const show = await crm.get(`${base}/${campaign._id}`);
         assertPage(show, "Kampagne anzeigen");
@@ -713,14 +720,21 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         assert.equal(preview.status, 200);
         assert.match(preview.contentType, /text\/html/);
         assert.match(preview.text, /Sehr geehrter Herr Mustermann/);
-        assert.match(preview.text, /Max Mustermann Jetzt im Herbst sollte Muster GmbH/);
+        assert.match(preview.text, /Max Mustermann Jetzt im Herbst sollte <strong>Muster GmbH<\/strong>/);
+        assert.match(preview.text, /<img src="data:image\/png;base64,/, "Bild in der Vorschau");
         assert.match(preview.text, /href="https:\/\/vonnebrink\.com"/);
         assert.match(preview.text, /hier abmelden/);
 
-        const draftPreview = await crm.post(`${base}/preview`, { subject: "Test", content: "Ungespeichert <script>alert(1)</script> {{firma}}" });
+        const draftPreview = await crm.post(`${base}/preview`, { subject: "Test", format: "html", content: "<p>Ungespeichert <script>alert(1)</script> {{firma}}</p>" });
         assert.equal(draftPreview.status, 200);
-        assert.match(draftPreview.text, /Ungespeichert &lt;script&gt;/);
+        assert.match(draftPreview.text, /Ungespeichert/);
+        assert.doesNotMatch(draftPreview.text, /<script>alert/);
         assert.match(draftPreview.text, /Muster GmbH/);
+
+        // Großes Bild (über dem normalen 100-KB-Formularlimit) wird angenommen
+        const bigImage = "A".repeat(400 * 1024);
+        const bigPreview = await crm.post(`${base}/preview`, { subject: "Groß", format: "html", content: `<p>Mit großem Bild</p><img src="data:image/png;base64,${bigImage}">` });
+        assert.equal(bigPreview.status, 200, `großes Bild: Status ${bigPreview.status}`);
 
         // Bearbeiten
         assertPage(await crm.get(`${base}/${campaign._id}/edit`), "Kampagne bearbeiten");
@@ -745,16 +759,31 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         assert.equal((await Campaign.findById(campaign._id)).status, "draft");
 
         // Versand mit (simuliertem) Mailserver
-        const original = { isConfigured: emailService.isConfigured, send: emailService.send };
+        const original = { isConfigured: emailService.isConfigured, send: emailService.send, appUrl: process.env.APP_URL };
         const outbox = [];
 
         emailService.isConfigured = () => true;
+
+        // CRM nur im Büronetz: kein Versand (Abmeldelinks wären für Kunden tot)
+        process.env.APP_URL = "http://192.168.178.35:3000";
         emailService.send = async (message) => {
             outbox.push(message);
             return { sent: true, messageId: `<smoke-${outbox.length}>`, recipients: [message.to] };
         };
 
         try {
+
+            const lan = await crm.get(`${base}/${campaign._id}`);
+            assert.match(lan.text, /Abmeldelinks nicht erreichbar/);
+            assert.doesNotMatch(lan.text, /Jetzt an 1 Empfänger senden/);
+
+            assertRedirect(await crm.post(`${base}/${campaign._id}/send`, {}), "Versand mit LAN-Adresse");
+            assert.equal((await Campaign.findById(campaign._id)).status, "draft");
+            assert.match((await crm.get(`${base}/${campaign._id}`)).text, /192\.168\.178\.35/);
+            assert.equal(outbox.length, 0);
+
+            // Öffentliche Adresse (wie später auf der VPS)
+            process.env.APP_URL = "https://crm.vonnebrink-smoke.de";
 
             assert.match((await crm.get(`${base}/${campaign._id}`)).text, /Jetzt an 1 Empfänger senden/);
 
@@ -773,6 +802,15 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
             assert.equal(outbox[0].to, "hans@smoke.test");
             assert.equal(outbox[0].subject, "Hallo Hans Smoke Für eure Smoke GmbH gibt es tolle Herbstangebote");
             assert.match(outbox[0].html, /Sehr geehrter Herr Smoke/);
+            assert.match(outbox[0].html, /<strong>Smoke GmbH<\/strong>/);
+
+            // Bild als Anhang mit Content-ID, nicht als data:-Adresse
+            assert.match(outbox[0].html, /src="cid:bild1@kampagne"/);
+            assert.doesNotMatch(outbox[0].html, /data:image/);
+            assert.equal(outbox[0].attachments.length, 1);
+            assert.equal(outbox[0].attachments[0].cid, "bild1@kampagne");
+            assert.equal(outbox[0].attachments[0].contentType, "image/png");
+            assert.match(outbox[0].html, /https:\/\/crm\.vonnebrink-smoke\.de\/email\/abmelden\//, "Abmeldelink mit öffentlicher Adresse");
 
             const token = (await Contact.findById(contact._id)).marketing.unsubscribeToken;
             assert.match(outbox[0].html, new RegExp(`/email/abmelden/${token}`), "persönlicher Abmeldelink");
@@ -826,7 +864,29 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
             emailService.isConfigured = original.isConfigured;
             emailService.send = original.send;
 
+            if (original.appUrl === undefined) delete process.env.APP_URL;
+            else process.env.APP_URL = original.appUrl;
+
         }
+
+        // Ältere Kampagne im Textformat: im Editor als HTML, nach dem Speichern HTML
+        const legacy = await Campaign.create({
+            campaignNumber: "KAM-999998",
+            name: "Alt",
+            subject: "Alt",
+            content: "Erste Zeile\n\nZweiter Absatz mit https://vonnebrink.com"
+        });
+
+        assert.equal(legacy.format, "text");
+
+        const legacyEdit = await crm.get(`${base}/${legacy._id}/edit`);
+        assertPage(legacyEdit, "alte Kampagne bearbeiten");
+        assert.match(legacyEdit.text, /&lt;p style=&quot;margin:0 0 14px;&quot;&gt;Zweiter Absatz/);
+
+        assert.match((await crm.get(`${base}/${legacy._id}/preview`)).text, /<a href="https:\/\/vonnebrink\.com"/);
+
+        assertRedirect(await crm.post(`${base}/${legacy._id}/update`, { name: "Alt", subject: "Alt", format: "html", content: "<p>Jetzt aus dem Editor.</p>" }), "alte Kampagne speichern");
+        assert.equal((await Campaign.findById(legacy._id)).format, "html");
 
         // Duplizieren und Löschen
         const copy = await crm.post(`${base}/${campaign._id}/duplicate`, {});

@@ -390,7 +390,14 @@ test("Kampagnen: Formular neu und bearbeiten", { skip: !pug && "pug nicht instal
         ...campaignHelpers
     };
 
-    const create = render("crm/campaigns/create.pug", { ...locals, campaign: { name: "", description: "", subject: "", content: "{{anrede}},", audience: { tags: [] } } });
+    const create = render("crm/campaigns/create.pug", { ...locals, campaign: { name: "", description: "", subject: "", format: "html", content: "<p>{{anrede}},</p>", audience: { tags: [] } } });
+
+    // Editor mit Bildern; HTML steht maskiert im versteckten Feld
+    assert.match(create, /id="editor"/);
+    assert.match(create, /quill@2\.0\.3\/dist\/quill\.js/);
+    assert.match(create, /name="format" value="html"/);
+    assert.match(create, /<textarea[^>]*name="content"[^>]*>&lt;p&gt;\{\{anrede\}\},&lt;\/p&gt;<\/textarea>/);
+    assert.match(create, /bi-image/);
 
     assert.match(create, /action="\/crm\/marketing\/campaigns"/);
     assert.match(create, /formaction="\/crm\/marketing\/campaigns\/preview"/);
@@ -417,6 +424,18 @@ test("Kampagnen: Detailseite je Status", { skip: !pug && "pug nicht installiert"
     assert.match(draft, /\/crm\/marketing\/campaigns\/k1\/preview/);
     assert.match(draft, /\/crm\/marketing\/campaigns\/k1\/edit/);
     assert.match(draft, /value="ralf@vonnebrink.com"/);
+
+    const lanOnly = render("crm/campaigns/show.pug", {
+        ...base,
+        campaign: campaignOf(),
+        recipientCount: 4,
+        mailConfigured: true,
+        appUrlProblem: "APP_URL zeigt auf 192.168.178.35 – diese Adresse können Kunden aus dem Internet nicht öffnen."
+    });
+    assert.match(lanOnly, /Abmeldelinks nicht erreichbar/);
+    assert.match(lanOnly, /192\.168\.178\.35/);
+    assert.doesNotMatch(lanOnly, /Jetzt an 4 Empfänger senden/);
+    assert.match(lanOnly, /\/crm\/marketing\/campaigns\/k1\/test/, "Test-Mail geht trotzdem");
 
     const noMail = render("crm/campaigns/show.pug", { ...base, campaign: campaignOf(), recipientCount: 4, mailConfigured: false });
     assert.match(noMail, /Mailversand ist nicht eingerichtet/);

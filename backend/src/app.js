@@ -36,7 +36,19 @@ app.use(
 );
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// Formulare. Ausnahme: Kampagnen-Editor (eingebettete Bilder, größeres
+// Limit) – der liest sein Formular erst nach der Anmeldung selbst,
+// siehe routes/crm/campaign.routes.js.
+const formParser = express.urlencoded({ extended: true });
+
+app.use((req, res, next) => {
+
+    if (req.path.startsWith("/crm/marketing/campaigns")) return next();
+
+    formParser(req, res, next);
+
+});
 
 // Request-Zeilen mit Datum und Uhrzeit
 app.use(morgan("dev", { stream: morganStream() }));

@@ -16,7 +16,11 @@ const {
     letterSalutation,
     valuesFor,
     sampleValues,
-    validate
+    validate,
+    formatOf,
+    contentHtml,
+    contentText,
+    LIMITS
 } = require("../src/utils/campaignContent");
 
 const valid = {
@@ -116,5 +120,55 @@ test("Beispielwerte für jeden Platzhalter", () => {
     for (const placeholder of PLACEHOLDERS) {
         assert.ok(sample[placeholder.key], placeholder.key);
     }
+
+});
+
+// ----------------------------------------------------
+// HTML aus dem Editor
+// ----------------------------------------------------
+
+const html = (content) => ({ name: "Herbst", subject: "Hallo {{vorname}}", format: "html", content });
+
+test("Format: html aus dem Editor, ältere Kampagnen ohne Angabe sind Text", () => {
+
+    assert.equal(formatOf({ format: "html" }), "html");
+    assert.equal(formatOf({}), "text");
+    assert.equal(formatOf({ format: "quatsch" }), "text");
+
+    assert.match(contentHtml({ content: "Zeile\n\nAbsatz" }), /<p style="margin:0 0 14px;">Absatz<\/p>/);
+    assert.match(contentHtml({ format: "html", content: "<p onclick=\"x\">Hallo</p><script>1</script>" }), /^<p style="margin:0;">Hallo<\/p>$/);
+
+    assert.equal(contentText({ format: "html", content: "<p>{{anrede}},</p><p>Hallo&nbsp;Welt</p>" }), "{{anrede}},\nHallo Welt");
+
+});
+
+test("HTML: Länge zählt nur den Text, nicht das Markup", () => {
+
+    assert.match(validate(html("<p><strong><em>kurz</em></strong></p>")), /mindestens 10 Zeichen/);
+    assert.equal(validate(html("<p>{{anrede}},</p><p>ein ganz normaler Text.</p>")), null);
+
+});
+
+test("HTML: unbekannte und teilweise formatierte Platzhalter", () => {
+
+    assert.match(validate(html("<p>Hallo {{vornahme}}, wie geht es?</p>")), /Unbekannter Platzhalter: \{\{vornahme\}\}/);
+
+    const split = validate(html("<p>Hallo {{an<strong>rede</strong>}}, wie geht es Ihnen?</p>"));
+    assert.match(split, /teilweise formatiert: \{\{anrede\}\}/);
+
+    // ganz fett ist in Ordnung
+    assert.equal(validate(html("<p><strong>{{anrede}}</strong>, wie geht es Ihnen?</p>")), null);
+
+});
+
+test("HTML: Grenzen für eingebettete Bilder", () => {
+
+    const image = (bytes) => `<img src="data:image/png;base64,${"A".repeat(Math.ceil(bytes / 3) * 4)}">`;
+    const text = "<p>Ein Text mit genug Zeichen.</p>";
+
+    assert.equal(validate(html(text + image(100 * 1024))), null);
+    assert.match(validate(html(text + image(LIMITS.imageBytes + 10))), /Ein Bild ist zu groß/);
+    assert.match(validate(html(text + image(1.4 * 1024 * 1024).repeat(3))), /zusammen zu groß/);
+    assert.match(validate(html(text + image(100).repeat(LIMITS.images + 1))), /Höchstens 20 Bilder/);
 
 });

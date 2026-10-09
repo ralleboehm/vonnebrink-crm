@@ -63,14 +63,32 @@ form#campaignForm(method="POST" action=action)
 
                     .mb-2
 
-                        label.form-label(for="content") Text
+                        label.form-label(for="editor") Text
 
-                        textarea.form-control#content(name="content" rows="16" required maxlength="20000" style="font-size: 0.95rem;")= campaign.content
+                        //- Der Editor schreibt beim Speichern sein HTML in das versteckte Feld "content".
+                        //- Ohne Editor (z. B. CDN nicht erreichbar) wird das Feld selbst sichtbar.
+                        input(type="hidden" name="format" value="html")
+
+                        #editorWrap
+
+                            #editor.campaign-editor
+
+                        textarea.form-control.font-monospace.d-none#content(name="content" rows="16")= campaign.content
 
                     .form-text
 
-                        | Normaler Text: Leerzeile = neuer Absatz, Links (https://…) werden automatisch anklickbar.
-                        | Der Abmeldelink wird automatisch unten angefügt.
+                        | Bilder: Knopf
+                        |
+                        i.bi.bi-image
+                        |  in der Leiste, oder Bild hineinziehen bzw. einfügen (Strg+V). Große Bilder werden automatisch verkleinert.
+                        | Links: Text markieren, dann
+                        |
+                        i.bi.bi-link-45deg
+                        | . Adressen wie https://… werden automatisch anklickbar. Der Abmeldelink kommt automatisch unten dazu.
+
+                    #editorFallback.alert.alert-warning.small.mt-2.d-none
+
+                        | Der Editor konnte nicht geladen werden (keine Verbindung zu cdn.jsdelivr.net?). Sie können den Inhalt als HTML bearbeiten.
 
         .col-lg-4
 
@@ -84,7 +102,7 @@ form#campaignForm(method="POST" action=action)
 
                 .card-body
 
-                    p.small.text-muted.mb-2 Klick fügt den Platzhalter an der Cursor-Position ein (Betreff oder Text).
+                    p.small.text-muted.mb-2 Klick fügt den Platzhalter an der Cursor-Position ein (Betreff oder Text). Platzhalter bitte nur als Ganzes formatieren.
 
                     .list-group.list-group-flush
 
@@ -168,24 +186,197 @@ form#campaignForm(method="POST" action=action)
 
                     .small.text-muted.mt-1 Versendet wird erst auf der nächsten Seite – nach Vorschau und Test-Mail.
 
+link(rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css")
+
+style.
+    #editorWrap .ql-toolbar { border-radius: 0.375rem 0.375rem 0 0; background: #f8f9fa; }
+    #editorWrap .ql-container { border-radius: 0 0 0.375rem 0.375rem; font-family: Roboto, Arial, Helvetica, sans-serif; font-size: 15px; }
+    #editorWrap .ql-editor { min-height: 380px; line-height: 1.6; }
+    #editorWrap .ql-editor img { max-width: 100%; height: auto; }
+    #editorWrap .ql-editor h1 { font-size: 24px; }
+    #editorWrap .ql-editor h2 { font-size: 20px; }
+    #editorWrap .ql-editor h3 { font-size: 17px; }
+
+script(src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js")
+
 script.
     (function () {
-        var lastField = document.getElementById("content");
+        // Breite des Textbereichs in der E-Mail (Layout 600px minus Rand)
+        var MAX_IMAGE_WIDTH = 544;
+        // Server-Grenze: 6 MB inklusive Bilder (utils/campaignContent.js)
+        var MAX_FORM_CHARS = 6200000;
 
-        ["subject", "content"].forEach(function (id) {
-            var field = document.getElementById(id);
-            field.addEventListener("focus", function () { lastField = field; });
-        });
+        var form = document.getElementById("campaignForm");
+        var subject = document.getElementById("subject");
+        var hidden = document.getElementById("content");
+        var quill = null;
+        var lastTarget = "editor";
+
+        // ------------------------------------------------
+        // Bilder verkleinern (JPEG; PNG/GIF bleiben, wenn sie klein genug sind)
+        // ------------------------------------------------
+
+        function readAsDataUrl(file) {
+            return new Promise(function (resolve, reject) {
+                var reader = new FileReader();
+                reader.onload = function () { resolve(reader.result); };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function loadImage(src) {
+            return new Promise(function (resolve, reject) {
+                var image = new Image();
+                image.onload = function () { resolve(image); };
+                image.onerror = reject;
+                image.src = src;
+            });
+        }
+
+        function prepareImage(file) {
+            return readAsDataUrl(file).then(function (original) {
+                return loadImage(original).then(function (image) {
+                    // WebP zeigen manche E-Mail-Programme (Outlook) nicht an: immer umwandeln
+                    var keepOriginal = file.type !== "image/webp"
+                        && image.naturalWidth <= MAX_IMAGE_WIDTH
+                        && (file.type === "image/gif" || file.size <= 300 * 1024);
+
+                    if (keepOriginal) return original;
+
+                    var scale = Math.min(1, MAX_IMAGE_WIDTH / image.naturalWidth);
+                    var canvas = document.createElement("canvas");
+                    canvas.width = Math.round(image.naturalWidth * scale);
+                    canvas.height = Math.round(image.naturalHeight * scale);
+
+                    var context = canvas.getContext("2d");
+                    context.fillStyle = "#ffffff";
+                    context.fillRect(0, 0, canvas.width, canvas.height);
+                    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+                    return canvas.toDataURL("image/jpeg", 0.85);
+                });
+            });
+        }
+
+        function insertImages(range, files) {
+            var images = Array.prototype.filter.call(files, function (file) {
+                return /^image\/(png|jpe?g|gif|webp)$/.test(file.type);
+            });
+
+            if (!images.length) {
+                alert("Bitte ein Bild im Format JPG, PNG, GIF oder WebP wählen.");
+                return;
+            }
+
+            var index = range ? range.index : Math.max(quill.getLength() - 1, 0);
+
+            images.reduce(function (chain, file) {
+                return chain.then(function () {
+                    return prepareImage(file).then(function (dataUrl) {
+                        quill.insertEmbed(index, "image", dataUrl, "user");
+                        index += 1;
+                        quill.setSelection(index, 0, "silent");
+                    });
+                });
+            }, Promise.resolve()).catch(function () {
+                alert("Das Bild konnte nicht gelesen werden.");
+            });
+        }
+
+        function chooseImage() {
+            var input = document.createElement("input");
+            input.type = "file";
+            input.accept = "image/png,image/jpeg,image/gif,image/webp";
+            input.multiple = true;
+            input.onchange = function () {
+                if (input.files && input.files.length) {
+                    insertImages(quill.getSelection(true), input.files);
+                }
+            };
+            input.click();
+        }
+
+        // ------------------------------------------------
+        // Editor starten (oder HTML-Feld als Ersatz zeigen)
+        // ------------------------------------------------
+
+        if (window.Quill) {
+            quill = new Quill("#editor", {
+                theme: "snow",
+                placeholder: "Text der E-Mail …",
+                modules: {
+                    toolbar: {
+                        container: [
+                            [{ header: [1, 2, 3, false] }],
+                            ["bold", "italic", "underline", "strike"],
+                            [{ color: [] }],
+                            [{ list: "ordered" }, { list: "bullet" }],
+                            [{ align: [] }],
+                            ["blockquote", "link", "image"],
+                            ["clean"]
+                        ],
+                        handlers: { image: chooseImage }
+                    },
+                    uploader: {
+                        mimetypes: ["image/png", "image/jpeg", "image/gif", "image/webp"],
+                        handler: function (range, files) { insertImages(range, files); }
+                    }
+                }
+            });
+
+            quill.clipboard.dangerouslyPasteHTML(hidden.value || "", "silent");
+            quill.history.clear();
+
+            quill.on("selection-change", function (range) {
+                if (range) lastTarget = "editor";
+            });
+        } else {
+            document.getElementById("editorWrap").classList.add("d-none");
+            document.getElementById("editorFallback").classList.remove("d-none");
+            hidden.classList.remove("d-none");
+            hidden.addEventListener("focus", function () { lastTarget = "html"; });
+        }
+
+        subject.addEventListener("focus", function () { lastTarget = "subject"; });
+
+        // ------------------------------------------------
+        // Platzhalter einfügen
+        // ------------------------------------------------
+
+        function insertIntoField(field, text) {
+            var start = field.selectionStart;
+            var end = field.selectionEnd;
+            field.value = field.value.slice(0, start) + text + field.value.slice(end);
+            field.focus();
+            field.selectionStart = field.selectionEnd = start + text.length;
+        }
 
         document.querySelectorAll("[data-placeholder]").forEach(function (button) {
             button.addEventListener("click", function () {
                 var text = "{{" + button.getAttribute("data-placeholder") + "}}";
-                var field = lastField;
-                var start = field.selectionStart;
-                var end = field.selectionEnd;
-                field.value = field.value.slice(0, start) + text + field.value.slice(end);
-                field.focus();
-                field.selectionStart = field.selectionEnd = start + text.length;
+
+                if (lastTarget === "subject") return insertIntoField(subject, text);
+                if (!quill) return insertIntoField(hidden, text);
+
+                var range = quill.getSelection(true);
+                quill.insertText(range.index, text, "user");
+                quill.setSelection(range.index + text.length, 0, "user");
             });
+        });
+
+        // ------------------------------------------------
+        // Speichern / Vorschau: HTML in das Formularfeld
+        // ------------------------------------------------
+
+        form.addEventListener("submit", function (event) {
+            if (quill) {
+                hidden.value = quill.getLength() > 1 ? quill.getSemanticHTML() : "";
+            }
+
+            if (hidden.value.length > MAX_FORM_CHARS) {
+                event.preventDefault();
+                alert("Die E-Mail ist zu groß (höchstens 6 MB inklusive Bilder). Bitte Bilder entfernen oder verkleinern.");
+            }
         });
     })();

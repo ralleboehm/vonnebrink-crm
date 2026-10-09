@@ -62,8 +62,12 @@ const campaignSchema = new mongoose.Schema(
 
         subject: { type: String, required: true, trim: true, maxlength: 200 },
 
-        // Text mit {{platzhaltern}}, siehe utils/campaignContent.js
-        content: { type: String, required: true, maxlength: 20000 },
+        // Inhalt mit {{platzhaltern}}, siehe utils/campaignContent.js
+        //   html: aus dem Editor, bereinigt, Bilder eingebettet
+        //   text: ältere Kampagnen (normaler Text)
+        format: { type: String, enum: ["html", "text"], default: "text" },
+
+        content: { type: String, required: true, maxlength: 6 * 1024 * 1024 },
 
         audience: {
             // Gruppen (Schlagwörter der Firmen). Leer = alle erreichbaren Kontakte

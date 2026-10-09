@@ -79,6 +79,69 @@ function appUrl(path = "", env = process.env) {
 
 }
 
+// Adressen, die Empfänger aus dem Internet nicht erreichen
+function isPrivateHost(hostname) {
+
+    const host = String(hostname || "").toLowerCase().replace(/^\[|\]$/g, "");
+
+    if (!host || host === "localhost" || !host.includes(".") && !host.includes(":")) return true;
+
+    if (/\.(localhost|local|lan|internal|intranet|home|corp|test|example|invalid)$/.test(host)) return true;
+
+    const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+
+    if (ipv4) {
+
+        const [a, b] = [Number(ipv4[1]), Number(ipv4[2])];
+
+        return a === 10 || a === 127 || a === 0
+            || (a === 169 && b === 254)
+            || (a === 172 && b >= 16 && b <= 31)
+            || (a === 192 && b === 168)
+            || (a === 100 && b >= 64 && b <= 127);
+
+    }
+
+    if (host.includes(":")) {
+        return host === "::1" || /^(fc|fd|fe80)/.test(host);
+    }
+
+    return false;
+
+}
+
+/**
+ * Ist APP_URL eine Adresse, die Empfänger aus dem Internet öffnen können?
+ * (Nötig für Abmeldelinks in Kampagnen.) Gibt eine Erklärung oder null zurück.
+ */
+function publicAppUrlProblem(env = process.env) {
+
+    const url = configFromEnv(env).appUrl;
+
+    if (!url) {
+        return "APP_URL ist in der .env nicht gesetzt – Abmeldelinks würden auf localhost zeigen.";
+    }
+
+    let parsed;
+
+    try {
+        parsed = new URL(url);
+    } catch {
+        return `APP_URL „${url}“ ist keine gültige Adresse.`;
+    }
+
+    if (!/^https?:$/.test(parsed.protocol)) {
+        return `APP_URL „${url}“ muss mit https:// beginnen.`;
+    }
+
+    if (isPrivateHost(parsed.hostname)) {
+        return `APP_URL zeigt auf ${parsed.hostname} – diese Adresse können Kunden aus dem Internet nicht öffnen, die Abmeldelinks würden nicht funktionieren.`;
+    }
+
+    return null;
+
+}
+
 function getTransport() {
 
     const config = configFromEnv();
@@ -152,6 +215,7 @@ function normalizeRecipients(to) {
  * @param {string} [message.text]
  * @param {string} [message.replyTo]
  * @param {object} [message.headers]  zusätzliche Kopfzeilen (z. B. List-Unsubscribe)
+ * @param {object[]} [message.attachments]  Anhänge (Nodemailer-Format, z. B. eingebettete Bilder mit cid)
  * @returns {Promise<{sent: boolean, skipped?: string, messageId?: string, recipients: string[]}>}
  */
 async function send(message) {
@@ -183,7 +247,8 @@ async function send(message) {
         subject: message.subject,
         html: message.html,
         text: message.text,
-        headers: message.headers || undefined
+        headers: message.headers || undefined,
+        attachments: message.attachments && message.attachments.length ? message.attachments : undefined
     });
 
     return { sent: true, messageId: info.messageId, recipients };
@@ -383,6 +448,8 @@ module.exports = {
     configFromEnv,
     isConfigured,
     appUrl,
+    isPrivateHost,
+    publicAppUrlProblem,
     normalizeRecipients,
     send,
     sendTemplate,

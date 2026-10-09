@@ -31,6 +31,7 @@ const emailLog = require("./emailLog.service");
 const { escapeRegex } = require("./search.service");
 
 const content = require("../utils/campaignContent");
+const sanitizer = require("../utils/htmlSanitizer");
 
 // Kurze Pause zwischen zwei Mails (schont den Mailserver)
 const SEND_DELAY_MS = 200;
@@ -74,11 +75,17 @@ function cleanTags(input) {
  */
 function fromForm(body = {}) {
 
+    // Der Editor schickt HTML; "text" nur für ältere Kampagnen
+    const format = body.format === "text" ? "text" : "html";
+    const raw = String(body.content || "").replace(/\r\n?/g, "\n");
+
     return {
         name: String(body.name || "").trim(),
         description: String(body.description || "").trim(),
         subject: String(body.subject || "").replace(/[\r\n]+/g, " ").trim(),
-        content: String(body.content || "").replace(/\r\n?/g, "\n"),
+        format,
+        // Übergroßes nicht bereinigen – validate() lehnt es ab
+        content: format === "html" && raw.length <= content.LIMITS.html ? sanitizer.sanitize(raw) : raw,
         audience: { tags: cleanTags(body.tags) }
     };
 
@@ -87,6 +94,18 @@ function fromForm(body = {}) {
 function validate(data) {
 
     return content.validate(data);
+
+}
+
+/**
+ * Werte für das Formular. Ältere Text-Kampagnen werden für den Editor
+ * in HTML umgewandelt (beim Speichern sind sie dann HTML).
+ */
+function forEditor(campaign) {
+
+    const data = typeof campaign.toObject === "function" ? campaign.toObject() : { ...campaign };
+
+    return { ...data, format: "html", content: content.contentHtml(campaign) };
 
 }
 
@@ -115,7 +134,7 @@ async function findAll(filters = {}) {
 
     }
 
-    return Campaign.find(query, "-deliveries").sort({ createdAt: -1 }).lean();
+    return Campaign.find(query, "-deliveries -content").sort({ createdAt: -1 }).lean();
 
 }
 
@@ -207,6 +226,7 @@ async function duplicate(id, { by } = {}) {
         name: `Kopie von ${campaign.name}`.slice(0, content.LIMITS.name),
         description: campaign.description,
         subject: campaign.subject,
+        format: content.formatOf(campaign),
         content: campaign.content,
         audience: { tags: [...campaign.audience.tags] }
     }, { by });
@@ -268,11 +288,22 @@ async function render(campaign, row = null) {
     const unsubscribeUrl = row ? marketingService.unsubscribeUrl(row.contact) : null;
 
     const subject = content.fillPlaceholders(campaign.subject, values);
-    const body = content.fillPlaceholders(content.textToHtml(campaign.content), values, { html: true });
+    const body = content.fillPlaceholders(content.contentHtml(campaign), values, { html: true });
 
     const rendered = await emailTemplates.renderWithLayout(subject, body + unsubscribeBlock(unsubscribeUrl));
 
     return { ...rendered, unsubscribeUrl };
+
+}
+
+/**
+ * Eingebettete Bilder als Anhänge mit Content-ID (für den Versand)
+ */
+function withInlineImages(rendered) {
+
+    const { html, attachments } = sanitizer.extractInlineImages(rendered.html);
+
+    return { html, attachments };
 
 }
 
@@ -296,7 +327,9 @@ async function sendTest(id, to) {
 
     try {
 
-        const result = await emailService.send({ to: address, subject, html: rendered.html, text: rendered.text });
+        const { html, attachments } = withInlineImages(rendered);
+
+        const result = await emailService.send({ to: address, subject, html, text: rendered.text, attachments });
 
         await emailLog.record({
             template: `kampagne-test ${campaign.campaignNumber}`,
@@ -345,6 +378,13 @@ async function startSending(id, { by } = {}) {
 
     if (!emailService.isConfigured()) {
         throw httpError("Der Mailversand ist nicht eingerichtet (SMTP_HOST und MAIL_FROM in der .env). Es wurde nichts verschickt.", 409);
+    }
+
+    // Ohne erreichbaren Abmeldelink keine Kampagne (Test-Mails gehen trotzdem)
+    const urlProblem = emailService.publicAppUrlProblem();
+
+    if (urlProblem) {
+        throw httpError(`${urlProblem} Es wurde nichts verschickt. Test-Mails an Sie selbst funktionieren trotzdem.`, 409);
     }
 
     const message = validate(campaign);
@@ -446,12 +486,15 @@ async function deliverOne(campaign, delivery) {
             }
             : undefined;
 
+        const { html, attachments } = withInlineImages(rendered);
+
         const result = await emailService.send({
             to: contact.email,
             subject: rendered.subject,
-            html: rendered.html,
+            html,
             text: rendered.text,
-            headers
+            headers,
+            attachments
         });
 
         const status = result.sent ? "sent" : "skipped";
@@ -582,6 +625,7 @@ module.exports = {
     PLACEHOLDERS: content.PLACEHOLDERS,
     fromForm,
     validate,
+    forEditor,
     findAll,
     findById,
     create,

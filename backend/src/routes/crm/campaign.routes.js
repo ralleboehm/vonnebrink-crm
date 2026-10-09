@@ -8,6 +8,10 @@ const { requirePermission, PERMISSIONS } = require("../../core/permissions");
 const view = requirePermission(PERMISSIONS.MARKETING_VIEW);
 const manage = requirePermission(PERMISSIONS.MARKETING_MANAGE);
 
+// Formulare mit eingebetteten Bildern (app.js überspringt diese Route).
+// Erst hier, also nur für angemeldete Benutzer.
+router.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
 // ----------------------------------------------------
 // E-Mail-Kampagnen (unter /crm/marketing/campaigns)
 // ----------------------------------------------------
