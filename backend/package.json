@@ -4,8 +4,10 @@
   "description": "Self-hosted CRM and Customer Portal for Managed Service Providers",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
+    "start": "mkdir -p logs && node src/server.js 2>&1 | tee -a logs/crm.log",
+    "start:plain": "node src/server.js",
+    "dev": "mkdir -p logs && nodemon src/server.js 2>&1 | tee -a logs/crm.log",
+    "dev:plain": "nodemon src/server.js",
     "test": "node --test test/*.test.js",
     "test:smoke": "SMOKE_TEST=1 node --test --test-concurrency=1 test/smoke.test.js",
     "create-admin": "node src/scripts/create-admin.js",
