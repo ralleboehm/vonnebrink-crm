@@ -83,19 +83,23 @@ html(lang="de")
                                         i.bi.bi-people.me-2
                                         | Kontakte
 
-                        li.nav-item.dropdown
-                            a.nav-link.dropdown-toggle(href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false")
-                                i.bi.bi-tools.me-1
-                                | Service
-                            ul.dropdown-menu.shadow
-                                li
-                                    a.dropdown-item(href="/crm/tickets")
-                                        i.bi.bi-ticket-detailed.me-2
-                                        | Tickets
-                                li
-                                    a.dropdown-item(href="/crm/assets")
-                                        i.bi.bi-pc-display.me-2
-                                        | Assets
+                        if can("tickets.list") || can("assets.view")
+
+                            li.nav-item.dropdown
+                                a.nav-link.dropdown-toggle(href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false")
+                                    i.bi.bi-tools.me-1
+                                    | Service
+                                ul.dropdown-menu.shadow
+                                    if can("tickets.list")
+                                        li
+                                            a.dropdown-item(href="/crm/tickets")
+                                                i.bi.bi-ticket-detailed.me-2
+                                                | Tickets
+                                    if can("assets.view")
+                                        li
+                                            a.dropdown-item(href="/crm/assets")
+                                                i.bi.bi-pc-display.me-2
+                                                | Assets
 
                         if can("marketing.view")
 
@@ -221,6 +225,10 @@ html(lang="de")
                                             else if session.user.role === "technician"
 
                                                 | Techniker
+
+                                            else if session.user.role === "sales"
+
+                                                | Vertrieb
 
                                             else
 

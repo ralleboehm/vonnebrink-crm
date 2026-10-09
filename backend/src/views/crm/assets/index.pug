@@ -18,11 +18,13 @@ block content
 
                     | Action1
 
-            a.btn.btn-primary(href=filters.company ? `/crm/assets/new?company=${filters.company}` : "/crm/assets/new")
+            if can("assets.edit")
 
-                i.bi.bi-plus-circle.me-2
+                a.btn.btn-primary(href=filters.company ? `/crm/assets/new?company=${filters.company}` : "/crm/assets/new")
 
-                | Neues Asset
+                    i.bi.bi-plus-circle.me-2
+
+                    | Neues Asset
 
     // =====================================================
     // Filter

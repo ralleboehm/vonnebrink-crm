@@ -259,13 +259,18 @@ test("Controller suggest: liefert JSON ohne Rohdaten und ohne Caching", async ()
             status() { return res; }
         };
 
-        await controller.suggest({ query: { q: "holz" } }, res);
+        await controller.suggest({ query: { q: "holz" }, session: { user: { role: "admin" } } }, res);
 
         assert.equal(headers["Cache-Control"], "no-store");
         assert.equal(body.companies.total, 2);
         assert.equal(body.companies.items[0].url.startsWith("/crm/companies/"), true);
         assert.ok(body.tickets.items.every((t) => /^TIC-\d+ – /.test(t.title)));
         assert.equal(JSON.stringify(body).includes("isDeleted"), false);
+
+        // Vertrieb: keine Tickets in den Vorschlägen
+        await controller.suggest({ query: { q: "holz" }, session: { user: { role: "sales" } } }, res);
+        assert.equal(body.tickets.total, 0);
+        assert.equal(body.companies.total, 2);
     } finally {
         service.searchAll = realSearchAll;
         Module._load = original;

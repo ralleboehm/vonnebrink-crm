@@ -226,7 +226,7 @@ die globale Suche findet Assets auch über Seriennummer, IP und Benutzer, und
 
 ## Marketing
 
-Menü **Marketing** (Rollen: Admin und Vertrieb dürfen ändern, Techniker nur ansehen).
+Menü **Marketing** (Rollen: Admin und Vertrieb).
 
 - **Empfänger** (`/crm/marketing`): Wer ist für Kampagnen erreichbar? Filter nach Gruppe und Name,
   Kennzahlen, CSV-Export (Serienbrief / Anrufliste).
@@ -250,3 +250,17 @@ Nur Kontakte, die
 - Jede Änderung steht im Verlauf (wann, wer, wie, Notiz).
 
 Ticket-E-Mails sind davon nicht betroffen.
+
+## Rollen
+
+| Bereich | Administrator | Techniker | Vertrieb |
+|---|---|---|---|
+| Firmen, Kontakte | ✔ | ✔ | ✔ |
+| Tickets | ✔ | ✔ | nur Liste (Nummer, Betreff, Firma, Status) – kein Öffnen, keine Nachrichten/Anhänge |
+| Assets | ✔ | ✔ | nur ansehen |
+| Marketing | ✔ | – | ✔ |
+| Sales / Angebote (später) | ✔ | – | ✔ |
+| Benutzer, Import & Export, Action1, E-Mail-Protokoll | ✔ | – | – |
+
+Die Rechte stehen in `backend/src/core/permissions/index.js`. Die globale Suche zeigt nur Bereiche,
+die der Benutzer öffnen darf. Benachrichtigungen zu neuen Tickets gehen an Admins und Techniker.

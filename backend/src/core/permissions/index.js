@@ -13,12 +13,11 @@
 //   if (can(req.session.user, "invoices.create")) { … }
 //   // in Pug-Views: if can("users.manage")
 //
-// WICHTIG: Die Tabelle unten bildet das HEUTIGE Verhalten ab – Admins
-// dürfen alles, Techniker und Vertrieb alles außer Benutzerverwaltung,
-// Import/Export und Integrationen. Bestehende Routen nutzen weiterhin
-// requireAuth/requireRole; wer eine Route auf requirePermission umstellt,
-// ändert also nichts am Verhalten. Engere Rechte (z. B. Vertrieb darf
-// keine Tickets löschen) sind eine bewusste spätere Entscheidung hier.
+// Rollen (Stand: Rechte-Konzept Oktober 2026)
+//   Admin:     alles
+//   Techniker: Firmen, Kontakte, Tickets, Assets
+//   Vertrieb:  Firmen, Kontakte, Ticketliste OHNE Inhalt (tickets.list),
+//              Assets nur ansehen, Marketing, später Sales/Angebote
 //
 // Später: Rollen/Rechte aus der Datenbank (models/role.model.js und
 // models/permission.model.js existieren bereits) – dann wird nur
@@ -37,7 +36,8 @@ const PERMISSIONS = Object.freeze({
     PORTAL_ACCOUNTS_MANAGE: "contacts.portal",
 
     // Support
-    TICKETS_VIEW: "tickets.view",
+    TICKETS_LIST: "tickets.list",     // Liste: Nummer, Betreff, Status – ohne Inhalt
+    TICKETS_VIEW: "tickets.view",     // Ticket öffnen, Nachrichten, Anhänge
     TICKETS_EDIT: "tickets.edit",
     TICKETS_ASSIGN: "tickets.assign",
     TICKETS_DELETE: "tickets.delete",
@@ -76,12 +76,10 @@ const PERMISSIONS = Object.freeze({
 
 });
 
-// Alles, was interne Benutzer heute dürfen (außer Admin-Bereichen)
-const INTERNAL_DEFAULT = [
+// Stammdaten und Allgemeines für alle internen Rollen
+const INTERNAL_BASE = [
     "companies.*",
     "contacts.*",
-    "tickets.*",
-    "assets.*",
     "search.use",
     "notifications.view"
 ];
@@ -106,9 +104,9 @@ const ROLE_PERMISSIONS = Object.freeze({
 
     admin: ["*"],
 
-    technician: [...INTERNAL_DEFAULT, "marketing.view"],
+    technician: [...INTERNAL_BASE, "tickets.*", "assets.*"],
 
-    sales: [...INTERNAL_DEFAULT, "sales.*", "quotes.*", "marketing.*"],
+    sales: [...INTERNAL_BASE, "tickets.list", "assets.view", "marketing.*", "sales.*", "quotes.*"],
 
     accounting: ["companies.view", "contacts.view", "invoices.*", "contracts.*", "reports.view", "search.use", "notifications.view"],
 

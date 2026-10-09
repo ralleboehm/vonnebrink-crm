@@ -1,3 +1,4 @@
+const { can, PERMISSIONS } = require("../../core/permissions");
 const ticketService = require("../../services/ticket.service");
 const ticketMessageService = require("../../services/ticketMessage.service");
 const authorService = require("../../services/author.service");
@@ -41,7 +42,12 @@ exports.index = async (req, res, next) => {
             company: req.query.company || ""
         };
 
-        const tickets = await ticketService.getAll(filters);
+        // Ohne tickets.view (Vertrieb) nur Nummer und Betreff durchsuchen,
+        // nicht die Beschreibung
+        const tickets = await ticketService.getAll({
+            ...filters,
+            searchDescription: can(req.session.user, PERMISSIONS.TICKETS_VIEW)
+        });
 
         res.render("tickets/index", {
             title: "Tickets",

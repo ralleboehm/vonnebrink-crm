@@ -7,25 +7,32 @@ const upload = require("../../config/multer");
 const ticketController = require("../../controllers/crm/ticket.controller");
 const { requireAuth } = require("../../middleware/auth/crmAuth.middleware");
 const { requireInternal } = require("../../middleware/crm/internal.middleware");
+const { requirePermission, PERMISSIONS } = require("../../core/permissions");
+
+// Vertrieb sieht nur die Liste (tickets.list), Techniker/Admin alles
+const list = requirePermission(PERMISSIONS.TICKETS_LIST);
+const view = requirePermission(PERMISSIONS.TICKETS_VIEW);
+const edit = requirePermission(PERMISSIONS.TICKETS_EDIT);
+const remove = requirePermission(PERMISSIONS.TICKETS_DELETE);
 
 // ----------------------------------------------------
 // Übersicht
 // ----------------------------------------------------
 
-router.get("/", requireAuth, ticketController.index);
+router.get("/", requireAuth, list, ticketController.index);
 
 // ----------------------------------------------------
 // Neues Ticket
 // ----------------------------------------------------
 
-router.get("/new", requireAuth, ticketController.create);
-router.post("/", requireAuth, ticketController.store);
+router.get("/new", requireAuth, edit, ticketController.create);
+router.post("/", requireAuth, edit, ticketController.store);
 
 // ----------------------------------------------------
 // Ticket anzeigen
 // ----------------------------------------------------
 
-router.get("/:id", requireAuth, ticketController.show);
+router.get("/:id", requireAuth, view, ticketController.show);
 
 // ----------------------------------------------------
 // Nachrichten
@@ -34,6 +41,7 @@ router.get("/:id", requireAuth, ticketController.show);
 router.post(
     "/:id/messages",
     requireAuth,
+    edit,
     ticketController.addMessage
 );
 
@@ -45,6 +53,7 @@ router.post(
 router.post(
     "/:id/attachments",
     requireAuth,
+    edit,
     upload.single("attachment"),
     ticketController.uploadAttachment
 );
@@ -53,6 +62,7 @@ router.post(
 router.get(
     "/:id/attachments/:attachmentId",
     requireAuth,
+    view,
     ticketController.downloadAttachment
 );
 
@@ -60,6 +70,7 @@ router.get(
 router.post(
     "/:id/attachments/:attachmentId/delete",
     requireAuth,
+    edit,
     requireInternal,
     ticketController.deleteAttachment
 );
@@ -68,11 +79,12 @@ router.post(
 // Ticket bearbeiten
 // ----------------------------------------------------
 
-router.get("/:id/edit", requireAuth, ticketController.edit);
+router.get("/:id/edit", requireAuth, edit, ticketController.edit);
 
 router.post(
     "/:id/update",
     requireAuth,
+    edit,
     ticketController.update
 );
 
@@ -83,6 +95,7 @@ router.post(
 router.post(
     "/:id/assign",
     requireAuth,
+    edit,
     requireInternal,
     ticketController.assign
 );
@@ -94,6 +107,7 @@ router.post(
 router.post(
     "/:id/delete",
     requireAuth,
+    remove,
     ticketController.destroy
 );
 

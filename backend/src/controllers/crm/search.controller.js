@@ -1,7 +1,38 @@
 const searchService = require("../../services/search.service");
+const { can, PERMISSIONS } = require("../../core/permissions");
 
 const RESULT_LIMIT = 25;
 const SUGGEST_LIMIT = 5;
+
+const EMPTY = Object.freeze({ items: [], total: 0 });
+
+// Bereiche, die der Benutzer öffnen darf (Vertrieb: keine Tickets)
+const SECTION_PERMISSIONS = {
+    tickets: PERMISSIONS.TICKETS_VIEW,
+    assets: PERMISSIONS.ASSETS_VIEW
+};
+
+function visibleOnly(result, user) {
+
+    const visible = { ...result };
+
+    for (const [section, permission] of Object.entries(SECTION_PERMISSIONS)) {
+        if (!can(user, permission)) visible[section] = EMPTY;
+    }
+
+    return visible;
+
+}
+
+function allowedTarget(target, user) {
+
+    if (!target) return null;
+    if (target.startsWith("/crm/tickets/") && !can(user, PERMISSIONS.TICKETS_VIEW)) return null;
+    if (target.startsWith("/crm/assets/") && !can(user, PERMISSIONS.ASSETS_VIEW)) return null;
+
+    return target;
+
+}
 
 /**
  * Ergebnisseite
@@ -13,13 +44,13 @@ exports.index = async (req, res, next) => {
         const query = searchService.normalizeQuery(req.query.q);
 
         // Exakte Nummer (CUS-000012, CON-..., TIC-..., AST-...) -> direkt öffnen
-        const target = await searchService.findByNumber(query);
+        const target = allowedTarget(await searchService.findByNumber(query), req.session.user);
 
         if (target) {
             return res.redirect(target);
         }
 
-        const result = await searchService.searchAll(query, { limit: RESULT_LIMIT });
+        const result = visibleOnly(await searchService.searchAll(query, { limit: RESULT_LIMIT }), req.session.user);
 
         res.render("search/index", {
             title: query ? `Suche: ${query}` : "Suche",
@@ -44,7 +75,7 @@ exports.suggest = async (req, res) => {
 
     try {
 
-        const result = await searchService.searchAll(req.query.q, { limit: SUGGEST_LIMIT });
+        const result = visibleOnly(await searchService.searchAll(req.query.q, { limit: SUGGEST_LIMIT }), req.session.user);
 
         const text = (value) => (value === null || value === undefined ? "" : String(value));
 

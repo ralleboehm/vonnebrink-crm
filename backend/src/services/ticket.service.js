@@ -41,16 +41,19 @@ class TicketService {
                         $regex: escapeRegex(filters.search),
                         $options: "i"
                     }
-                },
+                }
 
-                {
+            ];
+
+            // Beschreibung nur für Benutzer, die Tickets öffnen dürfen
+            if (filters.searchDescription !== false) {
+                query.$or.push({
                     description: {
                         $regex: escapeRegex(filters.search),
                         $options: "i"
                     }
-                }
-
-            ];
+                });
+            }
 
         }
 

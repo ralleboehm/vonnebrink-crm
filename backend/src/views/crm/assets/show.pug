@@ -60,19 +60,23 @@ block content
 
         div
 
-            a.btn.btn-outline-primary.me-2(
-                href=`/crm/tickets/new?company=${asset.company ? asset.company._id : ""}`
-            )
+            if can("tickets.edit")
 
-                i.bi.bi-ticket-detailed.me-2
+                a.btn.btn-outline-primary.me-2(
+                    href=`/crm/tickets/new?company=${asset.company ? asset.company._id : ""}`
+                )
 
-                | Ticket erstellen
+                    i.bi.bi-ticket-detailed.me-2
 
-            a.btn.btn-outline-secondary.me-2(href=`/crm/assets/${asset._id}/edit`)
+                    | Ticket erstellen
 
-                i.bi.bi-pencil.me-2
+            if can("assets.edit")
 
-                | Bearbeiten
+                a.btn.btn-outline-secondary.me-2(href=`/crm/assets/${asset._id}/edit`)
+
+                    i.bi.bi-pencil.me-2
+
+                    | Bearbeiten
 
             a.btn.btn-secondary(href="/crm/assets")
 
@@ -284,14 +288,16 @@ block content
 
                         span.text-muted Keine Notizen.
 
-    form.mt-2.mb-5(
-        action=`/crm/assets/${asset._id}/delete`
-        method="POST"
-        onsubmit="return confirm('Asset wirklich löschen? Ein Action1-Gerät wird danach auch beim Sync nicht wieder angelegt.');"
-    )
+    if can("assets.delete")
 
-        button.btn.btn-outline-danger.btn-sm(type="submit")
+        form.mt-2.mb-5(
+            action=`/crm/assets/${asset._id}/delete`
+            method="POST"
+            onsubmit="return confirm('Asset wirklich löschen? Ein Action1-Gerät wird danach auch beim Sync nicht wieder angelegt.');"
+        )
 
-            i.bi.bi-trash.me-2
+            button.btn.btn-outline-danger.btn-sm(type="submit")
 
-            | Asset löschen
+                i.bi.bi-trash.me-2
+
+                | Asset löschen

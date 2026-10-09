@@ -218,6 +218,7 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
 
     const admin = await User.create({ username: "smoke-admin", firstName: "Smoke", lastName: "Admin", email: "admin@smoke.test", password: PASSWORD, role: "admin" });
     const technician = await User.create({ username: "smoke-tech", firstName: "Smoke", lastName: "Techniker", email: "tech@smoke.test", password: PASSWORD, role: "technician" });
+    await User.create({ username: "smoke-sales", firstName: "Smoke", lastName: "Vertrieb", email: "sales@smoke.test", password: PASSWORD, role: "sales" });
 
     const company = await Company.create({ companyName: "Smoke GmbH", customerNumber: "CUS-900001", status: "active", address: { city: "Lampertheim" } });
     const otherCompany = await Company.create({ companyName: "Fremde AG", customerNumber: "CUS-900002", status: "active" });
@@ -566,23 +567,81 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
 
     });
 
-    await t.test("CRM: Techniker sieht Marketing, darf aber nichts ändern", async () => {
+    await t.test("Rollen: Techniker – Tickets und Assets, kein Marketing", async () => {
 
         const tech = createClient(baseUrl);
         assertRedirect(await tech.post("/crm/login", { username: "smoke-tech", password: PASSWORD }), "Login Techniker");
 
-        assertPage(await tech.get("/crm/marketing"), "Techniker /crm/marketing");
-        assertPage(await tech.get("/crm/marketing/groups"), "Techniker Gruppen");
+        for (const url of ["/crm", "/crm/companies", "/crm/contacts", "/crm/tickets", `/crm/tickets/${ticket._id}`, "/crm/assets", `/crm/assets/${manualAsset._id}/edit`]) {
+            assertPage(await tech.get(url), `Techniker ${url}`);
+        }
+
+        assert.equal((await tech.get("/crm/marketing")).status, 403, "Techniker: kein Marketing");
+        assert.equal((await tech.get("/crm/marketing/groups")).status, 403);
+        assert.doesNotMatch((await tech.get("/crm")).text, /\/crm\/marketing/, "kein Marketing-Menü");
 
         const before = (await Contact.findById(contact._id)).marketing.history.length;
-
-        const denied = await tech.post(`/crm/contacts/${contact._id}/marketing`, { consent: "revoked" });
-        assert.notEqual(denied.status, 200, "Techniker darf Einwilligung nicht ändern");
+        assert.equal((await tech.post(`/crm/contacts/${contact._id}/marketing`, { consent: "revoked" })).status, 403);
         assert.equal((await Contact.findById(contact._id)).marketing.history.length, before);
 
-        const rename = await tech.post("/crm/marketing/groups/rename", { from: "VIP", to: "Gold" });
-        assert.notEqual(rename.status, 302, "Techniker darf Gruppen nicht umbenennen");
+        assert.equal((await tech.post("/crm/marketing/groups/rename", { from: "VIP", to: "Gold" })).status, 403);
         assert.deepEqual([...(await Company.findOne({ companyName: "Smoke Praxis" })).tags], ["Arztpraxis", "VIP"]);
+
+    });
+
+    await t.test("Rollen: Vertrieb – Ticketliste ohne Inhalt, Assets lesen, Marketing", async () => {
+
+        const sales = createClient(baseUrl);
+        assertRedirect(await sales.post("/crm/login", { username: "smoke-sales", password: PASSWORD }), "Login Vertrieb");
+
+        for (const url of ["/crm", "/crm/companies", `/crm/companies/${company._id}`, "/crm/contacts", `/crm/contacts/${contact._id}`, "/crm/assets", `/crm/assets/${manualAsset._id}`, "/crm/marketing", "/crm/marketing/groups", "/crm/search?q=Smoke"]) {
+            assertPage(await sales.get(url), `Vertrieb ${url}`);
+        }
+
+        // Liste: Betreff und Status ja, aber kein Link ins Ticket
+        const list = await sales.get("/crm/tickets");
+        assertPage(list, "Vertrieb Ticketliste");
+        assert.match(list.text, /Smoke Drucker/);
+        assert.doesNotMatch(list.text, new RegExp(`/crm/tickets/${ticket._id}`), "kein Link ins Ticket");
+        assert.doesNotMatch(list.text, /\/crm\/tickets\/new/, "kein Neues Ticket");
+
+        // Suche in der Liste nicht in der Beschreibung
+        assert.doesNotMatch((await sales.get("/crm/tickets?search=Druckt")).text, /Smoke Drucker/, "Beschreibung nicht durchsuchbar");
+
+        assert.doesNotMatch((await sales.get(`/crm/companies/${company._id}`)).text, new RegExp(`/crm/tickets/${ticket._id}`), "Firma ohne Ticket-Link");
+        assert.doesNotMatch((await sales.get("/crm")).text, new RegExp(`/crm/tickets/${ticket._id}`), "Dashboard ohne Ticket-Link");
+
+        // Ticket selbst gesperrt
+        const crmAttachment = await Attachment.findOne({ ticket: ticket._id, originalName: "crm.txt" });
+
+        for (const url of [`/crm/tickets/${ticket._id}`, `/crm/tickets/${ticket._id}/edit`, "/crm/tickets/new", `/crm/tickets/${ticket._id}/attachments/${crmAttachment._id}`]) {
+            assert.equal((await sales.get(url)).status, 403, `Vertrieb ${url}`);
+        }
+
+        const messages = await mongoose.connection.db.collection("ticketmessages").countDocuments();
+        assert.equal((await sales.post(`/crm/tickets/${ticket._id}/messages`, { message: "darf nicht" })).status, 403);
+        assert.equal(await mongoose.connection.db.collection("ticketmessages").countDocuments(), messages);
+        assert.equal((await sales.post("/crm/tickets", { company: String(company._id), subject: "Vertrieb", description: "x" })).status, 403);
+        assert.equal((await sales.post(`/crm/tickets/${ticket._id}/delete`, {})).status, 403);
+
+        // Assets: nur lesen
+        assert.equal((await sales.get("/crm/assets/new")).status, 403);
+        assert.equal((await sales.get(`/crm/assets/${manualAsset._id}/edit`)).status, 403);
+        assert.equal((await sales.post(`/crm/assets/${manualAsset._id}/delete`, {})).status, 403);
+        assert.ok(await Asset.exists({ _id: manualAsset._id, isDeleted: false }));
+        assert.doesNotMatch((await sales.get(`/crm/assets/${manualAsset._id}`)).text, /Asset löschen/);
+
+        // Suche: keine Tickets, kein Sprung ins Ticket
+        assertPage(await sales.get("/crm/search?q=TIC-900001"), "Nummernsprung gesperrt");
+        const suggest = JSON.parse((await sales.get("/crm/search/suggest?q=Smoke")).text);
+        assert.equal(suggest.tickets.total, 0, "Vorschläge ohne Tickets");
+        assert.ok(suggest.companies.total >= 1);
+
+        // Marketing ändern erlaubt
+        assertRedirect(await sales.post("/crm/marketing/groups/rename", { from: "VIP", to: "VIP" }), "Vertrieb Gruppen");
+
+        // Verwaltung gesperrt
+        assert.equal((await sales.get("/crm/users")).status, 403);
 
     });
 

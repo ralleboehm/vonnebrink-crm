@@ -129,12 +129,26 @@ test("Rechte: Rollen bilden das heutige Verhalten ab", () => {
     assert.equal(can({ role: "admin" }, "invoices.edit"), true);
 
     for (const role of ["technician", "sales"]) {
-        assert.equal(can({ role }, "tickets.delete"), true, role);
-        assert.equal(can({ role }, "assets.edit"), true, role);
+        assert.equal(can({ role }, "companies.edit"), true, role);
+        assert.equal(can({ role }, "contacts.edit"), true, role);
+        assert.equal(can({ role }, "tickets.list"), true, role);
+        assert.equal(can({ role }, "assets.view"), true, role);
         assert.equal(can({ role }, "users.manage"), false, role);
         assert.equal(can({ role }, "import.run"), false, role);
         assert.equal(can({ role }, "integrations.manage"), false, role);
     }
+
+    // Techniker: Tickets und Assets ganz, kein Marketing
+    assert.equal(can("technician", "tickets.view"), true);
+    assert.equal(can("technician", "tickets.delete"), true);
+    assert.equal(can("technician", "assets.edit"), true);
+    assert.equal(can("technician", "marketing.view"), false);
+
+    // Vertrieb: Ticketliste ohne Inhalt, Assets nur lesen, Marketing
+    assert.equal(can("sales", "tickets.view"), false);
+    assert.equal(can("sales", "tickets.edit"), false);
+    assert.equal(can("sales", "assets.edit"), false);
+    assert.equal(can("sales", "marketing.manage"), true);
 
     assert.equal(can("sales", "quotes.edit"), true);
     assert.equal(can("technician", "quotes.edit"), false);

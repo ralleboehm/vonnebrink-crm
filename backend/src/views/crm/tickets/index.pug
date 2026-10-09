@@ -2,17 +2,21 @@ extends ../layouts/main
 
 block content
 
+    - const canOpen = can("tickets.view")
+
     .d-flex.justify-content-between.align-items-center.mb-4
 
         h1.mb-0
             i.bi.bi-ticket-detailed.me-2
             | Tickets
 
-        a.btn.btn-primary(href="/crm/tickets/new")
+        if can("tickets.edit")
 
-            i.bi.bi-plus-circle.me-2
+            a.btn.btn-primary(href="/crm/tickets/new")
 
-            | Neues Ticket
+                i.bi.bi-plus-circle.me-2
+
+                | Neues Ticket
 
     // =====================================================
     // Suche & Filter
@@ -110,9 +114,12 @@ block content
                                 tr
 
                                     td
-                                        a.text-decoration-none(
-                                            href=`/crm/tickets/${ticket._id}`
-                                        )
+                                        if canOpen
+                                            a.text-decoration-none(
+                                                href=`/crm/tickets/${ticket._id}`
+                                            )
+                                                strong= ticket.ticketNumber
+                                        else
                                             strong= ticket.ticketNumber
 
                                     td= ticket.subject
@@ -153,21 +160,25 @@ block content
 
                                     td.text-end
 
-                                        a.btn.btn-sm.btn-outline-primary.me-2(
-                                            href=`/crm/tickets/${ticket._id}`
-                                        )
+                                        if canOpen
 
-                                            i.bi.bi-eye.me-1
+                                            a.btn.btn-sm.btn-outline-primary.me-2(
+                                                href=`/crm/tickets/${ticket._id}`
+                                            )
 
-                                            | Anzeigen
+                                                i.bi.bi-eye.me-1
 
-                                        a.btn.btn-sm.btn-outline-secondary(
-                                            href=`/crm/tickets/${ticket._id}/edit`
-                                        )
+                                                | Anzeigen
 
-                                            i.bi.bi-pencil.me-1
+                                        if can("tickets.edit")
 
-                                            | Bearbeiten
+                                            a.btn.btn-sm.btn-outline-secondary(
+                                                href=`/crm/tickets/${ticket._id}/edit`
+                                            )
+
+                                                i.bi.bi-pencil.me-1
+
+                                                | Bearbeiten
 
             else
 
@@ -195,10 +206,12 @@ block content
                         p.text-muted
                             | Es sind noch keine Tickets vorhanden.
 
-                        a.btn.btn-primary.mt-2(
-                            href="/crm/tickets/new"
-                        )
+                        if can("tickets.edit")
 
-                            i.bi.bi-plus-circle.me-2
+                            a.btn.btn-primary.mt-2(
+                                href="/crm/tickets/new"
+                            )
 
-                            | Erstes Ticket anlegen
+                                i.bi.bi-plus-circle.me-2
+
+                                | Erstes Ticket anlegen

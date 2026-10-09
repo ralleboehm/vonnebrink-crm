@@ -249,7 +249,13 @@ block content
 
                                             td.text-nowrap
 
-                                                a.text-decoration-none(href=`/crm/tickets/${ticket._id}`)= ticket.ticketNumber
+                                                if can("tickets.view")
+
+                                                    a.text-decoration-none(href=`/crm/tickets/${ticket._id}`)= ticket.ticketNumber
+
+                                                else
+
+                                                    = ticket.ticketNumber
 
                                             td
 

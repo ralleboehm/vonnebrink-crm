@@ -292,11 +292,13 @@ block content
 
                     | Alle anzeigen
 
-                a.btn.btn-sm.btn-primary(href=`/crm/assets/new?company=${company._id}`)
+                if can("assets.edit")
 
-                    i.bi.bi-plus-circle.me-2
+                    a.btn.btn-sm.btn-primary(href=`/crm/assets/new?company=${company._id}`)
 
-                    | Neues Asset
+                        i.bi.bi-plus-circle.me-2
+
+                        | Neues Asset
 
         .card-body.p-0
 
@@ -433,9 +435,15 @@ block content
 
                                     td
 
-                                        a.text-decoration-none(
-                                            href=`/crm/tickets/${ticket._id}`
-                                        )
+                                        if can("tickets.view")
+
+                                            a.text-decoration-none(
+                                                href=`/crm/tickets/${ticket._id}`
+                                            )
+
+                                                strong= ticket.ticketNumber
+
+                                        else
 
                                             strong= ticket.ticketNumber
 
@@ -507,10 +515,12 @@ block content
 
                         | Für diese Firma wurden bisher keine Tickets erstellt.
 
-                    a.btn.btn-primary(
-                        href=`/crm/tickets/new?company=${company._id}`
-                    )
+                    if can("tickets.edit")
 
-                        i.bi.bi-plus-circle.me-2
+                        a.btn.btn-primary(
+                            href=`/crm/tickets/new?company=${company._id}`
+                        )
 
-                        | Neues Ticket erstellen
+                            i.bi.bi-plus-circle.me-2
+
+                            | Neues Ticket erstellen
