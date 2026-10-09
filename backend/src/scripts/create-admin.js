@@ -8,7 +8,8 @@ async function createAdmin() {
 
     try {
 
-        await mongoose.connect(process.env.MONGO_URI);
+        // MONGODB_URI ist der dokumentierte Name; MONGO_URI bleibt erlaubt
+        await mongoose.connect(process.env.MONGODB_URI || process.env.MONGO_URI);
 
         const existingUser = await User.findOne({
             username: "admin"

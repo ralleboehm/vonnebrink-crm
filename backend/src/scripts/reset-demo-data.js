@@ -14,6 +14,10 @@ const Ticket = require("../models/ticket.model");
 const TicketMessage = require("../models/ticketMessage.model");
 const Attachment = require("../models/attachment.model");
 const Counter = require("../models/counter.model");
+const Asset = require("../models/asset.model");
+const Activity = require("../models/activity.model");
+const Notification = require("../models/notification.model");
+const SyncRun = require("../models/syncRun.model");
 
 const storageService = require("../services/storage.service");
 
@@ -71,6 +75,10 @@ function confirmReset() {
         console.log(" • Tickets");
         console.log(" • Ticketnachrichten");
         console.log(" • Anhänge");
+        console.log(" • Aktivitäten");
+        console.log(" • Assets");
+        console.log(" • Benachrichtigungen");
+        console.log(" • Action1-Syncprotokolle");
         console.log(" • Counter");
         console.log(" • Storage");
         console.log("");
@@ -191,6 +199,35 @@ async function resetBusinessData() {
     console.log("Lösche Geschäftsdaten...");
     console.log("");
 
+    // Daten, die auf Tickets, Firmen oder Benutzer verweisen, zuerst
+    const activities =
+        await Activity.deleteMany({});
+
+    console.log(
+        `✔ Aktivitäten: ${activities.deletedCount}`
+    );
+
+    const assets =
+        await Asset.deleteMany({});
+
+    console.log(
+        `✔ Assets: ${assets.deletedCount}`
+    );
+
+    const notifications =
+        await Notification.deleteMany({});
+
+    console.log(
+        `✔ Benachrichtigungen: ${notifications.deletedCount}`
+    );
+
+    const syncRuns =
+        await SyncRun.deleteMany({});
+
+    console.log(
+        `✔ Action1-Syncprotokolle: ${syncRuns.deletedCount}`
+    );
+
     const attachments =
         await Attachment.deleteMany({});
 
@@ -248,7 +285,8 @@ async function resetCounters() {
 
         "company",
         "contact",
-        "ticket"
+        "ticket",
+        "asset"
 
     ];
 
