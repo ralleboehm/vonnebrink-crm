@@ -110,7 +110,7 @@ function lineToHtml(line) {
         const url = escapeHtml(match[0]);
 
         html += escapeHtml(line.slice(last, match.index));
-        html += `<a href="${url}" style="color:#0d6efd;">${url}</a>`;
+        html += `<a href="${url}" style="color:#1b9156;">${url}</a>`;
 
         last = match.index + match[0].length;
 

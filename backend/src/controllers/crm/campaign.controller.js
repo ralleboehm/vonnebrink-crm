@@ -3,6 +3,7 @@ const companyService = require("../../services/company.service");
 const marketingService = require("../../services/marketing.service");
 const emailService = require("../../services/email.service");
 const userService = require("../../services/user.service");
+const emailTemplates = require("../../services/emailTemplate.service");
 const { setFlash, takeFlash } = require("../../core/http/flash");
 
 const BASE = "/crm/marketing/campaigns";
@@ -220,7 +221,7 @@ exports.show = async (req, res, next) => {
 function sendPreview(res, rendered) {
 
     res.set("Content-Type", "text/html; charset=utf-8");
-    res.send(rendered.html);
+    res.send(emailTemplates.forBrowser(rendered.html));
 
 }
 

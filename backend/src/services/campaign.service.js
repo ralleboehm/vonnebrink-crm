@@ -290,7 +290,8 @@ async function render(campaign, row = null) {
     const subject = content.fillPlaceholders(campaign.subject, values);
     const body = content.fillPlaceholders(content.contentHtml(campaign), values, { html: true });
 
-    const rendered = await emailTemplates.renderWithLayout(subject, body + unsubscribeBlock(unsubscribeUrl));
+    // Kampagnen sind persönliche Mails – ohne "automatisch erstellt" im Fuß
+    const rendered = await emailTemplates.renderWithLayout(subject, body + unsubscribeBlock(unsubscribeUrl), { footerNote: "" });
 
     return { ...rendered, unsubscribeUrl };
 

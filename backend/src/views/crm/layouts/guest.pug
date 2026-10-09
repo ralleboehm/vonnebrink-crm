@@ -1,12 +1,19 @@
+//- Seiten ohne Menü: CRM-Anmeldung, Fehlerseiten, Hinweise aus E-Mail-Links.
+//- Kunden (audience "customer") sehen das helle Portal-Design, das CRM das dunkle.
+
 doctype html
 html(lang="de")
+
+    - const isCustomer = typeof audience !== "undefined" && audience === "customer"
 
     head
 
         meta(charset="UTF-8")
         meta(name="viewport" content="width=device-width, initial-scale=1")
 
-        title #{title || "Vonnebrink CRM"}
+        title #{title ? title + " – " : ""}#{isCustomer ? "Vonnebrink IT Operations" : "Vonnebrink CRM"}
+
+        link(rel="icon" type="image/png" href="/images/logo-mark.png")
 
         // Bootstrap
         link(
@@ -14,15 +21,31 @@ html(lang="de")
             rel="stylesheet"
         )
 
-        // Eigene Styles
         link(
+            href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
             rel="stylesheet"
-            href="/css/vonnebrink.css"
         )
 
-    body.bg-light
+        // Schriften wie auf vonnebrink.com
+        link(rel="preconnect" href="https://fonts.googleapis.com")
+        link(rel="preconnect" href="https://fonts.gstatic.com" crossorigin)
 
-        .container-fluid.min-vh-100.d-flex.align-items-center.justify-content-center
+        link(
+            href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@700&family=Montserrat:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap"
+            rel="stylesheet"
+        )
+
+        if isCustomer
+
+            link(rel="stylesheet" href="/css/portal.css")
+
+        else
+
+            link(rel="stylesheet" href="/css/vonnebrink.css")
+
+    body(class=isCustomer ? "vb-portal vb-guest" : "vb-crm vb-guest")
+
+        .container-fluid.min-vh-100.d-flex.align-items-center.justify-content-center.py-4
 
             block content
 

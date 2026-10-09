@@ -5,7 +5,9 @@ html(lang="de")
         meta(charset="UTF-8")
         meta(name="viewport" content="width=device-width, initial-scale=1")
 
-        title #{title || "Vonnebrink CRM"}
+        title #{title ? title + " – " : ""}Vonnebrink CRM
+
+        link(rel="icon" type="image/png" href="/images/logo-mark.png")
 
         // Bootstrap
         link(
@@ -24,7 +26,7 @@ html(lang="de")
         link(rel="preconnect" href="https://fonts.gstatic.com" crossorigin)
 
         link(
-            href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
+            href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap"
             rel="stylesheet"
         )
 
@@ -34,20 +36,20 @@ html(lang="de")
             href="/css/vonnebrink.css"
         )
 
-    body
+    body.vb-crm
 
-        nav.navbar.navbar-expand-lg.navbar-light.bg-white.shadow-sm
+        nav.navbar.navbar-expand-lg.navbar-dark.vb-crm-nav
 
             .container-fluid
 
-                a.navbar-brand.d-flex.align-items-center(href="/crm")
+                a.navbar-brand.d-flex.align-items-center.me-4(href="/crm")
 
-                    img(
-                        src="/images/logo-only.png"
+                    img.vb-crm-logo(
+                        src="/images/logo-wordmark-light.png"
                         alt="Vonnebrink IT Operations"
-                        height="40"
-                        class="me-3"
                     )
+
+                    span.vb-crm-tag CRM
 
                 button.navbar-toggler(
                     type="button"

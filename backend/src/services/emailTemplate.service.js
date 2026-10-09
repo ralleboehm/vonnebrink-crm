@@ -22,6 +22,10 @@
 //
 // Immer verfügbar: {{brandName}}, {{year}}, {{appUrl}}, {{portalLink}}
 // (brandName aus MAIL_BRAND_NAME, Standard "Vonnebrink IT Operations")
+//
+// Layout: Logo als eingebettetes Bild ({{logoSrc}} = cid:logo@vonnebrink,
+// der E-Mail-Service hängt die Datei an), Link zur Webseite aus
+// MAIL_BRAND_URL (Standard https://vonnebrink.com), {{footerNote}} unten.
 
 const fs = require("fs/promises");
 const path = require("path");
@@ -31,6 +35,21 @@ const LAYOUT = "_layout";
 const NAME_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 
 const cache = new Map();
+
+// Logo im E-Mail-Kopf: eingebettet (siehe email.service.js), im Browser die Datei
+const LOGO_CID = "logo@vonnebrink";
+const LOGO_SRC = `cid:${LOGO_CID}`;
+const LOGO_FILE = path.join(__dirname, "../public/images/logo-wordmark.png");
+const LOGO_URL = "/images/logo-wordmark.png";
+
+/**
+ * Für die Vorschau im Browser: eingebettetes Logo durch die Bilddatei ersetzen
+ */
+function forBrowser(html) {
+
+    return String(html || "").split(`src="${LOGO_SRC}"`).join(`src="${LOGO_URL}"`);
+
+}
 
 // ----------------------------------------------------
 // Hilfsfunktionen (ohne Dateisystem, gut testbar)
@@ -169,8 +188,14 @@ function defaults(env = process.env) {
 
     const { appUrl } = require("./email.service");
 
+    const brandUrl = (env.MAIL_BRAND_URL || "https://vonnebrink.com").trim().replace(/\/+$/, "");
+
     return {
         brandName: (env.MAIL_BRAND_NAME || "Vonnebrink IT Operations").trim(),
+        brandUrl,
+        brandUrlLabel: brandUrl.replace(/^https?:\/\/(www\.)?/, ""),
+        logoSrc: LOGO_SRC,
+        footerNote: "Diese E-Mail wurde automatisch erstellt.",
         year: new Date().getFullYear(),
         appUrl: appUrl("", env),
         portalLink: appUrl("/portal", env)
@@ -294,5 +319,9 @@ module.exports = {
     htmlToText,
     render,
     renderWithLayout,
-    list
+    list,
+    forBrowser,
+    LOGO_CID,
+    LOGO_SRC,
+    LOGO_FILE
 };

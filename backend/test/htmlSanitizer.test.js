@@ -48,7 +48,7 @@ test("Links: nur http, https und mailto; Attribute werden maskiert", () => {
 
     assert.equal(
         sanitize("<a href=\"https://x.de/?a=1&amp;b=&quot;2\" target=\"_blank\">x</a>"),
-        "<a href=\"https://x.de/?a=1&amp;b=&quot;2\" style=\"color:#0d6efd;\">x</a>"
+        "<a href=\"https://x.de/?a=1&amp;b=&quot;2\" style=\"color:#1b9156;\">x</a>"
     );
 
     assert.match(sanitize("<a href=\"mailto:info@vonnebrink.com\">Mail</a>"), /href="mailto:info@vonnebrink\.com"/);
@@ -60,12 +60,12 @@ test("nackte Adressen werden anklickbar, aber nicht in Links", () => {
 
     assert.equal(
         sanitize("<p>Siehe https://vonnebrink.com/a?x=1&amp;y=2. Danke</p>"),
-        "<p style=\"margin:0;\">Siehe <a href=\"https://vonnebrink.com/a?x=1&amp;y=2\" style=\"color:#0d6efd;\">https://vonnebrink.com/a?x=1&amp;y=2</a>. Danke</p>"
+        "<p style=\"margin:0;\">Siehe <a href=\"https://vonnebrink.com/a?x=1&amp;y=2\" style=\"color:#1b9156;\">https://vonnebrink.com/a?x=1&amp;y=2</a>. Danke</p>"
     );
 
     assert.equal(
         sanitize("<a href=\"https://a.de\">https://a.de</a>"),
-        "<a href=\"https://a.de\" style=\"color:#0d6efd;\">https://a.de</a>"
+        "<a href=\"https://a.de\" style=\"color:#1b9156;\">https://a.de</a>"
     );
 
 });

@@ -24,6 +24,40 @@
 
 const RETRY_DELAY_MS = 30 * 1000;
 
+let logoContent = null;
+
+/**
+ * Logo als eingebettetes Bild anhängen, wenn das Layout es verwendet
+ */
+function withLogo(html, attachments) {
+
+    const { LOGO_CID, LOGO_SRC, LOGO_FILE } = require("./emailTemplate.service");
+    const list = attachments ? [...attachments] : [];
+
+    if (!html || !html.includes(`src="${LOGO_SRC}"`)) return list;
+
+    try {
+
+        if (!logoContent) logoContent = require("fs").readFileSync(LOGO_FILE);
+
+        list.push({
+            filename: "vonnebrink.png",
+            content: logoContent,
+            contentType: "image/png",
+            cid: LOGO_CID,
+            contentDisposition: "inline"
+        });
+
+    } catch (err) {
+
+        console.error(`Logo für E-Mails nicht gefunden (${LOGO_FILE}): ${err.message}`);
+
+    }
+
+    return list;
+
+}
+
 let transport = null;
 let transportKey = null;
 
@@ -248,7 +282,10 @@ async function send(message) {
         html: message.html,
         text: message.text,
         headers: message.headers || undefined,
-        attachments: message.attachments && message.attachments.length ? message.attachments : undefined
+        attachments: (() => {
+            const list = withLogo(message.html, message.attachments);
+            return list.length ? list : undefined;
+        })()
     });
 
     return { sent: true, messageId: info.messageId, recipients };
@@ -450,6 +487,7 @@ module.exports = {
     appUrl,
     isPrivateHost,
     publicAppUrlProblem,
+    withLogo,
     normalizeRecipients,
     send,
     sendTemplate,

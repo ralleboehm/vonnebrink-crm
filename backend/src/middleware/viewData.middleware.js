@@ -16,6 +16,11 @@ module.exports = (req, res, next) => {
     // Aktueller Pfad (z. B. für den aktiven Menüpunkt)
     res.locals.currentPath = req.originalUrl.split("?")[0];
 
+    // Wer sieht die Seite? Kunden (Portal, Links aus E-Mails) bekommen auf
+    // Anmelde-, Fehler- und Hinweisseiten das helle Portal-Design, das
+    // CRM das dunkle (layouts/guest.pug).
+    res.locals.audience = /^\/(portal|email)(\/|$)/.test(res.locals.currentPath) ? "customer" : "crm";
+
     // Ziel des "Zurück"-Links auf Fehlerseiten
     res.locals.homeUrl = req.originalUrl.startsWith("/portal")
         ? "/portal"

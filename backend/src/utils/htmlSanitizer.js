@@ -29,7 +29,7 @@ const TAG_STYLES = {
     ol: "margin:0; padding-left:24px;",
     li: "margin:0;",
     blockquote: "margin:8px 0; padding-left:12px; border-left:3px solid #dee2e6; color:#6c757d;",
-    a: "color:#0d6efd;",
+    a: "color:#1b9156;",
     img: "display:block; max-width:100%; height:auto; border:0; margin:8px 0;"
 };
 

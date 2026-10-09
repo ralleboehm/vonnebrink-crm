@@ -520,3 +520,37 @@ test("Portal: Anmeldung, Übersicht und Ticketliste im neuen Design", { skip: !p
     assert.doesNotMatch(list, /table-dark/);
 
 });
+
+// ----------------------------------------------------
+// CRM und Portal: gleiche Marke, klar unterscheidbar
+// ----------------------------------------------------
+
+test("CRM: dunkler Kopf mit CRM-Kennung, Portal hell", { skip: !pug && "pug nicht installiert" }, () => {
+
+    const crm = render("crm/campaigns/index.pug", { campaigns: [], filters: { status: "", search: "" }, flash: null, ...campaignHelpers });
+
+    assert.match(crm, /<body class="vb-crm">/);
+    assert.match(crm, /navbar-dark vb-crm-nav/);
+    assert.match(crm, /logo-wordmark-light\.png/);
+    assert.match(crm, /class="vb-crm-tag">CRM</);
+    assert.match(crm, /\/css\/vonnebrink\.css/);
+    assert.doesNotMatch(crm, /\/css\/portal\.css/);
+
+    const login = render("crm/auth/login.pug", { error: null, audience: "crm" });
+    assert.match(login, /class="vb-crm vb-guest"/);
+    assert.match(login, /CRM · intern/);
+
+    // Fehler- und Hinweisseiten: Kunden sehen das Portal-Design
+    const customer404 = render("errors/404.pug", { audience: "customer", homeUrl: "/portal" });
+    assert.match(customer404, /class="vb-portal vb-guest"/);
+    assert.match(customer404, /\/css\/portal\.css/);
+    assert.match(customer404, /href="\/portal"/);
+
+    const crm404 = render("errors/404.pug", { audience: "crm", homeUrl: "/crm" });
+    assert.match(crm404, /class="vb-crm vb-guest"/);
+
+    const message = render("public/message.pug", { audience: "customer", title: "Abmelden", heading: "Abbestellen?", text: "Für a@b.de", tone: "primary", action: "/email/abmelden/x", button: "Abmelden" });
+    assert.match(message, /vb-portal vb-guest/);
+    assert.match(message, /logo-wordmark\.png/);
+
+});

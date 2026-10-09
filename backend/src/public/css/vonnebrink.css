@@ -1,144 +1,352 @@
-:root {
+/* ====================================================
+   CRM (intern) – Vonnebrink-Marke, aber klar anders als das Portal
+   ====================================================
+   Portal: heller, weißer Kopf, eckige Knöpfe, grünliche Flächen (Kunde)
+   CRM:    dunkler Petrol-Kopf mit „CRM“-Kennung, neutrale graue Flächen,
+           kompaktere Arbeitsoberfläche (Mitarbeiter)
+   Gleiche Marken-Farben und Schriften wie vonnebrink.com.
+   ==================================================== */
 
-    --vb-primary: #0d6efd;
-    --vb-primary-dark: #0a58ca;
-    --vb-background: #f8fafc;
-    --vb-card: #ffffff;
-    --vb-text: #212529;
-    --vb-border: #e5e7eb;
+body.vb-crm {
 
-}
+    --vb-green: #1b9156;
+    --vb-green-dark: #147245;
+    --vb-green-light: #2ac578;
+    --vb-green-soft: #e4f3eb;
+    --vb-teal: #013839;
+    --vb-teal-2: #0a4d4e;
+    --vb-text: #2f3535;
+    --vb-muted: #6b7672;
+    --vb-surface: #f3f5f5;
+    --vb-line: #e1e6e5;
+    --vb-logo-green: #79a335;
+    --vb-logo-blue: #0000fe;
 
-html,
-body {
+    --vb-font-text: "Source Sans 3", "Source Sans Pro", Arial, sans-serif;
+    --vb-font-head: "Montserrat", Arial, sans-serif;
 
-    font-family: "Roboto", sans-serif;
-    background: var(--vb-background);
+    /* Bootstrap an die Marke anpassen */
+    --bs-body-font-family: var(--vb-font-text);
+    --bs-body-font-size: 1rem;
+    --bs-body-color: var(--vb-text);
+    --bs-body-bg: var(--vb-surface);
+    --bs-primary: var(--vb-green);
+    --bs-primary-rgb: 27, 145, 86;
+    --bs-primary-text-emphasis: var(--vb-green-dark);
+    --bs-primary-bg-subtle: var(--vb-green-soft);
+    --bs-primary-border-subtle: #b9dfc9;
+    --bs-link-color: var(--vb-green);
+    --bs-link-color-rgb: 27, 145, 86;
+    --bs-link-hover-color: var(--vb-green-dark);
+    --bs-link-hover-color-rgb: 20, 114, 69;
+    --bs-border-color: var(--vb-line);
+    --bs-secondary-color: var(--vb-muted);
+    --bs-focus-ring-color: rgba(27, 145, 86, .25);
+
+    font-family: var(--vb-font-text);
     color: var(--vb-text);
+    background: var(--vb-surface);
 
 }
 
-/* Navbar */
+.vb-crm h1,
+.vb-crm h2,
+.vb-crm h3,
+.vb-crm h4,
+.vb-crm h5,
+.vb-crm .h1,
+.vb-crm .h2,
+.vb-crm .h3,
+.vb-crm .h4 {
 
-.navbar {
+    font-family: var(--vb-font-head);
+    font-weight: 700;
+    color: var(--vb-teal);
+    letter-spacing: -.01em;
+
+}
+
+.vb-crm h1 { font-size: 1.6rem; }
+
+/* ----------------------------------------------------
+   Kopf: dunkel (Portal ist hell)
+   ---------------------------------------------------- */
+
+.vb-crm .vb-crm-nav {
+
+    background: var(--vb-teal);
+    border-bottom: 3px solid var(--vb-green);
+    padding-top: .55rem;
+    padding-bottom: .55rem;
+    box-shadow: 0 2px 12px rgba(1, 56, 57, .25);
+
+    --bs-navbar-color: rgba(255, 255, 255, .78);
+    --bs-navbar-hover-color: #ffffff;
+    --bs-navbar-active-color: #ffffff;
+    --bs-navbar-brand-color: #ffffff;
+    --bs-navbar-brand-hover-color: #ffffff;
+    --bs-navbar-toggler-border-color: rgba(255, 255, 255, .25);
+
+}
+
+.vb-crm .vb-crm-nav .nav-link {
+
+    font-weight: 600;
+
+}
+
+.vb-crm .vb-crm-nav .nav-link:hover,
+.vb-crm .vb-crm-nav .nav-link:focus,
+.vb-crm .vb-crm-nav .nav-link.show {
+
+    color: #ffffff;
+
+}
+
+.vb-crm .vb-crm-logo {
+
+    height: 26px;
+    width: auto;
+
+}
+
+/* Kennung „CRM“ neben dem Logo */
+.vb-crm .vb-crm-tag {
+
+    font-family: var(--vb-font-head);
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--vb-teal);
+    background: var(--vb-green-light);
+    border-radius: 3px;
+    padding: .2rem .45rem;
+    margin-left: .75rem;
+
+}
+
+.vb-crm .vb-crm-nav .input-group-text {
+
+    background: rgba(255, 255, 255, .12);
+    border-color: rgba(255, 255, 255, .18);
+    color: rgba(255, 255, 255, .8);
+
+}
+
+.vb-crm .vb-crm-nav #globalSearchInput {
+
+    background: rgba(255, 255, 255, .12);
+    border-color: rgba(255, 255, 255, .18);
+    color: #ffffff;
+
+}
+
+.vb-crm .vb-crm-nav #globalSearchInput::placeholder {
+
+    color: rgba(255, 255, 255, .6);
+
+}
+
+.vb-crm .vb-crm-nav #globalSearchInput:focus {
+
+    background: #ffffff;
+    color: var(--vb-text);
+    box-shadow: 0 0 0 .2rem rgba(42, 197, 120, .35);
+
+}
+
+.vb-crm .vb-crm-avatar {
+
+    width: 34px;
+    height: 34px;
+    font-weight: 700;
+    font-family: var(--vb-font-head);
+    font-size: .85rem;
+    background: var(--vb-green);
+    color: #ffffff;
+
+}
+
+.vb-crm .dropdown-menu {
+
+    border: 1px solid var(--vb-line);
+    border-radius: 6px;
+    font-size: .95rem;
+
+}
+
+.vb-crm .dropdown-item:active {
+
+    background: var(--vb-green);
+
+}
+
+/* ----------------------------------------------------
+   Knöpfe (leicht gerundet – Portal: eckig)
+   ---------------------------------------------------- */
+
+.vb-crm .btn {
+
+    font-weight: 600;
+    border-radius: 4px;
+
+}
+
+.vb-crm .btn-primary {
+
+    --bs-btn-bg: var(--vb-green);
+    --bs-btn-border-color: var(--vb-green);
+    --bs-btn-hover-bg: var(--vb-green-dark);
+    --bs-btn-hover-border-color: var(--vb-green-dark);
+    --bs-btn-active-bg: var(--vb-green-dark);
+    --bs-btn-active-border-color: var(--vb-green-dark);
+    --bs-btn-disabled-bg: var(--vb-green);
+    --bs-btn-disabled-border-color: var(--vb-green);
+    --bs-btn-focus-shadow-rgb: 27, 145, 86;
+
+}
+
+.vb-crm .btn-outline-primary {
+
+    --bs-btn-color: var(--vb-green);
+    --bs-btn-border-color: var(--vb-green);
+    --bs-btn-hover-bg: var(--vb-green);
+    --bs-btn-hover-border-color: var(--vb-green);
+    --bs-btn-active-bg: var(--vb-green-dark);
+    --bs-btn-active-border-color: var(--vb-green-dark);
+    --bs-btn-focus-shadow-rgb: 27, 145, 86;
+
+}
+
+.vb-crm .btn-link {
+
+    --bs-btn-color: var(--vb-green);
+    --bs-btn-hover-color: var(--vb-green-dark);
+
+}
+
+/* ----------------------------------------------------
+   Karten, Formulare, Tabellen
+   ---------------------------------------------------- */
+
+.vb-crm .card {
+
+    background: #ffffff;
+    border: 1px solid var(--vb-line);
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(1, 56, 57, .06);
+
+}
+
+.vb-crm .card-header {
+
+    background: #ffffff;
+    border-bottom: 1px solid var(--vb-line);
+
+}
+
+.vb-crm .card-header.bg-light,
+.vb-crm .card-header.bg-white {
 
     background: #ffffff !important;
-    border-bottom: 1px solid var(--vb-border);
-    box-shadow: 0 2px 10px rgba(0,0,0,.05);
+    color: var(--vb-teal);
 
 }
 
-.navbar-brand {
+.vb-crm .form-control:focus,
+.vb-crm .form-select:focus,
+.vb-crm .form-check-input:focus {
 
+    border-color: var(--vb-green);
+    box-shadow: 0 0 0 .2rem rgba(27, 145, 86, .18);
+
+}
+
+.vb-crm .form-check-input:checked {
+
+    background-color: var(--vb-green);
+    border-color: var(--vb-green);
+
+}
+
+.vb-crm .table thead {
+
+    vertical-align: middle;
+
+}
+
+.vb-crm .table td,
+.vb-crm .table th {
+
+    vertical-align: middle;
+
+}
+
+.vb-crm .table > thead > tr > th,
+.vb-crm .table-light > tr > th {
+
+    background: #f6f8f8;
+    color: var(--vb-teal);
+    font-family: var(--vb-font-head);
+    font-size: .74rem;
     font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
 
 }
 
-.navbar .nav-link {
+.vb-crm .nav-tabs .nav-link.active,
+.vb-crm .nav-pills .nav-link.active {
 
-    color: #495057 !important;
-    font-weight: 500;
-
-}
-
-.navbar .nav-link:hover {
-
-    color: var(--vb-primary) !important;
+    font-weight: 600;
 
 }
 
-.navbar .dropdown-toggle {
+.vb-crm .nav-pills {
 
-    color: #495057 !important;
-
-}
-
-/* Login Card */
-
-.login-card {
-
-    width: 100%;
-    max-width: 430px;
-    border: none;
-    border-radius: 16px;
-    overflow: hidden;
+    --bs-nav-pills-link-active-bg: var(--vb-green);
 
 }
 
-.login-card .card-header {
+.vb-crm .nav-tabs .nav-link {
 
-    background: var(--vb-primary);
-    color: white;
-    text-align: center;
-    border-bottom: none;
-    padding: 2rem;
+    color: var(--vb-muted);
 
 }
 
-.login-card .card-body {
+.vb-crm .nav-tabs .nav-link.active {
 
-    padding: 2rem;
-
-}
-
-/* Buttons */
-
-.btn-primary {
-
-    background: var(--vb-primary);
-    border-color: var(--vb-primary);
+    color: var(--vb-teal);
 
 }
 
-.btn-primary:hover {
+.vb-crm .page-link {
 
-    background: var(--vb-primary-dark);
-    border-color: var(--vb-primary-dark);
-
-}
-
-/* Cards */
-
-.card {
-
-    background: var(--vb-card);
-    border: none;
-    border-radius: 14px;
-    box-shadow: 0 4px 12px rgba(0,0,0,.06);
+    color: var(--vb-green);
 
 }
 
-/* Tabellen */
+.vb-crm .active > .page-link,
+.vb-crm .page-link.active {
 
-.table thead {
-
-    vertical-align: middle;
-
-}
-
-.table td,
-.table th {
-
-    vertical-align: middle;
+    background: var(--vb-green);
+    border-color: var(--vb-green);
 
 }
 
-/* Logo */
+.vb-crm .progress {
 
-.crm-logo {
-
-    width: 72px;
-    height: auto;
-    margin-bottom: 1rem;
+    --bs-progress-bar-bg: var(--vb-green);
 
 }
 
-/* Readonly Felder */
+/* Nur lesbare Felder */
 
 .vb-readonly {
 
-    background-color: #f8f9fa !important;
-    color: #6c757d !important;
+    background-color: #f6f8f8 !important;
+    color: var(--vb-muted, #6c757d) !important;
     border-color: #dee2e6;
     cursor: default;
 
@@ -146,20 +354,73 @@ body {
 
 .vb-readonly:focus {
 
-    background-color: #f8f9fa;
-    color: #6c757d;
+    background-color: #f6f8f8;
+    color: var(--vb-muted, #6c757d);
     border-color: #dee2e6;
     box-shadow: none;
 
 }
 
-/* Footer */
+/* ----------------------------------------------------
+   Anmeldung und Fehlerseiten (CRM): dunkler Hintergrund
+   ---------------------------------------------------- */
 
-.login-footer {
+body.vb-crm.vb-guest {
+
+    background:
+        radial-gradient(circle at 85% 10%, rgba(42, 197, 120, .22), transparent 40%),
+        linear-gradient(140deg, var(--vb-teal) 0%, #021f20 100%);
+    min-height: 100vh;
+
+}
+
+.vb-guest .login-card {
+
+    width: 100%;
+    max-width: 430px;
+    border: none;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, .35);
+
+}
+
+.vb-guest .login-card .card-header {
+
+    background: #ffffff;
+    text-align: center;
+    border-bottom: 1px solid var(--vb-line);
+    padding: 2rem 2rem 1.5rem;
+
+}
+
+.vb-guest .login-card .card-body {
+
+    padding: 2rem;
+
+}
+
+.vb-guest .vb-login-logo {
+
+    height: 34px;
+    width: auto;
+
+}
+
+.vb-guest .login-footer {
 
     text-align: center;
-    color: #6c757d;
+    color: var(--vb-muted);
     font-size: .9rem;
     margin-top: 1.5rem;
+
+}
+
+/* Fehlerseiten im CRM-Look: Text hell auf dunkel */
+.vb-guest .vb-guest-panel {
+
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, .35);
 
 }
