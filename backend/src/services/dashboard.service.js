@@ -5,7 +5,7 @@ const Ticket = require("../models/ticket.model");
 const Asset = require("../models/asset.model");
 
 const assetService = require("./asset.service");
-const syncService = require("./action1/sync.service");
+const syncService = require("../integrations/action1/sync.service");
 const { coverageFrom } = require("../utils/action1Coverage");
 
 // ----------------------------------------------------

@@ -38,7 +38,7 @@ function mongooseRepo() {
     const Company = require("../../models/company.model");
     const Asset = require("../../models/asset.model");
     const SyncRun = require("../../models/syncRun.model");
-    const counterService = require("../counter.service");
+    const counterService = require("../../services/counter.service");
 
     return {
 

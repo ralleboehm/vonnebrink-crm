@@ -2,7 +2,7 @@ require("dotenv").config();
 
 const app = require("./app");
 const connectDatabase = require("./config/database");
-const action1Scheduler = require("./services/action1/scheduler");
+const integrations = require("./integrations");
 
 const PORT = process.env.PORT || 3000;
 
@@ -20,7 +20,7 @@ async function startServer() {
             console.log(`🌍 Environment : ${process.env.NODE_ENV || "development"}`);
             console.log(`🚀 Server      : http://localhost:${PORT}`);
             console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-            action1Scheduler.start();
+            integrations.startAll();
             console.log("✅ Ready");
             console.log("");
 

@@ -2,8 +2,8 @@ const mongoose = require("mongoose");
 
 const companyService = require("../../services/company.service");
 const assetService = require("../../services/asset.service");
-const action1Client = require("../../services/action1/client");
-const syncService = require("../../services/action1/sync.service");
+const action1Client = require("../../integrations/action1/client");
+const syncService = require("../../integrations/action1/sync.service");
 const labels = require("../../utils/assetLabels");
 
 const { setFlash, takeFlash } = require("../../core/http/flash");

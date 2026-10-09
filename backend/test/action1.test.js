@@ -8,9 +8,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const client = require("../src/services/action1/client");
-const mapping = require("../src/services/action1/mapping");
-const sync = require("../src/services/action1/sync.service");
+const client = require("../src/integrations/action1/client");
+const mapping = require("../src/integrations/action1/mapping");
+const sync = require("../src/integrations/action1/sync.service");
 const labels = require("../src/utils/assetLabels");
 
 // ----------------------------------------------------
