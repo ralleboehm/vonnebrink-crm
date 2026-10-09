@@ -107,6 +107,15 @@ npm test
 `test/views.test.js` braucht die installierten Pakete (`npm install`); alle
 anderen Tests laufen auch ohne.
 
+Smoke-Test der ganzen Anwendung (braucht eine laufende MongoDB; nutzt die
+eigene Testdatenbank `<datenbank>_test`, die echten Daten bleiben unberührt):
+
+```bash
+npm run test:smoke
+```
+
+Architektur und Konventionen für neue Module: siehe `ARCHITECTURE.md`.
+
 ---
 
 ## Environment
