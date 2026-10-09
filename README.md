@@ -185,3 +185,21 @@ die globale Suche findet Assets auch über Seriennummer, IP und Benutzer, und
   nicht gelöscht.
 - Im CRM gelöschte Assets werden vom Sync nicht wieder angelegt.
 - Hält das Action1-Limit (< 30 Anfragen pro Minute) ein.
+
+## Benachrichtigungen & E-Mail
+
+- **Glocke** in der Navigation: ungelesene Benachrichtigungen, Übersicht unter `/crm/notifications`.
+- **E-Mail** über Nodemailer, Einstellungen nur in der `.env` (`SMTP_*`, `MAIL_FROM`, `APP_URL`).
+  Ohne `SMTP_HOST` werden Mails nicht verschickt, sondern nur im Log angezeigt.
+- **Vorlagen** in `backend/src/email-templates/` mit Platzhaltern wie `{{customerName}}`,
+  `{{ticketNumber}}` und Abschnitten `{{#if agent}} … {{/if}}`.
+- **Neues Ticket** (CRM oder Portal): Glocke + E-Mail an Admins/Techniker, Eingangsbestätigung
+  an den Ansprechpartner. Wer ein Ticket selbst im CRM anlegt, wird darüber nicht benachrichtigt.
+
+### Neues Ereignis hinzufügen
+
+1. Namen in `services/notification/events.js` (`EVENTS`) eintragen – viele sind schon vorbereitet
+   (`quote.created`, `invoice.created`, `asset.offline`, `action1.alert` …).
+2. Handler in `services/notification/handlers/<bereich>.handlers.js` schreiben und mit `register()` anmelden.
+3. Datei in `services/notification/handlers/index.js` eintragen.
+4. An der passenden Stelle `notificationService.dispatch(EVENTS.…, payload)` aufrufen.

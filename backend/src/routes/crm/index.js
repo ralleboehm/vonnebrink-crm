@@ -2,6 +2,9 @@ const express = require("express");
 
 const router = express.Router();
 
+// Glocke in der Navigation (ungelesene Benachrichtigungen)
+router.use(require("../../middleware/crm/notificationBell.middleware"));
+
 // ----------------------------------------------------
 // CRM Dashboard
 // ----------------------------------------------------
@@ -49,6 +52,12 @@ router.use("/assets", require("./asset.routes"));
 // ----------------------------------------------------
 
 router.use("/integrations", require("./integration.routes"));
+
+// ----------------------------------------------------
+// Benachrichtigungen
+// ----------------------------------------------------
+
+router.use("/notifications", require("./notification.routes"));
 
 // ----------------------------------------------------
 // Globale Suche

@@ -145,7 +145,11 @@ html(lang="de")
 
                     if session && session.user
 
-                        ul.navbar-nav
+                        ul.navbar-nav.flex-row.align-items-center
+
+                            if notificationBell
+
+                                include ../partials/notificationBell
 
                             li.nav-item.dropdown
 

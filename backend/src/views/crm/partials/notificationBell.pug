@@ -1,0 +1,78 @@
+//- Glocke in der Navigation
+//- Erwartet: notificationBell = { unreadCount, recent, timeAgo, returnTo } (siehe notificationBell.middleware.js)
+
+- const bell = notificationBell
+- const TYPE_COLORS = { success: "text-success", info: "text-primary", warning: "text-warning", danger: "text-danger" }
+
+li.nav-item.dropdown.me-lg-2
+
+    a.nav-link.position-relative.px-2(
+        href="#"
+        role="button"
+        data-bs-toggle="dropdown"
+        data-bs-auto-close="outside"
+        aria-expanded="false"
+        aria-label=bell.unreadCount ? `Benachrichtigungen, ${bell.unreadCount} ungelesen` : "Benachrichtigungen"
+        title="Benachrichtigungen"
+    )
+
+        i.bi.fs-5(class=bell.unreadCount ? "bi-bell-fill" : "bi-bell")
+
+        if bell.unreadCount
+
+            span.position-absolute.badge.rounded-pill.bg-danger(
+                style="top: 2px; right: -4px; font-size: 0.65rem;"
+            )= bell.unreadCount > 99 ? "99+" : bell.unreadCount
+
+    .dropdown-menu.dropdown-menu-end.shadow.p-0(style="width: 360px; max-width: 92vw;")
+
+        .d-flex.justify-content-between.align-items-center.px-3.py-2.border-bottom
+
+            strong Benachrichtigungen
+
+            if bell.unreadCount
+
+                form.m-0(method="POST" action="/crm/notifications/read-all")
+
+                    input(type="hidden" name="returnTo" value=bell.returnTo)
+
+                    button.btn.btn-link.btn-sm.p-0.text-decoration-none(type="submit")
+
+                        | Alle als gelesen markieren
+
+        if bell.recent.length
+
+            .list-group.list-group-flush(style="max-height: 60vh; overflow-y: auto;")
+
+                each item in bell.recent
+
+                    a.list-group-item.list-group-item-action.d-flex.gap-2.py-2(
+                        href=`/crm/notifications/${item._id}/open`
+                        class=item.isRead ? "" : "bg-primary-subtle"
+                    )
+
+                        i.bi.mt-1(class=[item.icon || "bi-bell", TYPE_COLORS[item.type] || "text-primary"])
+
+                        .flex-grow-1.overflow-hidden
+
+                            .d-flex.justify-content-between.gap-2
+
+                                span.text-truncate(class=item.isRead ? "" : "fw-semibold")= item.title
+
+                                small.text-muted.text-nowrap= bell.timeAgo(item.createdAt)
+
+                            if item.message
+
+                                small.d-block.text-muted.text-truncate= item.message
+
+        else
+
+            .px-3.py-4.text-center.text-muted.small
+
+                i.bi.bi-bell-slash.d-block.fs-4.mb-1
+
+                | Keine Benachrichtigungen
+
+        a.d-block.text-center.py-2.border-top.small.text-decoration-none(href="/crm/notifications")
+
+            | Alle anzeigen

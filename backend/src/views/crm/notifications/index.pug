@@ -1,0 +1,115 @@
+extends ../layouts/main
+
+block content
+
+    - const TYPE_COLORS = { success: "text-success", info: "text-primary", warning: "text-warning", danger: "text-danger" }
+    - const pageUrl = (page) => `/crm/notifications?page=${page}${unreadOnly ? "&filter=unread" : ""}`
+
+    .d-flex.justify-content-between.align-items-center.mb-4.flex-wrap.gap-2
+
+        h1.mb-0
+
+            i.bi.bi-bell.me-2
+
+            | Benachrichtigungen
+
+        form.m-0(method="POST" action="/crm/notifications/read-all")
+
+            input(type="hidden" name="returnTo" value="/crm/notifications")
+
+            button.btn.btn-outline-secondary(type="submit")
+
+                i.bi.bi-check2-all.me-2
+
+                | Alle als gelesen markieren
+
+    ul.nav.nav-pills.mb-3
+
+        li.nav-item
+
+            a.nav-link(href="/crm/notifications" class=unreadOnly ? "" : "active") Alle
+
+        li.nav-item
+
+            a.nav-link(href="/crm/notifications?filter=unread" class=unreadOnly ? "active" : "") Ungelesen
+
+    if result.items.length
+
+        .card.shadow-sm
+
+            .list-group.list-group-flush
+
+                each item in result.items
+
+                    .list-group-item.d-flex.gap-3.align-items-start.py-3(
+                        class=item.isRead ? "" : "bg-primary-subtle"
+                    )
+
+                        i.bi.fs-4(class=[item.icon || "bi-bell", TYPE_COLORS[item.type] || "text-primary"])
+
+                        .flex-grow-1
+
+                            .d-flex.justify-content-between.flex-wrap.gap-2
+
+                                if item.link
+
+                                    a.text-decoration-none(
+                                        href=`/crm/notifications/${item._id}/open`
+                                        class=item.isRead ? "text-body" : "fw-semibold"
+                                    )= item.title
+
+                                else
+
+                                    span(class=item.isRead ? "" : "fw-semibold")= item.title
+
+                                small.text-muted(title=labels.formatDateTime(item.createdAt))
+
+                                    = labels.timeAgo(item.createdAt)
+
+                            if item.message
+
+                                .text-muted.small.mt-1= item.message
+
+                        if !item.isRead
+
+                            form.m-0(method="POST" action=`/crm/notifications/${item._id}/read`)
+
+                                input(type="hidden" name="returnTo" value=pageUrl(result.page))
+
+                                button.btn.btn-sm.btn-outline-secondary(type="submit" title="Als gelesen markieren")
+
+                                    i.bi.bi-check2
+
+        if result.pages > 1
+
+            nav.mt-3(aria-label="Seiten")
+
+                ul.pagination.justify-content-center
+
+                    li.page-item(class=result.page <= 1 ? "disabled" : "")
+
+                        a.page-link(href=pageUrl(result.page - 1)) Zurück
+
+                    li.page-item.disabled
+
+                        span.page-link Seite #{result.page} von #{result.pages}
+
+                    li.page-item(class=result.page >= result.pages ? "disabled" : "")
+
+                        a.page-link(href=pageUrl(result.page + 1)) Weiter
+
+    else
+
+        .card.shadow-sm
+
+            .card-body.text-center.text-muted.py-5
+
+                i.bi.bi-bell-slash.display-6.d-block.mb-2
+
+                if unreadOnly
+
+                    | Keine ungelesenen Benachrichtigungen.
+
+                else
+
+                    | Noch keine Benachrichtigungen vorhanden.

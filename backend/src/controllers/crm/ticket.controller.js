@@ -10,6 +10,7 @@ const activityService = require("../../services/activity.service");
 const companyService = require("../../services/company.service");
 const contactService = require("../../services/contact.service");
 const userService = require("../../services/user.service");
+const notificationService = require("../../services/notification.service");
 const formatFileSize = require("../../utils/formatFileSize");
 
 /**
@@ -106,6 +107,12 @@ exports.store = async (req, res, next) => {
             user: req.session.user.id,
             action: "created",
             description: "Ticket erstellt."
+        });
+
+        // Benachrichtigungen & E-Mails (scheitert nie, Mails laufen im Hintergrund)
+        await notificationService.ticketCreated(ticket, {
+            createdByUserId: req.session.user.id,
+            source: "crm"
         });
 
         res.redirect("/crm/tickets");

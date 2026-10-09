@@ -1,0 +1,21 @@
+---
+subject: Ihr Ticket {{ticketNumber}} ist bei uns eingegangen
+---
+<p>Guten Tag {{customerName}},</p>
+
+<p>vielen Dank für Ihre Anfrage. Wir haben Ihr Ticket erhalten und kümmern uns darum.</p>
+
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:16px 0; border-collapse:collapse;">
+<tr><td style="padding:4px 16px 4px 0; color:#6c757d;">Ticketnummer</td><td style="padding:4px 0;"><strong>{{ticketNumber}}</strong></td></tr>
+<tr><td style="padding:4px 16px 4px 0; color:#6c757d;">Betreff</td><td style="padding:4px 0;">{{subject}}</td></tr>
+{{#if company}}<tr><td style="padding:4px 16px 4px 0; color:#6c757d;">Firma</td><td style="padding:4px 0;">{{company}}</td></tr>{{/if}}
+{{#if priority}}<tr><td style="padding:4px 16px 4px 0; color:#6c757d;">Priorität</td><td style="padding:4px 0;">{{priority}}</td></tr>{{/if}}
+</table>
+
+<p>Bitte geben Sie bei Rückfragen die Ticketnummer <strong>{{ticketNumber}}</strong> an.</p>
+
+{{#if portalLink}}<p>Den aktuellen Stand Ihres Tickets sehen Sie jederzeit im Kundenportal:<br>
+<a href="{{portalLink}}" style="color:#0d6efd;">{{portalLink}}</a></p>{{/if}}
+
+<p>Mit freundlichen Grüßen<br>
+{{brandName}}</p>

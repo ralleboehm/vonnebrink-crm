@@ -256,3 +256,38 @@ test("Dashboard mit Assets und Action1-Abdeckung", { skip: !pug && "pug nicht in
     assert.match(render("crm/dashboard/index.pug", { ...base, coverage: null }), /Noch kein Sync gelaufen/);
 
 });
+
+test("Glocke in der Navigation und Benachrichtigungsseite", { skip: !pug && "pug nicht installiert" }, () => {
+
+    const items = [
+        { _id: "n1", title: "Neues Ticket TIC-000007", message: "Holz Müller – Drucker", type: "danger", icon: "bi-ticket-detailed", link: "/crm/tickets/t1", isRead: false, createdAt: new Date() },
+        { _id: "n2", title: "Alte Meldung", message: "", type: "info", icon: "bi-bell", link: null, isRead: true, createdAt: new Date(Date.now() - 86400000) }
+    ];
+
+    const bell = { unreadCount: 1, recent: items, timeAgo: labels.timeAgo, returnTo: "/crm" };
+
+    const page = render("crm/notifications/index.pug", {
+        result: { items, total: 2, page: 1, pages: 1, perPage: 25 },
+        unreadOnly: false,
+        labels,
+        notificationBell: bell
+    });
+
+    assert.match(page, /Neues Ticket TIC-000007/);
+    assert.match(page, /\/crm\/notifications\/n1\/open/);
+    assert.match(page, /\/crm\/notifications\/n1\/read/);
+    assert.doesNotMatch(page, /\/crm\/notifications\/n2\/read/, "gelesene ohne Häkchen-Knopf");
+    assert.match(page, /bi-bell-fill/, "Glocke mit ungelesenen");
+    assert.match(page, /Alle anzeigen/);
+
+    const empty = render("crm/notifications/index.pug", {
+        result: { items: [], total: 0, page: 1, pages: 1, perPage: 25 },
+        unreadOnly: true,
+        labels,
+        notificationBell: { unreadCount: 0, recent: [], timeAgo: labels.timeAgo, returnTo: "/crm" }
+    });
+
+    assert.match(empty, /Keine ungelesenen Benachrichtigungen/);
+    assert.match(empty, /Keine Benachrichtigungen/);
+
+});

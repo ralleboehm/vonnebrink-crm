@@ -6,6 +6,7 @@ const ticketMessageService = require("../../services/ticketMessage.service");
 const attachmentService = require("../../services/attachment.service");
 const storageService = require("../../services/storage.service");
 const formatFileSize = require("../../utils/formatFileSize");
+const notificationService = require("../../services/notification.service");
 
 // ----------------------------------------------------
 // Meine Tickets
@@ -81,6 +82,11 @@ exports.store = async (req, res, next) => {
 
             createdBy: req.session.portalUser.id
 
+        });
+
+        // Benachrichtigungen & E-Mails (scheitert nie, Mails laufen im Hintergrund)
+        await notificationService.ticketCreated(ticket, {
+            source: "portal"
         });
 
         res.redirect(`/portal/tickets/${ticket._id}`);
