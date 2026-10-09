@@ -73,6 +73,12 @@ router.use("/marketing/campaigns", require("./campaign.routes"));
 router.use("/marketing", require("./marketing.routes"));
 
 // ----------------------------------------------------
+// Kundenumfragen / NPS (Admins)
+// ----------------------------------------------------
+
+router.use("/surveys", require("./survey.routes"));
+
+// ----------------------------------------------------
 // E-Mail-Protokoll (Admins)
 // ----------------------------------------------------
 

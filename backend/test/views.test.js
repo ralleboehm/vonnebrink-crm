@@ -687,3 +687,67 @@ test("Vertrieb: Pipeline-Tafel, Liste, Detail, Formular", { skip: !pug && "pug n
     assert.match(edit, /Bitte einen Titel angeben/);
 
 });
+
+const npsRules = require("../src/utils/npsRules");
+
+test("Kundenumfrage: Seite für Kunden und Auswertung für Admins", { skip: !pug && "pug nicht installiert" }, () => {
+
+    // Kundenseite (Portal-Design), Wert aus dem Mail-Link vorausgewählt
+    const form = render("public/survey.pug", { audience: "customer", token: "tok_1234567890abcdefghij", ticketNumber: "TIC-000007", companyName: "Holz Müller GmbH", score: 9, comment: "", error: null, commentMax: npsRules.COMMENT_MAX });
+
+    assert.match(form, /action="\/email\/umfrage\/tok_1234567890abcdefghij"/);
+    assert.match(form, /id="score-9" value="9" required checked/);
+    assert.doesNotMatch(form, /id="score-8" value="8" required checked/);
+    assert.match(form, /freiwillig/);
+    assert.match(form, /portal\.css/);
+
+    // Auswertung
+    const answered = (score, comment, monthsAgo = 0) => ({
+        _id: `s${score}`,
+        score,
+        comment,
+        answeredAt: new Date(Date.now() - monthsAgo * 31 * 86400000),
+        email: "hans@example.de",
+        ticketNumber: "TIC-000007",
+        company: { _id: "c1", companyName: "Holz Müller GmbH" },
+        contact: { firstName: "Hans", lastName: "Müller" },
+        ticket: { _id: "t1", subject: "Drucker" }
+    });
+
+    const answers = [answered(10, "Super schnell!"), answered(8, ""), answered(3, "Hat zu lange gedauert", 2)];
+    const summary = npsRules.summarize(answers);
+
+    const locals = {
+        filters: { period: "365", company: "", category: "", comments: "", search: "" },
+        stats: { summary, sent: 6, responseRate: 50, trend: npsRules.monthlyTrend(answers), byCompany: [{ company: answers[0].company, ...summary }] },
+        answers,
+        companies: [company],
+        periods: { "30": { label: "Letzte 30 Tage" }, "365": { label: "Letzte 12 Monate" }, all: { label: "Gesamter Zeitraum" } },
+        categories: npsRules.CATEGORIES,
+        categoryOf: npsRules.category,
+        fatigueDays: 30
+    };
+
+    const page = render("crm/surveys/index.pug", locals);
+
+    assert.match(page, /Kundenumfragen/);
+    assert.match(page, /class="vb-nps-value is-neutral">0</, "NPS 0 (1 Promotor, 1 Kritiker)");
+    assert.match(page, /50 %/);
+    assert.match(page, /Super schnell!/);
+    assert.match(page, /Hat zu lange gedauert/);
+    assert.match(page, /href="\/crm\/tickets\/t1"/);
+    assert.match(page, /href="\/crm\/surveys\/export\?period=365"/);
+    assert.match(page, /vb-nps-score is-detractor/);
+    assert.match(page, /Als Tabelle anzeigen/);
+    assert.match(page, /class="nav-link" href="\/crm\/surveys"/, "Menü Umfragen");
+
+    const empty = render("crm/surveys/index.pug", { ...locals, answers: [], stats: { ...locals.stats, summary: npsRules.summarize([]), sent: 0, responseRate: null, byCompany: [] } });
+    assert.match(empty, /Noch keine Umfragen/);
+
+    // Nur Admins sehen den Menüpunkt
+    for (const role of ["sales", "technician"]) {
+        const other = render("crm/tickets/index.pug", { tickets: [], filters: { search: "", status: "", priority: "", company: "" } }, role);
+        assert.doesNotMatch(other, /class="nav-link" href="\/crm\/surveys"/, role);
+    }
+
+});

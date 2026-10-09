@@ -283,6 +283,13 @@ function buildContext(overrides = {}) {
             return require("./ticket.service").getById(id);
         },
 
+        // NPS-Umfrage zum Ticket anlegen → Links für die Mail (oder null)
+        async createSurvey(ticket) {
+            const surveys = require("./survey.service");
+            const survey = await surveys.createForTicket(ticket);
+            return survey ? surveys.links(survey) : null;
+        },
+
         // Kontakt mit Firma laden
         loadContact(id) {
             return require("./contact.service").getById(id);

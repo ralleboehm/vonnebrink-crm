@@ -472,11 +472,24 @@ test("ticket.closed: Abschluss-Mail an den Kunden", async () => {
 
     const result = await ticketHandlers.ticketClosed({ ticket: "t1", closedByName: "Ralf Böhm" }, ctx);
 
-    assert.deepEqual(result, { ticketNumber: "TIC-000007", customerEmail: true });
+    assert.deepEqual(result, { ticketNumber: "TIC-000007", customerEmail: true, survey: false });
     assert.equal(calls.emails[0].template, "ticket-closed");
     assert.equal(calls.emails[0].to, "hans@example.de");
     assert.equal(calls.emails[0].data.agent, "Ralf Böhm");
+    assert.equal(calls.emails[0].data.survey, undefined);
     assert.equal(calls.notifications.length, 0);
+
+    // Mit Umfrage: Links landen in der Mail
+    const links = { url: "https://crm.example.de/email/umfrage/abc", s0: "x0", s10: "x10" };
+    ({ ctx, calls } = fakeContext({ createSurvey: async () => links }));
+    assert.equal((await ticketHandlers.ticketClosed({ ticket: "t1" }, ctx)).survey, true);
+    assert.equal(calls.emails[0].data.survey, links);
+
+    // Umfrage scheitert: Mail geht trotzdem raus
+    ({ ctx, calls } = fakeContext({ createSurvey: async () => { throw new Error("DB weg"); } }));
+    assert.equal((await ticketHandlers.ticketClosed({ ticket: "t1" }, ctx)).survey, false);
+    assert.equal(calls.emails.length, 1);
+    assert.match(calls.logs[0], /Umfrage nicht angelegt/);
 
     ({ ctx, calls } = fakeContext({ loadTicket: async () => ({ _id: "t2", ticketNumber: "TIC-2", contact: { lastName: "X" } }) }));
     assert.equal((await ticketHandlers.ticketClosed({ ticket: "t2" }, ctx)).customerEmail, false);

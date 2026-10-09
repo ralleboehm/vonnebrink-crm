@@ -22,4 +22,8 @@ router.post("/abmelden/:token", controller.unsubscribe);
 router.get("/bestaetigen/:token", controller.confirmPage);
 router.post("/bestaetigen/:token", controller.confirm);
 
+// Kundenumfrage (NPS) aus der Abschluss-Mail
+router.get("/umfrage/:token", controller.surveyPage);
+router.post("/umfrage/:token", controller.surveySubmit);
+
 module.exports = router;

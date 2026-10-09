@@ -17,6 +17,7 @@ const Counter = require("../models/counter.model");
 const Asset = require("../models/asset.model");
 const Campaign = require("../models/campaign.model");
 const Opportunity = require("../models/opportunity.model");
+const Survey = require("../models/survey.model");
 const Activity = require("../models/activity.model");
 const Notification = require("../models/notification.model");
 const SyncRun = require("../models/syncRun.model");
@@ -230,6 +231,14 @@ async function resetBusinessData() {
 
     console.log(
         `✔ Verkaufschancen: ${opportunities.deletedCount}`
+    );
+
+    // Kundenumfragen verweisen auf Tickets
+    const surveys =
+        await Survey.deleteMany({});
+
+    console.log(
+        `✔ Kundenumfragen: ${surveys.deletedCount}`
     );
 
     const notifications =

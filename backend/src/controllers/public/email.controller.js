@@ -130,3 +130,94 @@ exports.confirm = async (req, res, next) => {
     }
 
 };
+
+// ----------------------------------------------------
+// Kundenumfrage (NPS) nach Ticket-Abschluss
+// ----------------------------------------------------
+//
+// GET zeigt nur das Formular (Wert aus dem Link vorausgewählt) – erst
+// POST speichert. So lösen Virenscanner, die Links vorab öffnen, keine
+// Bewertung aus. Kommentar und Absenden sind freiwillig.
+
+const surveyService = require("../../services/survey.service");
+const npsRules = require("../../utils/npsRules");
+
+const SURVEY_THANKS = {
+    title: "Vielen Dank",
+    heading: "Vielen Dank für Ihre Bewertung!",
+    text: "Ihre Rückmeldung hilft uns, noch besser zu werden.",
+    tone: "success"
+};
+
+function surveyForm(res, status, found, { score = null, comment = "", error = null } = {}) {
+
+    const survey = found.survey;
+
+    res.status(status).render("public/survey", {
+        title: "Ihre Meinung",
+        token: survey.token,
+        ticketNumber: survey.ticketNumber,
+        companyName: survey.company ? survey.company.companyName : "",
+        score,
+        comment,
+        error,
+        commentMax: npsRules.COMMENT_MAX
+    });
+
+}
+
+exports.surveyPage = async (req, res, next) => {
+
+    try {
+
+        const found = await surveyService.findByToken(req.params.token);
+
+        if (!found) return page(res, 404, INVALID);
+
+        if (found.answered) return page(res, 200, { ...SURVEY_THANKS, text: "Ihre Bewertung haben wir bereits erhalten. Vielen Dank!" });
+
+        if (found.expired) {
+            return page(res, 410, { ...INVALID, title: "Umfrage abgelaufen", heading: "Diese Umfrage ist abgelaufen", text: "Vielen Dank für Ihr Interesse – die Umfrage zu diesem Ticket ist nicht mehr geöffnet." });
+        }
+
+        surveyForm(res, 200, found, { score: npsRules.parseScore(req.query.wert) });
+
+    } catch (err) {
+
+        next(err);
+
+    }
+
+};
+
+exports.surveySubmit = async (req, res, next) => {
+
+    const body = req.body || {};
+
+    try {
+
+        await surveyService.answer(req.params.token, body.score, body.comment);
+
+        page(res, 200, SURVEY_THANKS);
+
+    } catch (err) {
+
+        if (!err.status) return next(err);
+
+        if (err.status === 422) {
+
+            const found = await surveyService.findByToken(req.params.token);
+
+            if (found) return surveyForm(res, 422, found, { comment: npsRules.cleanComment(body.comment), error: err.message });
+
+        }
+
+        if (err.status === 409) return page(res, 200, { ...SURVEY_THANKS, text: "Ihre Bewertung haben wir bereits erhalten. Vielen Dank!" });
+
+        if (err.status === 410) return page(res, 410, { ...INVALID, title: "Umfrage abgelaufen", heading: "Diese Umfrage ist abgelaufen", text: "Die Umfrage zu diesem Ticket ist nicht mehr geöffnet." });
+
+        page(res, 404, INVALID);
+
+    }
+
+};

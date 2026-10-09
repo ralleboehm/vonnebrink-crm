@@ -219,7 +219,8 @@ die globale Suche findet Assets auch über Seriennummer, IP und Benutzer, und
   interne Dateien lösen keine Mail aus.
 - **Bearbeiter zugewiesen**: Glocke für den Bearbeiter (außer bei Selbstzuweisung); beim ersten
   Zuweisen E-Mail an den Kunden „Ihr Ticket wird bearbeitet“ (`ticket-assigned`).
-- **Gelöst / Geschlossen**: E-Mail an den Kunden (`ticket-closed`), einmal je Abschluss.
+- **Gelöst / Geschlossen**: E-Mail an den Kunden (`ticket-closed`), einmal je Abschluss – mit
+  freiwilliger NPS-Frage (siehe Kundenumfragen).
 - **Portalzugang anlegen / Passwort zurücksetzen** (Kontakt): mit Haken „per E-Mail schicken“
   gehen die Zugangsdaten an den Kontakt (`portal-welcome`, `password-reset`). Das vorläufige
   Passwort gilt nur für die erste Anmeldung.
@@ -231,7 +232,7 @@ die globale Suche findet Assets auch über Seriennummer, IP und Benutzer, und
 | `ticket-reply` | Kunde | Antwort / Datei im CRM (nicht intern) |
 | `ticket-reply-internal` | zuständiger Techniker (sonst Team) | Antwort / Datei im Portal |
 | `ticket-assigned` | Kunde | erstes Zuweisen |
-| `ticket-closed` | Kunde | Status Gelöst / Geschlossen |
+| `ticket-closed` | Kunde | Status Gelöst / Geschlossen (mit NPS-Frage, siehe unten) |
 | `portal-welcome` | Kunde | Portalzugang angelegt (mit Haken) |
 | `password-reset` | Kunde | Passwort zurückgesetzt (mit Haken) |
 | `marketing-confirm` | Kunde | Double-Opt-In angefordert |
@@ -318,6 +319,22 @@ Menü **Vertrieb** (Rollen: Admin und Vertrieb, nicht Techniker).
   Gewonnen / Verloren (mit Grund). Gewonnen macht aus einer Firma mit Status „Interessent“ einen Kunden.
 - Die Firmenseite zeigt ihre Verkaufschancen. Regeln: `utils/salesRules.js`.
 
+## Kundenumfragen (NPS)
+
+Menü **Umfragen** (nur Admins).
+
+- Die Abschluss-Mail (`ticket-closed`) enthält die Frage „Wie wahrscheinlich ist es, dass Sie uns
+  weiterempfehlen?“ als Leiste 0–10. Ein Klick öffnet `/email/umfrage/<Link>` mit vorausgewähltem
+  Wert; erst mit „Bewertung absenden“ wird gespeichert (Link-Scanner lösen nichts aus). Ein
+  Kommentar ist möglich, alles ist **freiwillig**.
+- Ein Kontakt bekommt höchstens **alle 30 Tage** eine Umfrage, je Ticket höchstens eine. Links
+  gelten 60 Tage und können nur einmal beantwortet werden.
+- Kritische Bewertungen (0–6) erscheinen bei den Admins in der Glocke.
+- **Auswertung** (`/crm/surveys`): NPS (% Promotoren 9–10 minus % Kritiker 0–6), Antworten,
+  Rücklauf, Durchschnitt, Aufteilung, Verteilung 0–10, Verlauf je Monat, Tabelle je Firma und alle
+  Antworten mit Kommentar und Ticket. Filter nach Zeitraum, Firma, Gruppe, Text; CSV-Export.
+- Regeln und Kennzahlen: `utils/npsRules.js`, Versand und Auswertung: `services/survey.service.js`.
+
 ## Rollen
 
 | Bereich | Administrator | Techniker | Vertrieb |
@@ -327,6 +344,7 @@ Menü **Vertrieb** (Rollen: Admin und Vertrieb, nicht Techniker).
 | Assets | ✔ | ✔ | nur ansehen |
 | Marketing (Kampagnen, Empfänger, Gruppen) | ✔ | – | ✔ |
 | Vertrieb (Pipeline, Verkaufschancen; Angebote später) | ✔ | – | ✔ |
+| Kundenumfragen (NPS) | ✔ | – | – |
 | Benutzer, Import & Export, Action1, E-Mail-Protokoll | ✔ | – | – |
 
 Die Rechte stehen in `backend/src/core/permissions/index.js`. Die globale Suche zeigt nur Bereiche,

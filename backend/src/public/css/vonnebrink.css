@@ -631,3 +631,172 @@ body.vb-crm.vb-guest {
     font-size: 1.1rem;
 
 }
+
+/* ====================================================
+   Kundenumfragen (NPS) – Auswertung
+   ====================================================
+   Kritiker (0–6) orange, Passive (7–8) grau, Promotoren (9–10) grün.
+   Farbe nie allein: Beschriftung, Legende und Tabellenansicht stehen dabei. */
+
+body.vb-crm {
+    --vb-nps-detractor: #c2410c;
+    --vb-nps-passive: #87918d;
+    --vb-nps-promoter: #1b9156;
+}
+
+.vb-crm .vb-nps-hero .vb-nps-value {
+    font-family: var(--vb-font-head);
+    font-size: 3.25rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--vb-teal);
+}
+
+.vb-crm .vb-nps-value.is-good { color: var(--vb-green-dark); }
+.vb-crm .vb-nps-value.is-bad { color: var(--vb-nps-detractor); }
+
+.vb-crm .vb-nps-split {
+    display: flex;
+    gap: 2px;
+    height: 28px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--vb-line);
+}
+
+.vb-crm .vb-nps-split-part { display: block; min-width: 4px; }
+
+.vb-crm .is-detractor.vb-nps-split-part,
+.vb-crm .is-detractor.vb-nps-swatch,
+.vb-crm .is-detractor.vb-nps-dist-bar { background: var(--vb-nps-detractor); }
+
+.vb-crm .is-passive.vb-nps-split-part,
+.vb-crm .is-passive.vb-nps-swatch,
+.vb-crm .is-passive.vb-nps-dist-bar { background: var(--vb-nps-passive); }
+
+.vb-crm .is-promoter.vb-nps-split-part,
+.vb-crm .is-promoter.vb-nps-swatch,
+.vb-crm .is-promoter.vb-nps-dist-bar { background: var(--vb-nps-promoter); }
+
+.vb-crm .vb-nps-split-part:hover { filter: brightness(1.1); }
+
+.vb-crm .vb-nps-legend { display: flex; gap: .5rem; align-items: flex-start; }
+
+.vb-crm .vb-nps-swatch {
+    flex: 0 0 auto;
+    width: 12px;
+    height: 12px;
+    margin-top: .3rem;
+    border-radius: 3px;
+}
+
+/* Verteilung 0–10 */
+
+.vb-crm .vb-nps-dist {
+    display: grid;
+    grid-template-columns: repeat(11, minmax(0, 1fr));
+    gap: 4px;
+    align-items: end;
+}
+
+.vb-crm .vb-nps-dist-col { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+
+.vb-crm .vb-nps-dist-track {
+    display: flex;
+    align-items: flex-end;
+    width: 100%;
+    height: 120px;
+    border-bottom: 1px solid var(--vb-line);
+}
+
+.vb-crm .vb-nps-dist-bar { width: 100%; border-radius: 4px 4px 0 0; }
+
+.vb-crm .vb-nps-dist-count { font-size: .75rem; color: var(--vb-muted); min-height: 1.1em; }
+
+.vb-crm .vb-nps-dist-label { font-size: .8rem; font-weight: 600; color: var(--vb-text); }
+
+/* Verlauf je Monat (Balken um die Null-Linie) */
+
+.vb-crm .vb-nps-trend {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 4px;
+}
+
+.vb-crm .vb-nps-trend-col { display: flex; flex-direction: column; align-items: center; min-width: 0; }
+
+.vb-crm .vb-nps-trend-plot {
+    position: relative;
+    width: 100%;
+    height: 160px;
+    background: linear-gradient(var(--vb-line), var(--vb-line)) center / 100% 1px no-repeat;
+}
+
+.vb-crm .vb-nps-trend-bar {
+    position: absolute;
+    left: 18%;
+    right: 18%;
+}
+
+.vb-crm .vb-nps-trend-bar.is-up {
+    bottom: 50%;
+    background: var(--vb-nps-promoter);
+    border-radius: 4px 4px 0 0;
+}
+
+.vb-crm .vb-nps-trend-bar.is-down {
+    top: 50%;
+    background: var(--vb-nps-detractor);
+    border-radius: 0 0 4px 4px;
+}
+
+.vb-crm .vb-nps-trend-value {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: .72rem;
+    font-weight: 600;
+    color: var(--vb-text);
+    white-space: nowrap;
+}
+
+.vb-crm .vb-nps-trend-bar.is-up .vb-nps-trend-value { bottom: 100%; margin-bottom: 2px; }
+.vb-crm .vb-nps-trend-bar.is-down .vb-nps-trend-value { top: 100%; margin-top: 2px; }
+
+.vb-crm .vb-nps-trend-empty {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -120%);
+    color: var(--vb-muted);
+    font-size: .8rem;
+}
+
+.vb-crm .vb-nps-trend-label { margin-top: .35rem; font-size: .72rem; color: var(--vb-muted); white-space: nowrap; }
+
+/* Wert-Plaketten in Tabellen */
+
+.vb-crm .vb-nps-score {
+    display: inline-block;
+    min-width: 2rem;
+    padding: .15rem .45rem;
+    border-radius: 4px;
+    text-align: center;
+    font-weight: 700;
+    color: #fff;
+}
+
+.vb-crm .vb-nps-score.is-promoter { background: var(--vb-nps-promoter); }
+.vb-crm .vb-nps-score.is-passive { background: #6b7672; }
+.vb-crm .vb-nps-score.is-detractor { background: var(--vb-nps-detractor); }
+
+.vb-crm .vb-nps-chip { font-weight: 600; }
+.vb-crm .vb-nps-chip.is-good { color: var(--vb-green-dark); }
+.vb-crm .vb-nps-chip.is-bad { color: var(--vb-nps-detractor); }
+
+.vb-crm .vb-nps-comment { max-width: 32rem; white-space: pre-line; }
+
+@media (max-width: 575.98px) {
+    .vb-crm .vb-nps-trend-value { display: none; }
+    .vb-crm .vb-nps-trend-label { font-size: .62rem; }
+}

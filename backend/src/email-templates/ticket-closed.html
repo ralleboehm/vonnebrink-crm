@@ -11,6 +11,35 @@ subject: Ihr Ticket {{ticketNumber}} wurde abgeschlossen
 
 {{#if portalLink}}<p><a href="{{portalLink}}" style="color:#1b9156;">{{portalLink}}</a></p>{{/if}}
 
+{{#if survey.url}}<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 8px; border-top:1px solid #dde7e2;">
+<tr><td style="padding:20px 0 4px; font-size:15px;"><strong style="color:#013839;">Eine kurze Frage – freiwillig:</strong><br>
+Wie wahrscheinlich ist es, dass Sie uns einem Kollegen oder Geschäftspartner weiterempfehlen?</td></tr>
+<tr><td style="padding:10px 0 0;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed;">
+<tr>
+<td style="padding:0 2px;"><a href="{{survey.s0}}" style="display:block; width:100%; padding:9px 0; background:#f2f7f5; border:1px solid #dde7e2; color:#013839; font-weight:bold; font-size:15px; text-align:center; text-decoration:none;">0</a></td>
+<td style="padding:0 2px;"><a href="{{survey.s1}}" style="display:block; width:100%; padding:9px 0; background:#f2f7f5; border:1px solid #dde7e2; color:#013839; font-weight:bold; font-size:15px; text-align:center; text-decoration:none;">1</a></td>
+<td style="padding:0 2px;"><a href="{{survey.s2}}" style="display:block; width:100%; padding:9px 0; background:#f2f7f5; border:1px solid #dde7e2; color:#013839; font-weight:bold; font-size:15px; text-align:center; text-decoration:none;">2</a></td>
+<td style="padding:0 2px;"><a href="{{survey.s3}}" style="display:block; width:100%; padding:9px 0; background:#f2f7f5; border:1px solid #dde7e2; color:#013839; font-weight:bold; font-size:15px; text-align:center; text-decoration:none;">3</a></td>
+<td style="padding:0 2px;"><a href="{{survey.s4}}" style="display:block; width:100%; padding:9px 0; background:#f2f7f5; border:1px solid #dde7e2; color:#013839; font-weight:bold; font-size:15px; text-align:center; text-decoration:none;">4</a></td>
+<td style="padding:0 2px;"><a href="{{survey.s5}}" style="display:block; width:100%; padding:9px 0; background:#f2f7f5; border:1px solid #dde7e2; color:#013839; font-weight:bold; font-size:15px; text-align:center; text-decoration:none;">5</a></td>
+<td style="padding:0 2px;"><a href="{{survey.s6}}" style="display:block; width:100%; padding:9px 0; background:#f2f7f5; border:1px solid #dde7e2; color:#013839; font-weight:bold; font-size:15px; text-align:center; text-decoration:none;">6</a></td>
+<td style="padding:0 2px;"><a href="{{survey.s7}}" style="display:block; width:100%; padding:9px 0; background:#f2f7f5; border:1px solid #dde7e2; color:#013839; font-weight:bold; font-size:15px; text-align:center; text-decoration:none;">7</a></td>
+<td style="padding:0 2px;"><a href="{{survey.s8}}" style="display:block; width:100%; padding:9px 0; background:#f2f7f5; border:1px solid #dde7e2; color:#013839; font-weight:bold; font-size:15px; text-align:center; text-decoration:none;">8</a></td>
+<td style="padding:0 2px;"><a href="{{survey.s9}}" style="display:block; width:100%; padding:9px 0; background:#f2f7f5; border:1px solid #dde7e2; color:#013839; font-weight:bold; font-size:15px; text-align:center; text-decoration:none;">9</a></td>
+<td style="padding:0 2px;"><a href="{{survey.s10}}" style="display:block; width:100%; padding:9px 0; background:#f2f7f5; border:1px solid #dde7e2; color:#013839; font-weight:bold; font-size:15px; text-align:center; text-decoration:none;">10</a></td>
+</tr>
+</table>
+</td></tr>
+<tr><td style="padding:6px 0 0;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+<td style="font-size:12px; color:#6c757d;">0 = unwahrscheinlich</td>
+<td style="font-size:12px; color:#6c757d; text-align:right;">10 = sehr wahrscheinlich</td>
+</tr></table>
+</td></tr>
+<tr><td style="padding:10px 0 0; font-size:12px; color:#6c757d;">Ein Klick genügt; auf der nächsten Seite können Sie die Bewertung bestätigen und uns gern noch ein paar Worte mitgeben.</td></tr>
+</table>{{/if}}
+
 <p>Mit freundlichen Grüßen<br>
 {{#if agent}}{{agent}}<br>{{/if}}
 {{brandName}}</p>

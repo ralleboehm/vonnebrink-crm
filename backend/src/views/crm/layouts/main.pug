@@ -146,6 +146,13 @@ html(lang="de")
                                             i.bi.bi-tags.me-2
                                             | Gruppen
 
+                        if can("surveys.view")
+
+                            li.nav-item
+                                a.nav-link(href="/crm/surveys")
+                                    i.bi.bi-emoji-smile.me-1
+                                    | Umfragen
+
                         if session && session.user && session.user.role === "admin"
 
                             li.nav-item.dropdown

@@ -1,0 +1,51 @@
+extends ../crm/layouts/guest
+
+block content
+
+    .vb-guest-panel(style="max-width: 640px; width: 100%;")
+
+        .p-4.p-md-5
+
+            .text-center
+
+                img.mb-4(src="/images/logo-wordmark.png" alt="Vonnebrink IT Operations" style="height: 32px;")
+
+            .vb-eyebrow.text-center Ihre Meinung · Ticket #{ticketNumber}
+
+            h1.h4.text-center.mt-2.mb-4 Wie wahrscheinlich ist es, dass Sie uns einem Kollegen oder Geschäftspartner weiterempfehlen?
+
+            if error
+
+                .alert.alert-danger(role="alert")= error
+
+            form(method="POST" action=`/email/umfrage/${token}`)
+
+                fieldset
+
+                    legend.visually-hidden Bewertung von 0 (unwahrscheinlich) bis 10 (sehr wahrscheinlich)
+
+                    .vb-nps-scale
+
+                        each value in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+                            input.vb-nps-input(type="radio" name="score" id=`score-${value}` value=value required checked=(score === value))
+
+                            label.vb-nps-option(for=`score-${value}`)= value
+
+                    .d-flex.justify-content-between.small.text-muted.mt-2.mb-4
+
+                        span 0 = unwahrscheinlich
+
+                        span 10 = sehr wahrscheinlich
+
+                .mb-4
+
+                    label.form-label(for="comment") Möchten Sie uns noch etwas mitteilen? (freiwillig)
+
+                    textarea.form-control#comment(name="comment" rows="4" maxlength=commentMax placeholder="Was hat Ihnen gefallen, was können wir besser machen?")= comment
+
+                button.btn.btn-primary.btn-lg.w-100(type="submit") Bewertung absenden
+
+            p.small.text-muted.text-center.mt-4.mb-0
+
+                | Die Teilnahme ist freiwillig. Ihre Antwort sehen nur wir intern – sie wird nicht veröffentlicht.

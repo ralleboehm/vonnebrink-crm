@@ -51,6 +51,7 @@ const PERMISSIONS = Object.freeze({
     IMPORT_RUN: "import.run",
     INTEGRATIONS_MANAGE: "integrations.manage",
     EMAIL_LOG_VIEW: "email.log",
+    SURVEYS_VIEW: "surveys.view",     // Kundenumfragen (NPS) auswerten – nur Admin
 
     // Allgemein
     SEARCH_USE: "search.use",

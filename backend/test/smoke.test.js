@@ -1362,6 +1362,100 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
 
     });
 
+    await t.test("Kundenumfrage (NPS) nach Ticket-Abschluss", async () => {
+
+        const Survey = require("../src/models/survey.model");
+        const surveyService = require("../src/services/survey.service");
+
+        // Im vorigen Schritt wurde TIC-900001 geschlossen: Umfrage für Hans
+        const survey = await Survey.findOne({ ticket: ticket._id });
+        assert.ok(survey, "Umfrage beim Abschluss angelegt");
+        assert.equal(survey.email, "hans@smoke.test");
+        assert.equal(survey.answeredAt, null);
+
+        // Höchstens eine Umfrage je Kontakt in 30 Tagen
+        const again = await surveyService.createForTicket({ _id: new mongoose.Types.ObjectId(), ticketNumber: "TIC-900099", company: company._id, contact: { _id: contact._id, email: contact.email } });
+        assert.equal(again, null, "keine zweite Umfrage innerhalb von 30 Tagen");
+
+        // Ohne Anmeldung: Seite mit vorausgewähltem Wert
+        const guest = createClient(baseUrl);
+        const url = `/email/umfrage/${survey.token}`;
+
+        const form = await guest.get(`${url}?wert=9`);
+        assertPage(form, "Umfrage-Seite");
+        assert.match(form.text, /id="score-9" value="9" required checked/);
+        assert.match(form.text, /portal\.css/);
+
+        // Ungültiger Wert: Formular mit Hinweis, nichts gespeichert
+        const invalid = await guest.post(url, { score: "11", comment: "x" });
+        assert.equal(invalid.status, 422);
+        assert.match(invalid.text, /zwischen 0 und 10/);
+        assert.equal((await Survey.findById(survey._id)).answeredAt, null);
+
+        // Kritische Bewertung: gespeichert, Admins bekommen einen Hinweis
+        const alertsBefore = await Notification.countDocuments({ user: admin._id, event: "survey.answered" });
+
+        const thanks = await guest.post(url, { score: "3", comment: "Hat zu lange gedauert" });
+        assertPage(thanks, "Umfrage absenden");
+        assert.match(thanks.text, /Vielen Dank/);
+
+        const saved = await Survey.findById(survey._id);
+        assert.equal(saved.score, 3);
+        assert.equal(saved.comment, "Hat zu lange gedauert");
+        assert.ok(saved.answeredAt);
+        assert.equal(await Notification.countDocuments({ user: admin._id, event: "survey.answered" }), alertsBefore + 1, "Admin: Glocke");
+        assert.equal(await Notification.countDocuments({ user: technician._id, event: "survey.answered" }), 0, "Techniker: keine Glocke");
+
+        // Nur einmal beantworten
+        const twice = await guest.post(url, { score: "10", comment: "" });
+        assertPage(twice, "zweites Absenden");
+        assert.match(twice.text, /bereits erhalten/);
+        assert.equal((await Survey.findById(survey._id)).score, 3);
+        assert.match((await guest.get(url)).text, /bereits erhalten/);
+
+        // Ungültiger und abgelaufener Link
+        assert.equal((await guest.get("/email/umfrage/gibt-es-nicht-1234567890")).status, 404);
+        assert.equal((await guest.get("/email/umfrage/x")).status, 404);
+
+        const oldTicket = await Ticket.create({ ticketNumber: "TIC-900088", subject: "Alt", description: "Alt", company: otherCompany._id, contact: otherContact._id, createdBy: admin._id });
+        const expired = await Survey.create({ token: "abgelaufen_abcdefghijklmnop", ticket: oldTicket._id, company: otherCompany._id, contact: otherContact._id, ticketNumber: "TIC-900088", email: "fritz@smoke.test", sentAt: new Date(Date.now() - 70 * 86400000) });
+        assert.equal((await guest.get(`/email/umfrage/${expired.token}`)).status, 410);
+        assert.equal((await guest.post(`/email/umfrage/${expired.token}`, { score: "9" })).status, 410);
+
+        // Auswertung im CRM (Admin)
+        const overview = await crm.get("/crm/surveys");
+        assertPage(overview, "/crm/surveys");
+        assert.match(overview.text, /Hat zu lange gedauert/);
+        assert.match(overview.text, /TIC-900001/);
+        assert.match(overview.text, /class="nav-link" href="\/crm\/surveys"/, "Menü Umfragen");
+
+        for (const query of ["?category=detractor&comments=1", "?period=all&search=lange", `?company=${company._id}`, "?period=quatsch&company=kaputt&category=x"]) {
+            assertPage(await crm.get(`/crm/surveys${query}`), `/crm/surveys${query}`);
+        }
+
+        assert.doesNotMatch((await crm.get("/crm/surveys?category=promoter")).text, /Hat zu lange gedauert/, "Filter Promotoren");
+
+        const csv = await crm.get("/crm/surveys/export");
+        assert.equal(csv.status, 200);
+        assert.match(csv.contentType, /text\/csv/);
+        assert.match(csv.text, /Hat zu lange gedauert/);
+
+        // Nur Admins
+        for (const username of ["smoke-tech", "smoke-sales"]) {
+
+            const other = createClient(baseUrl);
+            assertRedirect(await other.post("/crm/login", { username, password: PASSWORD }), `Login ${username}`);
+
+            assert.equal((await other.get("/crm/surveys")).status, 403, `${username}: Auswertung gesperrt`);
+            assert.equal((await other.get("/crm/surveys/export")).status, 403, `${username}: Export gesperrt`);
+            const dashboard = await other.get("/crm");
+            assertPage(dashboard, `${username}: Dashboard`);
+            assert.doesNotMatch(dashboard.text, /href="\/crm\/surveys"/, `${username}: kein Menüpunkt`);
+
+        }
+
+    });
+
     await t.test("Abmelden", async () => {
 
         assertRedirect(await portal.get("/portal/logout"), "/portal/logout");

@@ -720,3 +720,66 @@ body.vb-portal {
     box-shadow: 0 20px 50px rgba(1, 56, 57, .10);
 
 }
+
+/* NPS-Umfrage: Skala 0–10 */
+.vb-portal .vb-nps-scale {
+
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(11, minmax(0, 1fr));
+    gap: 4px;
+
+}
+
+.vb-portal .vb-nps-input {
+
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+
+}
+
+.vb-portal .vb-nps-option {
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 46px;
+    border: 1px solid var(--vb-line);
+    background: var(--vb-soft);
+    color: var(--vb-teal);
+    font-family: var(--vb-font-head);
+    font-weight: 700;
+    cursor: pointer;
+    user-select: none;
+    transition: background .1s, border-color .1s;
+
+}
+
+.vb-portal .vb-nps-option:hover {
+
+    border-color: var(--vb-green);
+
+}
+
+.vb-portal .vb-nps-input:checked + .vb-nps-option {
+
+    background: var(--vb-green);
+    border-color: var(--vb-green);
+    color: #ffffff;
+
+}
+
+.vb-portal .vb-nps-input:focus-visible + .vb-nps-option {
+
+    outline: 3px solid rgba(27, 145, 86, .35);
+    outline-offset: 1px;
+
+}
+
+@media (max-width: 420px) {
+
+    .vb-portal .vb-nps-scale { gap: 2px; }
+    .vb-portal .vb-nps-option { height: 40px; font-size: .85rem; }
+
+}

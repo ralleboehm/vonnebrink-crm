@@ -23,7 +23,8 @@
 //   (Vorlage ticket-assigned) – bei späterem Umverteilen nicht.
 //
 // ticket.closed (Status wechselt auf „Gelöst“ oder „Geschlossen“)
-//   E-Mail an den Kunden (Vorlage ticket-closed), einmal je Abschluss.
+//   E-Mail an den Kunden (Vorlage ticket-closed), einmal je Abschluss –
+//   mit freiwilliger NPS-Umfrage 0–10 (services/survey.service.js).
 //
 // Links ins Kundenportal stehen nur in Kunden-Mails, wenn der Kontakt einen
 // aktiven Portalzugang hat – sonst „antworten Sie auf diese E-Mail“.
@@ -513,16 +514,30 @@ async function ticketClosed(payload, ctx) {
 
     }
 
+    // Freiwillige NPS-Umfrage (nicht bei jeder Mail – siehe survey.service)
+    let survey = null;
+
+    if (typeof ctx.createSurvey === "function") {
+
+        try {
+            survey = await ctx.createSurvey(ticket);
+        } catch (err) {
+            ctx.log(`Ticket ${ticket.ticketNumber}: Umfrage nicht angelegt (${err.message}).`);
+        }
+
+    }
+
     ctx.queueTemplateEmail("ticket-closed", contact.email, {
         customerName: customerName(contact),
         ticketNumber: ticket.ticketNumber,
         subject: ticket.subject,
         agent: payload.closedByName || "",
         resolution: payload.resolution ? String(payload.resolution).trim().slice(0, EMAIL_MESSAGE_LENGTH) : "",
-        portalLink: await portalLinkFor(ticket, ctx)
+        portalLink: await portalLinkFor(ticket, ctx),
+        survey: survey || undefined
     });
 
-    return { ticketNumber: ticket.ticketNumber, customerEmail: true };
+    return { ticketNumber: ticket.ticketNumber, customerEmail: true, survey: Boolean(survey) };
 
 }
 

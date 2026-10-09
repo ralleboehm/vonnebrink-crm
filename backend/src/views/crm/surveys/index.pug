@@ -1,0 +1,431 @@
+extends ../layouts/main
+
+block content
+
+    - const summary = stats.summary
+    - const formatDay = (date) => date ? new Date(date).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" }) : "—"
+    - const signed = (value) => value === null || value === undefined ? "—" : (value > 0 ? "+" + value : String(value))
+    - const pct = (value) => String(value).replace(".", ",") + " %"
+    - const npsClass = (value) => value === null || value === undefined ? "" : (value >= 30 ? "is-good" : (value >= 0 ? "is-neutral" : "is-bad"))
+    - const query = (extra) => { const p = new URLSearchParams(); for (const key of ["period", "company", "category", "comments", "search"]) { if (filters[key]) p.set(key, filters[key]); } for (const [k, v] of Object.entries(extra)) { if (v) p.set(k, v); else p.delete(k); } const s = p.toString(); return s ? "?" + s : ""; }
+    - const maxBucket = Math.max.apply(null, [1].concat(summary.distribution))
+    - const answersLabel = (n) => n + " " + (n === 1 ? "Antwort" : "Antworten")
+    - const filtered = Boolean(filters.company || filters.category || filters.comments || filters.search)
+
+    .d-flex.justify-content-between.align-items-center.mb-4.flex-wrap.gap-2
+
+        div
+
+            h1.mb-0
+
+                i.bi.bi-emoji-smile.me-2
+
+                | Kundenumfragen
+
+            small.text-muted
+                | Net Promoter Score aus der Abschluss-Mail · freiwillig, höchstens eine Umfrage je Kontakt alle #{fatigueDays} Tage
+
+        a.btn.btn-outline-secondary(href=`/crm/surveys/export${query({})}`)
+
+            i.bi.bi-download.me-2
+
+            | CSV exportieren
+
+    //- =====================================================
+    //- Filter
+    //- =====================================================
+
+    form.row.g-2.mb-4.align-items-center(method="GET" action="/crm/surveys")
+
+        .col-md-2
+
+            select.form-select(name="period" aria-label="Zeitraum")
+
+                each entry, key in periods
+
+                    option(value=key selected=filters.period === key)= entry.label
+
+        .col-md-3
+
+            select.form-select(name="company" aria-label="Firma")
+
+                option(value="") Alle Firmen
+
+                each company in companies
+
+                    option(value=String(company._id) selected=filters.company === String(company._id))= company.companyName
+
+        .col-md-2
+
+            select.form-select(name="category" aria-label="Gruppe")
+
+                option(value="") Alle Bewertungen
+
+                each entry, key in categories
+
+                    option(value=key selected=filters.category === key) #{entry.label} (#{entry.range})
+
+        .col-md-2
+
+            input.form-control(type="search" name="search" value=filters.search placeholder="Kommentar, Ticket …" maxlength="100" aria-label="Suche")
+
+        .col-md-1
+
+            .form-check.mb-0
+
+                input.form-check-input#filterComments(type="checkbox" name="comments" value="1" checked=filters.comments === "1")
+
+                label.form-check-label.small(for="filterComments") mit Text
+
+        .col-md-2.d-flex.gap-2
+
+            button.btn.btn-primary.flex-fill(type="submit")
+
+                i.bi.bi-funnel.me-1
+
+                | Filtern
+
+            a.btn.btn-outline-secondary(href="/crm/surveys" title="Filter zurücksetzen" aria-label="Filter zurücksetzen")
+
+                i.bi.bi-x-lg
+
+    //- =====================================================
+    //- Kennzahlen
+    //- =====================================================
+
+    .row.g-3.mb-4
+
+        .col-md-4
+
+            .card.shadow-sm.h-100.vb-nps-hero
+
+                .card-body
+
+                    .text-muted.small.mb-1 Net Promoter Score
+
+                    .vb-nps-value(class=npsClass(summary.nps))= signed(summary.nps)
+
+                    .small.text-muted
+                        | % Promotoren − % Kritiker · Skala −100 bis +100
+
+        .col-md-8
+
+            .row.g-3.h-100
+
+                .col-4
+
+                    .card.shadow-sm.h-100
+
+                        .card-body
+
+                            .text-muted.small Antworten
+
+                            .fs-3.fw-semibold= summary.count
+
+                            .small.text-muted= periods[filters.period].label
+
+                .col-4
+
+                    .card.shadow-sm.h-100
+
+                        .card-body
+
+                            .text-muted.small Rücklauf
+
+                            .fs-3.fw-semibold= stats.responseRate === null ? "—" : stats.responseRate + " %"
+
+                            .small.text-muted #{stats.sent} Umfragen verschickt
+
+                .col-4
+
+                    .card.shadow-sm.h-100
+
+                        .card-body
+
+                            .text-muted.small Durchschnitt
+
+                            .fs-3.fw-semibold= summary.average === null ? "—" : String(summary.average).replace(".", ",")
+
+                            .small.text-muted von 10 Punkten
+
+    if summary.count
+
+        //- =====================================================
+        //- Aufteilung & Verteilung
+        //- =====================================================
+
+        .row.g-3.mb-4
+
+            .col-lg-6
+
+                .card.shadow-sm.h-100
+
+                    .card-body
+
+                        h2.h5.mb-3 Aufteilung
+
+                        .vb-nps-split(aria-hidden="true")
+
+                            each key in ["detractor", "passive", "promoter"]
+
+                                if summary.shares[key] > 0
+
+                                    - const partTitle = categories[key].label + " (" + categories[key].range + "): " + pct(summary.shares[key])
+
+                                    span.vb-nps-split-part(class="is-" + key style="flex-basis:" + summary.shares[key] + "%" title=partTitle)
+
+                        .row.g-2.mt-3
+
+                            each key in ["detractor", "passive", "promoter"]
+
+                                - const count = key === "promoter" ? summary.promoters : (key === "passive" ? summary.passives : summary.detractors)
+
+                                .col-4
+
+                                    a.vb-nps-legend.text-decoration-none.text-reset(href=query({ category: key }))
+
+                                        span.vb-nps-swatch(class=`is-${key}`)
+
+                                        span
+
+                                            span.d-block.fw-semibold #{categories[key].label}
+
+                                            span.d-block.small.text-muted #{categories[key].range} · #{count} · #{pct(summary.shares[key])}
+
+            .col-lg-6
+
+                .card.shadow-sm.h-100
+
+                    .card-body
+
+                        h2.h5.mb-3 Verteilung der Werte
+
+                        .vb-nps-dist
+
+                            each amount, value in summary.distribution
+
+                                .vb-nps-dist-col(title="Wert " + value + ": " + answersLabel(amount))
+
+                                    span.vb-nps-dist-count= amount || ""
+
+                                    .vb-nps-dist-track
+
+                                        .vb-nps-dist-bar(class=`is-${categoryOf(value)}` style=`height:${Math.round((amount / maxBucket) * 100)}%`)
+
+                                    span.vb-nps-dist-label= value
+
+        //- =====================================================
+        //- Verlauf
+        //- =====================================================
+
+        .card.shadow-sm.mb-4
+
+            .card-body
+
+                .d-flex.justify-content-between.align-items-baseline.flex-wrap.gap-2.mb-3
+
+                    h2.h5.mb-0 NPS je Monat
+
+                    small.text-muted Letzte 12 Monate · Firmen-Filter wird berücksichtigt
+
+                .vb-nps-trend
+
+                    each month in stats.trend
+
+                        - const height = month.nps === null ? 0 : Math.max(2, Math.round(Math.abs(month.nps) / 2))
+
+                        - const monthTitle = month.nps === null ? month.label + ": keine Antworten" : month.label + ": NPS " + signed(month.nps) + " aus " + answersLabel(month.count)
+
+                        .vb-nps-trend-col(title=monthTitle)
+
+                            .vb-nps-trend-plot
+
+                                if month.nps === null
+
+                                    span.vb-nps-trend-empty –
+
+                                else if month.nps >= 0
+
+                                    .vb-nps-trend-bar.is-up(style=`height:${height}%`)
+
+                                        span.vb-nps-trend-value= signed(month.nps)
+
+                                else
+
+                                    .vb-nps-trend-bar.is-down(style=`height:${height}%`)
+
+                                        span.vb-nps-trend-value= signed(month.nps)
+
+                            span.vb-nps-trend-label= month.label
+
+                details.mt-3
+
+                    summary.small.text-muted Als Tabelle anzeigen
+
+                    .table-responsive.mt-2
+
+                        table.table.table-sm.mb-0
+
+                            thead
+
+                                tr
+                                    th Monat
+                                    th.text-end NPS
+                                    th.text-end Antworten
+
+                            tbody
+
+                                each month in stats.trend
+
+                                    tr
+                                        td= month.label
+                                        td.text-end= signed(month.nps)
+                                        td.text-end= month.count
+
+        //- =====================================================
+        //- Je Firma
+        //- =====================================================
+
+        if stats.byCompany.length > 1 || !filters.company
+
+            .card.shadow-sm.mb-4
+
+                .card-body.pb-0
+
+                    h2.h5.mb-3 Je Firma
+
+                .table-responsive
+
+                    table.table.table-hover.align-middle.mb-0
+
+                        thead.table-light
+
+                            tr
+                                th Firma
+                                th.text-end Antworten
+                                th.text-end NPS
+                                th.text-end Durchschnitt
+                                th.text-end Kritiker
+
+                        tbody
+
+                            each row in stats.byCompany
+
+                                tr
+
+                                    td
+
+                                        if row.company
+
+                                            a(href=query({ company: String(row.company._id) }))= row.company.companyName
+
+                                        else
+
+                                            span.text-muted Ohne Firma
+
+                                    td.text-end= row.count
+
+                                    td.text-end
+
+                                        span.vb-nps-chip(class=npsClass(row.nps))= signed(row.nps)
+
+                                    td.text-end= row.average === null ? "—" : String(row.average).replace(".", ",")
+
+                                    td.text-end= row.detractors
+
+    //- =====================================================
+    //- Antworten
+    //- =====================================================
+
+    .d-flex.justify-content-between.align-items-baseline.mb-2
+
+        h2.h5.mb-0 Antworten
+
+        small.text-muted #{answers.length} #{answers.length === 1 ? "Eintrag" : "Einträge"}
+
+    if answers.length
+
+        .card.shadow-sm
+
+            .table-responsive
+
+                table.table.table-hover.align-middle.mb-0
+
+                    thead.table-light
+
+                        tr
+                            th Datum
+                            th Wert
+                            th Kommentar
+                            th Firma / Kontakt
+                            th Ticket
+
+                    tbody
+
+                        each entry in answers
+
+                            - const cat = categoryOf(entry.score)
+
+                            tr
+
+                                td.text-nowrap.small= formatDay(entry.answeredAt)
+
+                                td.text-nowrap
+
+                                    span.vb-nps-score(class=`is-${cat}`)= entry.score
+
+                                    span.small.text-muted.ms-2= categories[cat] ? categories[cat].label : ""
+
+                                td.vb-nps-comment
+
+                                    if entry.comment
+
+                                        = entry.comment
+
+                                    else
+
+                                        span.text-muted.small ohne Kommentar
+
+                                td.small
+
+                                    if entry.company
+
+                                        a(href=`/crm/companies/${entry.company._id}`)= entry.company.companyName
+
+                                    if entry.contact
+
+                                        .text-muted #{entry.contact.firstName} #{entry.contact.lastName}
+
+                                    else if entry.email
+
+                                        .text-muted= entry.email
+
+                                td.small.text-nowrap
+
+                                    if entry.ticket
+
+                                        a(href=`/crm/tickets/${entry.ticket._id}` title=entry.ticket.subject)= entry.ticketNumber || "Ticket"
+
+                                    else
+
+                                        span.text-muted= entry.ticketNumber || "—"
+
+    else
+
+        .card.shadow-sm
+
+            .card-body.text-center.text-muted.py-5
+
+                i.bi.bi-emoji-neutral.display-6.d-block.mb-2
+
+                if filtered
+
+                    | Keine Antworten für diese Filter.
+
+                else if stats.sent
+
+                    | Es wurden #{stats.sent} Umfragen verschickt, aber noch keine beantwortet.
+
+                else
+
+                    | Noch keine Umfragen. Sie werden mit der Abschluss-Mail eines Tickets verschickt.
