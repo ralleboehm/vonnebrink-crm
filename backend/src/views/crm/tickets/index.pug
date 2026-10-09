@@ -37,7 +37,7 @@ block content
                         input.form-control(
                             type="text"
                             name="search"
-                            placeholder="Ticketnummer, Betreff oder Beschreibung..."
+                            placeholder=(canOpen ? "Ticketnummer, Betreff oder Beschreibung..." : "Ticketnummer oder Betreff...")
                             value=filters.search
                         )
 

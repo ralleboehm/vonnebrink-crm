@@ -37,11 +37,17 @@ function allTemplates(dir) {
 
 }
 
-function render(file, locals) {
+const { can } = require("../src/core/permissions");
+
+// Wie middleware/viewData.middleware.js: can() für die angemeldete Rolle
+function render(file, locals, role = "admin") {
+
+    const user = { id: "u1", firstName: "Ralf", lastName: "Test", username: "ralf", role };
 
     return pug.renderFile(path.join(VIEWS, file), {
-        session: { user: { id: "u1", firstName: "Ralf", lastName: "Test", username: "ralf", role: "admin" } },
-        currentUser: { id: "u1", role: "admin" },
+        session: { user },
+        currentUser: { id: "u1", role },
+        can: (permission) => can(user, permission),
         title: "Test",
         ...locals
     });
@@ -289,5 +295,31 @@ test("Glocke in der Navigation und Benachrichtigungsseite", { skip: !pug && "pug
 
     assert.match(empty, /Keine ungelesenen Benachrichtigungen/);
     assert.match(empty, /Keine Benachrichtigungen/);
+
+});
+
+test("Ticketliste: Vertrieb sieht Betreff, aber keine Links ins Ticket", { skip: !pug && "pug nicht installiert" }, () => {
+
+    const tickets = [{
+        _id: "t1", ticketNumber: "TIC-000001", subject: "Drucker defekt", status: "open", priority: "high",
+        company, assignedTo: null
+    }];
+
+    const locals = { tickets, filters: { search: "", status: "", priority: "", company: "" } };
+
+    const admin = render("crm/tickets/index.pug", locals, "admin");
+    assert.match(admin, /href="\/crm\/tickets\/t1"/);
+    assert.match(admin, /\/crm\/tickets\/new/);
+    assert.match(admin, /Marketing/);
+
+    const sales = render("crm/tickets/index.pug", locals, "sales");
+    assert.match(sales, /Drucker defekt/);
+    assert.doesNotMatch(sales, /href="\/crm\/tickets\/t1"/);
+    assert.doesNotMatch(sales, /\/crm\/tickets\/new/);
+    assert.match(sales, /Marketing/);
+
+    const technician = render("crm/tickets/index.pug", locals, "technician");
+    assert.match(technician, /href="\/crm\/tickets\/t1"/);
+    assert.doesNotMatch(technician, /\/crm\/marketing/);
 
 });
