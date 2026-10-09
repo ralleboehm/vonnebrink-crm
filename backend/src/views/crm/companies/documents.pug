@@ -230,17 +230,19 @@ block content
 
                                                 div.text-break
 
-                                                    if configured
-
-                                                        a.fw-semibold.text-decoration-none(href=downloadUrl)= doc.fileName
-
-                                                    else
-
-                                                        span.fw-semibold= doc.fileName
+                                                    a.fw-semibold.text-decoration-none(href=`/crm/documents/${doc._id}` title="Details, Versionen, Freigaben")= doc.fileName
 
                                                     if doc.version > 1
 
                                                         span.badge.text-bg-light.border.ms-2(title="Frühere Fassungen liegen in Nextcloud") Version #{doc.version}
+
+                                                    if doc.portalVisible
+
+                                                        span.badge.text-bg-success.ms-2(title="Für das Kundenportal freigegeben") Kundenportal
+
+                                                    if doc.reference && doc.reference.type === "contract"
+
+                                                        span.badge.text-bg-light.border.ms-2 Vertrag
 
                                                     if doc.originalName && doc.originalName !== doc.fileName
 

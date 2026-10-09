@@ -17,9 +17,12 @@ test("Kundenordner: Name aus Kundennummer und Firma, Unterordner", () => {
     assert.equal(rules.customerFolderName({ customerNumber: "CUS-000002", companyName: "Müller/Söhne: IT" }), "CUS-000002 Müller-Söhne- IT");
     assert.equal(rules.customerFolderName({}), "Ohne Namen");
 
-    for (const folder of ["Contracts", "Offers", "Invoices", "Tickets", "Assets", "Manuals", "Licenses", "Reports", "Photos", "Projects"]) {
+    for (const folder of ["Contracts", "Offers", "Invoices", "Manuals", "Licenses", "Reports", "Photos", "Projects", "Downloads", "Other"]) {
         assert.ok(rules.CUSTOMER_FOLDERS.includes(folder), folder);
     }
+
+    assert.equal(rules.CUSTOMER_FOLDERS.includes("Tickets"), false, "Tickets bleiben lokal");
+    assert.equal(rules.CUSTOMER_FOLDERS.includes("Assets"), false, "Assets bleiben lokal");
 
 });
 
@@ -126,5 +129,45 @@ test("Ereignisse für Dokumente sind angemeldet", () => {
     for (const name of ["document.uploaded", "document.downloaded", "document.updated", "document.deleted", "document.shared", "document.versionCreated", "customer.created"]) {
         assert.ok(isKnownEvent(name), name);
     }
+
+});
+
+test("Kundenportal: nur bestimmte Kategorien, Recht für Portal-Benutzer vorbereitet", () => {
+
+    assert.deepEqual([...rules.PORTAL_CATEGORIES].sort(), ["contract", "download", "invoice", "manual", "offer", "project"]);
+    assert.equal(rules.isPortalCategory("backup"), false);
+    assert.equal(rules.isPortalCategory("download"), true);
+    assert.equal(rules.CATEGORIES.download.folder, "Downloads");
+    assert.equal(can("portal", "portal.documents"), true);
+    assert.equal(can("portal", "documents.view"), false, "Portal sieht nie das CRM");
+
+});
+
+test("Verträge: Status, Unterschrift, Fristen", () => {
+
+    const contracts = require("../src/utils/contractRules");
+
+    assert.deepEqual(contracts.STATUS_KEYS, ["draft", "sent", "read", "signed", "active", "expired", "terminated"]);
+    assert.equal(contracts.STATUSES.terminated.label, "Gekündigt");
+    assert.ok(contracts.SIGNATURE_KEYS.includes("complete"));
+
+    const day = (d) => d.toISOString().slice(0, 10);
+
+    assert.equal(day(contracts.endDate("2026-01-01", 12)), "2026-12-31");
+    assert.equal(day(contracts.endDate("2026-01-31", 1)), "2026-02-27", "31.1. + 1 Monat → 28.2., Ende ein Tag davor");
+    assert.equal(day(contracts.addMonths("2028-01-31", 1)), "2028-02-29", "Schaltjahr");
+    assert.equal(contracts.endDate("2026-01-01", 0), null);
+
+    const d = contracts.deadlines({ startDate: "2026-01-01", termMonths: 24, noticePeriodMonths: 3, renewalMonths: 12 });
+    assert.equal(day(d.endDate), "2027-12-31");
+    assert.equal(day(d.noticeDeadline), "2027-09-30");
+    assert.equal(day(d.renewalDate), "2028-01-01");
+
+    assert.equal(contracts.deadlines({ startDate: "2026-01-01", termMonths: 12, noticePeriodMonths: 3 }).renewalDate, null, "ohne Verlängerung");
+
+    const now = new Date("2027-09-10T00:00:00Z");
+    assert.equal(contracts.noticeDue({ status: "active", noticeDeadline: d.noticeDeadline }, now), true);
+    assert.equal(contracts.noticeDue({ status: "draft", noticeDeadline: d.noticeDeadline }, now), false);
+    assert.equal(contracts.noticeDue({ status: "active", noticeDeadline: d.noticeDeadline }, new Date("2027-01-01T00:00:00Z")), false);
 
 });

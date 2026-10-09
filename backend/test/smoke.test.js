@@ -497,6 +497,8 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
             return form;
         };
 
+        const listedLink = (response) => response.text;
+
         const companyFields = (category, extra = {}) => ({ referenceType: "company", referenceId: String(company._id), category, ...extra });
 
         // Reiter auf der Firmenseite
@@ -508,9 +510,12 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         assert.match(empty.text, /Noch keine Dokumente/);
         assert.match(empty.text, /CRM\/Customers\/CUS-900001 Smoke GmbH/);
 
-        for (const sub of ["Contracts", "Offers", "Invoices", "Tickets", "Assets", "Manuals", "Licenses", "Reports", "Photos", "Projects"]) {
+        for (const sub of ["Contracts", "Offers", "Invoices", "Manuals", "Licenses", "Reports", "Photos", "Projects", "Downloads", "Other"]) {
             assert.ok(fakeCloud.isFolder(`${folder}/${sub}`), `Ordner ${sub}`);
         }
+
+        assert.equal(fakeCloud.isFolder(`${folder}/Tickets`), false, "Tickets bleiben lokal");
+        assert.equal(fakeCloud.isFolder(`${folder}/Assets`), false, "Assets bleiben lokal");
 
         // Hochladen
         assertRedirect(await crm.upload(`/crm/documents${returnTo}`, fileForm(companyFields("offer", { tags: "VPN, Firewall" }), "Angebot Müller.pdf", "%PDF Version 1")), "Upload", pageUrl);
@@ -567,6 +572,57 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         assert.equal(doc.nextcloud.path, `${folder}/Contracts/Angebot Q4.pdf`);
         assert.equal(fakeCloud.file(doc.nextcloud.path).toString(), "%PDF Version 2");
 
+        // Detailseite mit Versionen
+        const detailUrl = `/crm/documents/${doc._id}`;
+        const detail = await crm.get(detailUrl);
+        assertPage(detail, "Dokument-Details");
+        assert.match(detail.text, /Frühere Fassung/);
+        assert.match(detail.text, /Freigabe erstellen/);
+        assert.match(listedLink(await crm.get(pageUrl)), new RegExp(detailUrl), "Liste verlinkt die Detailseite");
+
+        const versionId = fakeCloud.nodes.get(doc.nextcloud.path).versions[0].versionId;
+        const oldVersion = await crm.get(`${detailUrl}/versions/${versionId}/download`);
+        assert.equal(oldVersion.status, 200);
+        assert.equal(oldVersion.text, "%PDF Version 1", "frühere Fassung");
+        assert.equal((await crm.get(`${detailUrl}/versions/..%2Fx/download`)).status, 404);
+
+        // Freigabe: öffentlich, befristet, mit Passwort – und wieder entfernen
+        const until = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+        assertRedirect(await crm.post(`${detailUrl}/shares`, { type: "public", expireDate: until, password: "Smoke-Freigabe-123" }), "Freigabe");
+        assert.equal(fakeCloud.shares.size, 1);
+        const [createdShare] = [...fakeCloud.shares.values()];
+        assert.equal(createdShare.expireDate, until);
+        assert.equal(createdShare.path, "/" + doc.nextcloud.path);
+        assert.match((await crm.get(detailUrl)).text, /Freigabelink erstellt: http/);
+        assert.match((await crm.get(detailUrl)).text, /Gültig bis/);
+
+        assertRedirect(await crm.post(`${detailUrl}/shares`, { type: "public", expireDate: "2020-01-01" }), "Freigabe in der Vergangenheit");
+        assert.match((await crm.get(detailUrl)).text, /in der Zukunft/);
+        assert.equal(fakeCloud.shares.size, 1);
+
+        assertRedirect(await crm.post(`${detailUrl}/shares`, { type: "group", shareWith: "technik" }), "interne Freigabe");
+        assert.equal(fakeCloud.shares.size, 2);
+
+        assertRedirect(await crm.post(`${detailUrl}/shares/${createdShare.id}/delete`, {}), "Freigabe entfernen");
+        assert.equal(fakeCloud.shares.has(createdShare.id), false);
+        assertRedirect(await crm.post(`${detailUrl}/shares/999999/delete`, {}), "fremde Freigabe");
+        assert.match((await crm.get(detailUrl)).text, /gibt es nicht/);
+
+        // Kundenportal (vorbereitet): freigeben
+        assertRedirect(await crm.post(`${detailUrl}/portal`, { visible: "1" }), "Portal");
+        assert.equal((await Document.findById(doc._id)).portalVisible, true);
+        assert.match((await crm.get(pageUrl)).text, /Kundenportal/);
+        assert.equal((await documentService.portalDocuments(company._id)).length, 1);
+
+        // Vertrag (vorbereitet): Dokumente landen unter Contracts/
+        const Contract = require("../src/models/contract.model");
+        const contract = await Contract.create({ title: "Managed Services", contractNumber: "VTR-900001", company: company._id });
+        assertRedirect(await crm.upload(`/crm/documents${returnTo}`, fileForm({ referenceType: "contract", referenceId: String(contract._id), category: "contract" }, "Rahmenvertrag.pdf", "%PDF Vertrag")), "Vertragsdokument");
+        const contractDoc = await Document.findOne({ fileName: "Rahmenvertrag.pdf" });
+        assert.equal(contractDoc.nextcloud.path, `${folder}/Contracts/Rahmenvertrag.pdf`);
+        assert.equal(contractDoc.reference.type, "contract");
+        assert.match((await crm.get(pageUrl)).text, /Rahmenvertrag\.pdf/, "auch auf der Firmenseite");
+
         // Eingaben prüfen
         assertRedirect(await crm.upload(`/crm/documents${returnTo}`, fileForm(companyFields("quatsch"), "x.txt", "x", "text/plain")), "falsche Kategorie");
         assert.match((await crm.get(pageUrl)).text, /Bitte eine Kategorie wählen/);
@@ -591,6 +647,12 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         assert.equal((await tech.post(`/crm/documents/${backup._id}/delete`, {})).status, 403);
         assert.equal((await tech.post(`/crm/documents/${backup._id}/rename`, { fileName: "x" })).status, 403);
 
+        const techDetail = await tech.get(`/crm/documents/${doc._id}`);
+        assertPage(techDetail, "Techniker Details");
+        assert.doesNotMatch(techDetail.text, /Freigabe erstellen/, "Techniker: keine Freigaben");
+        assert.equal((await tech.post(`/crm/documents/${doc._id}/shares`, { type: "public" })).status, 403);
+        assert.equal((await tech.post(`/crm/documents/${doc._id}/portal`, { visible: "0" })).status, 403);
+
         // Vertrieb: nur Verträge und Angebote
         const sales = createClient(baseUrl);
         assertRedirect(await sales.post("/crm/login", { username: "smoke-sales", password: PASSWORD }), "Login Vertrieb");
@@ -600,6 +662,8 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         assert.match(salesPage.text, /Angebot Q4\.pdf/);
         assert.doesNotMatch(salesPage.text, /firewall\.conf/, "Backup nicht sichtbar");
         assert.equal((await sales.get(`/crm/documents/${backup._id}/download`)).status, 404, "fremde Kategorie: nicht gefunden");
+        assert.equal((await sales.get(`/crm/documents/${backup._id}`)).status, 404, "fremde Kategorie: keine Details");
+        assertPage(await sales.get(`/crm/documents/${doc._id}`), "Vertrieb Details Vertrag");
         assertRedirect(await sales.upload(`/crm/documents${returnTo}`, fileForm(companyFields("invoice"), "Rechnung.pdf", "%PDF")), "Vertrieb Rechnung");
         assert.equal(await Document.exists({ fileName: "Rechnung.pdf" }), null, "Rechnung abgewiesen");
         assert.match((await sales.get(pageUrl)).text, /dürfen Sie nicht hochladen/);

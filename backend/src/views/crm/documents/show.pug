@@ -1,0 +1,370 @@
+extends ../layouts/main
+
+block content
+
+    - const doc = page.document
+    - const configured = page.status.configured
+    - const category = rules.CATEGORIES[doc.category] || { label: doc.category, icon: "bi-file-earmark", folder: "" }
+    - const base = `/crm/documents/${doc._id}`
+    - const personName = (user) => user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : "—"
+    - const shareTypes = { public: "Öffentlicher Link", user: "Intern: Benutzer", group: "Intern: Gruppe" }
+
+    .d-flex.justify-content-between.align-items-start.mb-4.flex-wrap.gap-2
+
+        div.text-break
+
+            .vb-eyebrow.small.text-muted.mb-1
+
+                i.bi.me-1(class=category.icon)
+
+                | #{category.label} · #{page.reference.title}
+
+            h1.h3.mb-0
+
+                i.bi.me-2.text-muted(class=rules.fileIcon(doc.extension) aria-hidden="true")
+
+                = doc.fileName
+
+        .d-flex.gap-2.flex-wrap
+
+            if configured && page.previewable
+
+                a.btn.btn-outline-secondary(href=`${base}/download?inline=1` target="_blank" rel="noopener")
+
+                    i.bi.bi-eye.me-2
+
+                    | Vorschau
+
+            if configured && page.webLink
+
+                a.btn.btn-outline-secondary(href=page.webLink target="_blank" rel="noopener" title=page.office ? "Office-Dokumente öffnen sich in Nextcloud zum Ansehen und Bearbeiten" : "In Nextcloud öffnen")
+
+                    i.bi.bi-box-arrow-up-right.me-2
+
+                    | In Nextcloud öffnen
+
+            if configured
+
+                a.btn.btn-primary(href=`${base}/download`)
+
+                    i.bi.bi-download.me-2
+
+                    | Herunterladen
+
+            a.btn.btn-secondary(href=page.reference.link)
+
+                i.bi.bi-arrow-left.me-2
+
+                | Zurück
+
+    if flash
+
+        .alert.text-break(class=`alert-${flash.type}`)= flash.text
+
+    if !configured
+
+        .alert.alert-info
+
+            i.bi.bi-cloud-slash.me-2
+
+            | Nextcloud ist nicht eingerichtet – Herunterladen, Versionen und Freigaben sind erst danach möglich.
+
+    .row.g-4
+
+        //- =================================================
+        //- Angaben
+        //- =================================================
+
+        .col-lg-5
+
+            .card.shadow-sm
+
+                .card-header
+
+                    h2.h5.mb-0 Angaben
+
+                .card-body
+
+                    dl.row.mb-0.small
+
+                        dt.col-5 Kategorie
+                        dd.col-7 #{category.label} (#{category.folder})
+
+                        dt.col-5 Größe
+                        dd.col-7= rules.formatSize(doc.size)
+
+                        dt.col-5 Version
+                        dd.col-7= doc.version
+
+                        dt.col-5 Hochgeladen
+                        dd.col-7
+                            = format.formatDateTime(doc.uploadedAt)
+                            br
+                            span.text-muted= personName(doc.uploadedBy)
+
+                        if doc.originalName && doc.originalName !== doc.fileName
+                            dt.col-5 Originalname
+                            dd.col-7.text-break= doc.originalName
+
+                        dt.col-5 Dateityp
+                        dd.col-7.text-break= doc.mimeType
+
+                        if doc.tags && doc.tags.length
+                            dt.col-5 Schlagworte
+                            dd.col-7
+                                each tag in doc.tags
+                                    span.badge.text-bg-light.border.me-1= tag
+
+                        dt.col-5 Prüfsumme
+                        dd.col-7
+                            code.small(title=doc.checksum)= doc.checksum ? doc.checksum.slice(0, 16) + "…" : "—"
+
+                        dt.col-5 Nextcloud
+                        dd.col-7.mb-0
+                            code.small.text-break= doc.nextcloud.path
+
+            //- Kundenportal (vorbereitet)
+
+            .card.shadow-sm.mt-4
+
+                .card-header
+
+                    h2.h5.mb-0
+
+                        i.bi.bi-person-badge.me-2
+
+                        | Kundenportal
+
+                .card-body.small
+
+                    if !page.portal.eligible
+
+                        p.text-muted.mb-0 Dokumente der Kategorie „#{category.label}“ sind nicht für das Kundenportal vorgesehen.
+
+                    else
+
+                        p.mb-2
+
+                            if page.portal.visible
+
+                                span.badge.bg-success.me-2 Freigegeben
+
+                                | Kunden sehen dieses Dokument, sobald das Portal Dokumente anzeigt.
+
+                            else
+
+                                span.badge.bg-secondary.me-2 Nicht freigegeben
+
+                                | Nur intern sichtbar.
+
+                        if page.portal.mayChange
+
+                            form.m-0(method="POST" action=`${base}/portal`)
+
+                                input(type="hidden" name="visible" value=page.portal.visible ? "0" : "1")
+
+                                button.btn.btn-sm(type="submit" class=page.portal.visible ? "btn-outline-secondary" : "btn-outline-primary")
+
+                                    = page.portal.visible ? "Freigabe zurücknehmen" : "Für das Kundenportal freigeben"
+
+        .col-lg-7
+
+            //- =================================================
+            //- Versionen
+            //- =================================================
+
+            .card.shadow-sm
+
+                .card-header
+
+                    h2.h5.mb-0
+
+                        i.bi.bi-clock-history.me-2
+
+                        | Versionen
+
+                .card-body.p-0
+
+                    table.table.align-middle.mb-0.small
+
+                        thead.table-light
+
+                            tr
+                                th Fassung
+                                th Stand
+                                th.text-end Größe
+                                th.text-end
+                                    span.visually-hidden Herunterladen
+
+                        tbody
+
+                            tr
+
+                                td
+
+                                    strong Aktuell
+
+                                    span.text-muted.ms-1 (Version #{doc.version})
+
+                                td= format.formatDateTime(doc.uploadedAt)
+
+                                td.text-end= rules.formatSize(doc.size)
+
+                                td.text-end
+
+                                    if configured
+
+                                        a.btn.btn-sm.btn-outline-secondary(href=`${base}/download` aria-label="Aktuelle Fassung herunterladen")
+
+                                            i.bi.bi-download
+
+                            each version in page.versions.list
+
+                                tr
+
+                                    td.text-muted Frühere Fassung
+
+                                    td= format.formatDateTime(version.lastModified)
+
+                                    td.text-end= rules.formatSize(version.size)
+
+                                    td.text-end
+
+                                        a.btn.btn-sm.btn-outline-secondary(href=`${base}/versions/${encodeURIComponent(version.versionId)}/download` aria-label=`Fassung vom ${format.formatDateTime(version.lastModified)} herunterladen`)
+
+                                            i.bi.bi-download
+
+                    .p-3.small.text-muted
+
+                        if page.versions.error
+
+                            span.text-warning
+
+                                i.bi.bi-exclamation-triangle.me-1
+
+                                | Versionen konnten nicht geladen werden: #{page.versions.error}
+
+                        else if configured && !page.versions.list.length
+
+                            | Noch keine früheren Fassungen. Laden Sie eine Datei mit gleichem Namen in derselben Kategorie hoch, entsteht eine neue Version.
+
+                        else
+
+                            | Frühere Fassungen bewahrt Nextcloud auf (wie lange, regelt die Versions-App in Nextcloud).
+
+            //- =================================================
+            //- Freigaben (nur Admin)
+            //- =================================================
+
+            if page.shares.allowed && configured
+
+                .card.shadow-sm.mt-4#shares
+
+                    .card-header
+
+                        h2.h5.mb-0
+
+                            i.bi.bi-share.me-2
+
+                            | Freigaben
+
+                    if page.shares.error
+
+                        .card-body
+
+                            .alert.alert-warning.mb-0.small Freigaben konnten nicht geladen werden: #{page.shares.error}
+
+                    else if page.shares.list.length
+
+                        ul.list-group.list-group-flush
+
+                            each share in page.shares.list
+
+                                li.list-group-item
+
+                                    .d-flex.justify-content-between.align-items-start.gap-2
+
+                                        div.small.text-break
+
+                                            strong= shareTypes[share.type] || share.type
+
+                                            if share.shareWith && share.type !== "public"
+
+                                                |  · #{share.shareWith}
+
+                                            if share.url
+
+                                                .mt-1
+
+                                                    a(href=share.url target="_blank" rel="noopener")= share.url
+
+                                            .text-muted.mt-1
+
+                                                if share.expiration
+
+                                                    | Gültig bis #{format.formatDate(share.expiration)}
+
+                                                else
+
+                                                    | Ohne Ablaufdatum
+
+                                                if share.hasPassword
+
+                                                    |  · mit Passwort
+
+                                        form.m-0(method="POST" action=`${base}/shares/${encodeURIComponent(share.id)}/delete` onsubmit="return confirm('Freigabe entfernen? Der Link funktioniert danach nicht mehr.');")
+
+                                            button.btn.btn-sm.btn-outline-danger(type="submit" aria-label="Freigabe entfernen")
+
+                                                i.bi.bi-x-lg
+
+                    .card-body.border-top
+
+                        form(method="POST" action=`${base}/shares`)
+
+                            .row.g-2
+
+                                .col-md-6
+
+                                    label.form-label.small(for="shareType") Art
+
+                                    select.form-select.form-select-sm#shareType(name="type")
+
+                                        option(value="public") Öffentlicher Link
+
+                                        option(value="user") Intern: Nextcloud-Benutzer
+
+                                        option(value="group") Intern: Nextcloud-Gruppe
+
+                                .col-md-6
+
+                                    label.form-label.small(for="shareWith") Benutzer / Gruppe
+
+                                        span.text-muted.ms-1 (nur intern)
+
+                                    input.form-control.form-control-sm#shareWith(type="text" name="shareWith" maxlength="64" placeholder="z. B. ralf")
+
+                                .col-md-6
+
+                                    label.form-label.small(for="shareExpire") Gültig bis
+
+                                        span.text-muted.ms-1 (freiwillig)
+
+                                    input.form-control.form-control-sm#shareExpire(type="date" name="expireDate" min=today)
+
+                                .col-md-6
+
+                                    label.form-label.small(for="sharePassword") Passwort
+
+                                        span.text-muted.ms-1 (nur öffentlich, freiwillig)
+
+                                    input.form-control.form-control-sm#sharePassword(type="password" name="password" maxlength="200" autocomplete="new-password")
+
+                            button.btn.btn-sm.btn-primary.mt-3(type="submit")
+
+                                i.bi.bi-link-45deg.me-1
+
+                                | Freigabe erstellen
+
+                            p.small.text-muted.mt-2.mb-0
+                                | Öffentliche Links kann jeder öffnen, der sie kennt – für Kunden am besten mit Ablaufdatum und Passwort.

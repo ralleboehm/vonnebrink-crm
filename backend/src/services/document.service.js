@@ -14,7 +14,11 @@
 //   Herunterladen    getDownload(id, user)
 //   Ändern           rename(id, name, user), moveToCategory(id, category, user)
 //   Löschen          remove(id, user)               – Nextcloud-Papierkorb
-//   Versionen        versions(id, user)
+//   Versionen        versions(id, user), downloadVersion(id, versionId, user)
+//   Detailseite      detailPage(id, user)
+//   Freigaben        createShare(id, options, user), removeShare(id, shareId, user)
+//   Kundenportal     setPortalVisible(id, visible, user) – vorbereitet:
+//                    portalDocuments(companyId), getPortalDownload(id, companyId)
 //
 // Bezüge: registerReference(type, resolver) – ein Resolver sagt, zu welcher
 // Firma ein Bezug gehört und in welchen Unterordner seine Dokumente kommen.
@@ -110,6 +114,27 @@ registerReference("company", async (id) => {
         title: company.companyName,
         link: `/crm/companies/${company._id}/documents`,
         folder: (category) => [rules.CATEGORIES[category].folder]
+    };
+
+});
+
+// Vertrag (vorbereitet): Dokumente immer im Kundenordner unter Contracts/
+registerReference("contract", async (id) => {
+
+    const Contract = require("../models/contract.model");
+    const contract = await Contract.findOne({ _id: id, isDeleted: false }).lean();
+
+    if (!contract) return null;
+
+    const company = await Company.findOne({ _id: contract.company, isDeleted: false }).lean();
+
+    if (!company) return null;
+
+    return {
+        company,
+        title: `Vertrag ${contract.contractNumber || contract.title}`,
+        link: `/crm/companies/${company._id}/documents`,
+        folder: () => ["Contracts"]
     };
 
 });
@@ -293,9 +318,11 @@ async function referencePage(type, record, user, filters = {}) {
     const allowed = rules.allowedCategories(user);
     const category = allowed.includes(filters.category) ? filters.category : "";
 
+    // Firma: alle Dokumente des Kunden (auch die zu Verträgen usw.)
+    const scope = type === "company" ? { company: record._id } : { "reference.type": type, "reference.id": record._id };
+
     const all = await Document.find({
-        "reference.type": type,
-        "reference.id": record._id,
+        ...scope,
         isDeleted: false,
         category: { $in: allowed }
     })
@@ -587,7 +614,8 @@ async function moveToCategory(id, category, user) {
 
     const previous = document.category;
 
-    document.set({ category, "nextcloud.path": target });
+    // Portal-Freigabe gilt nur für Portal-Kategorien
+    document.set({ category, "nextcloud.path": target, portalVisible: Boolean(document.portalVisible) && rules.isPortalCategory(category) });
     await document.save();
 
     emit(EVENTS.DOCUMENT_UPDATED, { document: document.toObject(), userId: userId(user), change: "moved", from, previousCategory: previous });
@@ -633,6 +661,255 @@ async function versions(id, user) {
 
 }
 
+// ----------------------------------------------------
+// Versionen, Detailseite
+// ----------------------------------------------------
+
+const VERSION_ID = /^[\w.-]{1,64}$/;
+
+/**
+ * Eine frühere Fassung herunterladen
+ */
+async function downloadVersion(id, versionId, user) {
+
+    assertConfigured();
+
+    const document = await loadVisible(id, user);
+
+    if (!VERSION_ID.test(String(versionId || "")) || !document.nextcloud.fileId) {
+        throw httpError("Diese Version gibt es nicht.", 404);
+    }
+
+    const file = await nextcloud.downloadVersion(document.nextcloud.fileId, versionId);
+    const { stem, extension } = paths.splitExtension(document.fileName);
+
+    emit(EVENTS.DOCUMENT_DOWNLOADED, { document: document.toObject(), userId: userId(user), versionId: String(versionId) });
+
+    return {
+        document,
+        stream: file.stream,
+        contentType: document.mimeType || file.contentType,
+        fileName: extension ? `${stem} (frühere Version).${extension}` : `${stem} (frühere Version)`
+    };
+
+}
+
+/**
+ * Alles für die Detailseite eines Dokuments. Nextcloud-Fehler beim Lesen
+ * von Versionen/Freigaben werden angezeigt, nicht geworfen.
+ */
+async function detailPage(id, user) {
+
+    const document = await loadVisible(id, user);
+
+    await document.populate("uploadedBy", "firstName lastName");
+
+    const ref = await resolveReference(document.reference.type, document.reference.id);
+    const status = nextcloud.status();
+    const mayShare = can(user, "documents.share");
+
+    const page = {
+        document,
+        reference: ref ? { title: ref.title, link: ref.link } : { title: "", link: "/crm" },
+        status,
+        webLink: status.configured ? nextcloud.webLink({ fileId: document.nextcloud.fileId, path: document.nextcloud.path }) : null,
+        previewable: rules.isPreviewable(document.mimeType),
+        office: rules.isOfficeFile(document.extension),
+        versions: { list: [], error: null },
+        shares: { allowed: mayShare, list: [], error: null },
+        portal: {
+            eligible: rules.isPortalCategory(document.category),
+            visible: Boolean(document.portalVisible),
+            mayChange: can(user, "documents.edit")
+        }
+    };
+
+    if (!status.configured) return page;
+
+    const [versionList, shareList] = await Promise.allSettled([
+        nextcloud.versions(document.nextcloud.fileId),
+        mayShare ? nextcloud.listShares(document.nextcloud.path) : Promise.resolve([])
+    ]);
+
+    if (versionList.status === "fulfilled") page.versions.list = versionList.value;
+    else page.versions.error = versionList.reason.message;
+
+    if (shareList.status === "fulfilled") page.shares.list = shareList.value;
+    else page.shares.error = shareList.reason.message;
+
+    return page;
+
+}
+
+// ----------------------------------------------------
+// Freigaben
+// ----------------------------------------------------
+
+const SHARE_WITH = /^[\w .@+-]{1,64}$/;
+const MAX_SHARE_DAYS = 5 * 366;
+
+/**
+ * Freigabe anlegen.
+ *
+ * @param {object} options
+ * @param {"public"|"user"|"group"} options.type  öffentlicher Link oder intern
+ * @param {string} [options.shareWith]   Nextcloud-Benutzer/-Gruppe (intern)
+ * @param {string} [options.expireDate]  JJJJ-MM-TT (zeitlich begrenzt)
+ * @param {string} [options.password]    für öffentliche Links
+ * @returns {Promise<{document, share}>}
+ */
+async function createShare(id, { type, shareWith, expireDate, password } = {}, user, now = new Date()) {
+
+    assertPermission(user, "documents.share");
+    assertConfigured();
+
+    const document = await loadVisible(id, user);
+
+    if (!["public", "user", "group"].includes(type)) throw httpError("Bitte die Art der Freigabe wählen.", 422);
+
+    const target = String(shareWith || "").trim();
+
+    if (type !== "public" && !SHARE_WITH.test(target)) {
+        throw httpError("Bitte den Nextcloud-Benutzer bzw. die Gruppe angeben.", 422);
+    }
+
+    let expires = null;
+
+    if (expireDate) {
+
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(String(expireDate))) throw httpError("Ablaufdatum ist ungültig.", 422);
+
+        expires = new Date(`${expireDate}T00:00:00Z`);
+
+        const days = (expires - now) / (24 * 60 * 60 * 1000);
+
+        if (Number.isNaN(expires.getTime()) || days < 0) throw httpError("Das Ablaufdatum muss in der Zukunft liegen.", 422);
+        if (days > MAX_SHARE_DAYS) throw httpError("Das Ablaufdatum liegt zu weit in der Zukunft (höchstens 5 Jahre).", 422);
+
+    }
+
+    const secret = type === "public" && typeof password === "string" && password ? password.slice(0, 200) : null;
+
+    let share;
+
+    try {
+
+        share = await nextcloud.createShare(document.nextcloud.path, {
+            type,
+            shareWith: type === "public" ? null : target,
+            expireDate: expires,
+            password: secret
+        });
+
+    } catch (err) {
+
+        // Meldung von Nextcloud (z. B. Passwortregeln) verständlich weitergeben
+        if (err.code === "OCS") throw httpError(err.message, 422);
+
+        throw err;
+
+    }
+
+    emit(EVENTS.DOCUMENT_SHARED, {
+        document: document.toObject(),
+        userId: userId(user),
+        action: "created",
+        share: { id: share.id, type: share.type, shareWith: share.shareWith, expiration: share.expiration, hasPassword: Boolean(secret) }
+    });
+
+    return { document, share };
+
+}
+
+/**
+ * Freigabe entfernen (nur Freigaben dieses Dokuments)
+ */
+async function removeShare(id, shareId, user) {
+
+    assertPermission(user, "documents.share");
+    assertConfigured();
+
+    const document = await loadVisible(id, user);
+    const shares = await nextcloud.listShares(document.nextcloud.path);
+
+    if (!shares.some((share) => share.id === String(shareId))) throw httpError("Diese Freigabe gibt es nicht (mehr).", 404);
+
+    await nextcloud.removeShare(shareId);
+
+    emit(EVENTS.DOCUMENT_SHARED, { document: document.toObject(), userId: userId(user), action: "removed", share: { id: String(shareId) } });
+
+    return document;
+
+}
+
+// ----------------------------------------------------
+// Kundenportal (vorbereitet – noch ohne Portalseite)
+// ----------------------------------------------------
+
+/**
+ * Dokument für das Kundenportal freigeben oder zurücknehmen
+ */
+async function setPortalVisible(id, visible, user) {
+
+    assertPermission(user, "documents.edit");
+
+    const document = await loadVisible(id, user);
+    const show = visible === true || visible === "1" || visible === "on";
+
+    if (show && !rules.isPortalCategory(document.category)) {
+        throw httpError(`Dokumente der Kategorie „${(rules.CATEGORIES[document.category] || {}).label || document.category}“ sind nicht für das Kundenportal vorgesehen.`, 422);
+    }
+
+    if (Boolean(document.portalVisible) === show) return document;
+
+    document.set({ portalVisible: show });
+    await document.save();
+
+    emit(EVENTS.DOCUMENT_UPDATED, { document: document.toObject(), userId: userId(user), change: show ? "portalShown" : "portalHidden" });
+
+    return document;
+
+}
+
+/**
+ * Für das Portal freigegebene Dokumente einer Firma
+ */
+async function portalDocuments(companyId) {
+
+    if (!mongoose.isValidObjectId(companyId)) return [];
+
+    return Document.find({
+        company: companyId,
+        portalVisible: true,
+        isDeleted: false,
+        category: { $in: rules.PORTAL_CATEGORIES }
+    })
+        .sort({ uploadedAt: -1 })
+        .lean();
+
+}
+
+/**
+ * Download für das Portal – nur eigene, freigegebene Dokumente
+ */
+async function getPortalDownload(id, companyId) {
+
+    assertConfigured();
+
+    if (!mongoose.isValidObjectId(id) || !mongoose.isValidObjectId(companyId)) throw httpError("Dokument nicht gefunden.", 404);
+
+    const document = await Document.findOne({ _id: id, company: companyId, portalVisible: true, isDeleted: false });
+
+    if (!document || !rules.isPortalCategory(document.category)) throw httpError("Dokument nicht gefunden.", 404);
+
+    const file = await nextcloud.download(document.nextcloud.path);
+
+    emit(EVENTS.DOCUMENT_DOWNLOADED, { document: document.toObject(), portal: true });
+
+    return { document, stream: file.stream, contentType: document.mimeType || file.contentType, size: file.size };
+
+}
+
 module.exports = {
     STRUCTURE_RECHECK_MS,
     registerReference,
@@ -650,5 +927,14 @@ module.exports = {
     rename,
     moveToCategory,
     remove,
-    versions
+    versions,
+    downloadVersion,
+    detailPage,
+
+    createShare,
+    removeShare,
+
+    setPortalVisible,
+    portalDocuments,
+    getPortalDownload
 };

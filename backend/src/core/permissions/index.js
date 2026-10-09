@@ -81,7 +81,8 @@ const PERMISSIONS = Object.freeze({
     REPORTS_VIEW: "reports.view",
 
     // Kundenportal
-    PORTAL_TICKETS_OWN: "portal.tickets"
+    PORTAL_TICKETS_OWN: "portal.tickets",
+    PORTAL_DOCUMENTS_OWN: "portal.documents"   // vorbereitet: eigene freigegebene Dokumente
 
 });
 
@@ -119,7 +120,7 @@ const ROLE_PERMISSIONS = Object.freeze({
 
     accounting: ["companies.view", "contacts.view", "invoices.*", "contracts.*", "reports.view", "search.use", "notifications.view", "documents.view", "documents.upload"],
 
-    portal: ["portal.tickets"]
+    portal: ["portal.tickets", "portal.documents"]
 
 });
 

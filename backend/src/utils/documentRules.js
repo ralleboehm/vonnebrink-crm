@@ -8,8 +8,10 @@
 //
 //   Customers/
 //     CUS-000001 Musterfirma/
-//       Contracts/ Offers/ Invoices/ Tickets/ Assets/ Manuals/
-//       Licenses/ Reports/ Photos/ Projects/ Other/
+//       Contracts/ Offers/ Invoices/ Manuals/ Licenses/ Reports/
+//       Photos/ Projects/ Downloads/ Other/
+//
+// Ticket-Anhänge und Asset-Dateien bleiben bewusst lokal (storage/).
 //
 // Die Kategorie eines Dokuments bestimmt den Unterordner. Neue Kategorien
 // lassen sich mit registerCategory() ergänzen (z. B. aus einem Modul).
@@ -23,13 +25,12 @@ const CUSTOMER_FOLDERS = [
     "Contracts",
     "Offers",
     "Invoices",
-    "Tickets",
-    "Assets",
     "Manuals",
     "Licenses",
     "Reports",
     "Photos",
     "Projects",
+    "Downloads",
     "Other"
 ];
 
@@ -42,6 +43,7 @@ const CATEGORIES = {
     manual: { label: "Handbuch", folder: "Manuals", icon: "bi-book" },
     report: { label: "Bericht", folder: "Reports", icon: "bi-clipboard-data" },
     project: { label: "Projektunterlage", folder: "Projects", icon: "bi-kanban" },
+    download: { label: "Download für Kunden", folder: "Downloads", icon: "bi-cloud-download" },
     screenshot: { label: "Screenshot", folder: "Photos", icon: "bi-display" },
     photo: { label: "Foto", folder: "Photos", icon: "bi-camera" },
     backup: { label: "Backup", folder: "Other", icon: "bi-archive" },
@@ -60,6 +62,16 @@ const REFERENCE_TYPES = {
     offer: { label: "Angebot" },
     invoice: { label: "Rechnung" }
 };
+
+// Kategorien, die Kunden später im Portal sehen können – aber nur Dokumente,
+// die im CRM ausdrücklich freigegeben sind (Document.portalVisible)
+const PORTAL_CATEGORIES = ["contract", "offer", "invoice", "manual", "download", "project"];
+
+function isPortalCategory(category) {
+
+    return PORTAL_CATEGORIES.includes(category);
+
+}
 
 // Welche Kategorien eine Rolle sehen und hochladen darf (fehlt = alle).
 // Admin und Techniker: alle. Vertrieb: Verträge und Angebote.
@@ -247,6 +259,8 @@ module.exports = {
     CATEGORIES,
     REFERENCE_TYPES,
     ROLE_CATEGORIES,
+    PORTAL_CATEGORIES,
+    isPortalCategory,
     registerCategory,
     isCategory,
     isReferenceType,

@@ -789,6 +789,7 @@ test("Dokumente: Reiter bei der Firma, Liste, Hochladen, Rechte, ohne Nextcloud"
     assert.match(admin, /enctype="multipart\/form-data"/);
     assert.match(admin, /action="\/crm\/documents\?returnTo=%2Fcrm%2Fcompanies%2Fc1%2Fdocuments"/);
     assert.match(admin, /Angebot Q4\.pdf/);
+    assert.match(admin, /href="\/crm\/documents\/d1" title="Details, Versionen, Freigaben"/, "Name führt zur Detailseite");
     assert.match(admin, /Version 2/);
     assert.match(admin, /Original: Angebot Müller\.pdf/);
     assert.match(admin, /1,5 KB/);
@@ -824,5 +825,73 @@ test("Dokumente: Reiter bei der Firma, Liste, Hochladen, Rechte, ohne Nextcloud"
 
     // Leer
     assert.match(render("crm/companies/documents.pug", locals(pageOf({ documents: [], total: 0 }))), /Noch keine Dokumente/);
+
+});
+
+test("Dokument-Detailseite: Versionen, Freigaben, Kundenportal", { skip: !pug && "pug nicht installiert" }, () => {
+
+    const doc = {
+        _id: "d1",
+        fileName: "Rahmenvertrag.pdf",
+        extension: "pdf",
+        mimeType: "application/pdf",
+        size: 2048,
+        category: "contract",
+        tags: [],
+        version: 2,
+        checksum: "a".repeat(64),
+        portalVisible: false,
+        nextcloud: { path: "CRM/Customers/CUS-000001 Holz Müller GmbH/Contracts/Rahmenvertrag.pdf", fileId: "77" },
+        uploadedAt: new Date("2026-10-09T10:00:00Z"),
+        uploadedBy: { firstName: "Ralf", lastName: "Böhm" }
+    };
+
+    const pageOf = (overrides = {}) => ({
+        document: doc,
+        reference: { title: "Holz Müller GmbH", link: "/crm/companies/c1/documents" },
+        status: { configured: true },
+        webLink: "https://cloud.example.de/index.php/f/77",
+        previewable: true,
+        office: false,
+        versions: { list: [{ versionId: "1760000000", size: 1024, lastModified: new Date("2026-10-01T08:00:00Z") }], error: null },
+        shares: { allowed: true, list: [{ id: "s1", type: "public", url: "https://cloud.example.de/s/abc", expiration: new Date("2026-12-31T00:00:00Z"), hasPassword: true }], error: null },
+        portal: { eligible: true, visible: false, mayChange: true },
+        ...overrides
+    });
+
+    const locals = (page) => ({ page, rules: documentRules, format, today: "2026-10-09", flash: null });
+
+    const admin = render("crm/documents/show.pug", locals(pageOf()));
+
+    assert.match(admin, /Rahmenvertrag\.pdf/);
+    assert.match(admin, /href="\/crm\/documents\/d1\/versions\/1760000000\/download"/);
+    assert.match(admin, /Frühere Fassung/);
+    assert.match(admin, /href="https:\/\/cloud\.example\.de\/s\/abc"/);
+    assert.match(admin, /Gültig bis 31\.12\.2026/);
+    assert.match(admin, /mit Passwort/);
+    assert.match(admin, /action="\/crm\/documents\/d1\/shares\/s1\/delete"/);
+    assert.match(admin, /action="\/crm\/documents\/d1\/shares"/);
+    assert.match(admin, /min="2026-10-09"/);
+    assert.match(admin, /Für das Kundenportal freigeben/);
+    assert.match(admin, /href="https:\/\/cloud\.example\.de\/index\.php\/f\/77"/, "In Nextcloud öffnen");
+    assert.match(admin, /href="\/crm\/companies\/c1\/documents"/, "Zurück");
+
+    // Techniker: keine Freigaben, Portal nicht änderbar
+    const tech = render("crm/documents/show.pug", locals(pageOf({ shares: { allowed: false, list: [], error: null }, portal: { eligible: true, visible: true, mayChange: false } })), "technician");
+    assert.doesNotMatch(tech, /Freigabe erstellen/);
+    assert.doesNotMatch(tech, /\/portal"/);
+    assert.match(tech, /Freigegeben/);
+
+    // Kategorie nicht fürs Portal, Nextcloud aus
+    const off = render("crm/documents/show.pug", locals(pageOf({ status: { configured: false }, webLink: null, versions: { list: [], error: null }, portal: { eligible: false, visible: false, mayChange: true } })));
+    assert.match(off, /nicht eingerichtet/);
+    assert.doesNotMatch(off, /\/download/);
+    assert.doesNotMatch(off, /Freigabe erstellen/);
+    assert.match(off, /nicht für das Kundenportal vorgesehen/);
+
+    // Fehler beim Laden aus Nextcloud
+    const broken = render("crm/documents/show.pug", locals(pageOf({ versions: { list: [], error: "Nextcloud: Serverfehler (500)." }, shares: { allowed: true, list: [], error: "Nextcloud: Serverfehler (500)." } })));
+    assert.match(broken, /Versionen konnten nicht geladen werden/);
+    assert.match(broken, /Freigaben konnten nicht geladen werden/);
 
 });

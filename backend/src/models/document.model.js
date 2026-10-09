@@ -39,6 +39,9 @@ const documentSchema = new mongoose.Schema(
 
         company: { type: mongoose.Schema.Types.ObjectId, ref: "Company", default: null, index: true },
 
+        // Für das Kundenportal freigegeben (nur Portal-Kategorien, siehe documentRules)
+        portalVisible: { type: Boolean, default: false },
+
         uploadedAt: { type: Date, default: Date.now },
         uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
 
@@ -53,5 +56,6 @@ const documentSchema = new mongoose.Schema(
 
 documentSchema.index({ "reference.type": 1, "reference.id": 1, isDeleted: 1 });
 documentSchema.index({ "nextcloud.path": 1, isDeleted: 1 });
+documentSchema.index({ company: 1, portalVisible: 1, isDeleted: 1 });
 
 module.exports = mongoose.model("Document", documentSchema);

@@ -213,3 +213,135 @@ exports.remove = async (req, res, next) => {
     }
 
 };
+
+/**
+ * Detailseite: Angaben, Versionen, Freigaben, Kundenportal
+ */
+exports.show = async (req, res, next) => {
+
+    try {
+
+        const page = await documentService.detailPage(req.params.id, req.session.user);
+
+        res.render("documents/show", {
+            title: page.document.fileName,
+            page,
+            rules,
+            format,
+            today: new Date().toISOString().slice(0, 10),
+            flash: takeFlash(req)
+        });
+
+    } catch (err) {
+
+        if (err.status === 404) return next();
+
+        next(err);
+
+    }
+
+};
+
+/**
+ * Frühere Fassung herunterladen
+ */
+exports.downloadVersion = async (req, res, next) => {
+
+    try {
+
+        const file = await documentService.downloadVersion(req.params.id, req.params.versionId, req.session.user);
+
+        res.set("Content-Type", file.contentType);
+        res.set("Content-Disposition", rules.contentDisposition(file.fileName));
+        res.set("Cache-Control", "private, no-store");
+        res.set("Content-Security-Policy", "sandbox; default-src 'none'");
+
+        pipeline(file.stream, res, (err) => {
+            if (err && err.code !== "ERR_STREAM_PREMATURE_CLOSE") {
+                console.error("Download einer Version abgebrochen:", err.message);
+            }
+        });
+
+    } catch (err) {
+
+        if (err.status === 404) return next();
+
+        if (!flashError(req, err)) return next(err);
+
+        res.redirect(`/crm/documents/${req.params.id}`);
+
+    }
+
+};
+
+/**
+ * Freigabe anlegen
+ */
+exports.createShare = async (req, res, next) => {
+
+    const body = req.body || {};
+
+    try {
+
+        const { share } = await documentService.createShare(req.params.id, {
+            type: body.type,
+            shareWith: body.shareWith,
+            expireDate: body.expireDate,
+            password: body.password
+        }, req.session.user);
+
+        setFlash(req, "success", share.url ? `Freigabelink erstellt: ${share.url}` : `Freigegeben für ${share.shareWith}.`);
+
+    } catch (err) {
+
+        if (!flashError(req, err)) return next(err);
+
+    }
+
+    res.redirect(`/crm/documents/${req.params.id}#shares`);
+
+};
+
+/**
+ * Freigabe entfernen
+ */
+exports.removeShare = async (req, res, next) => {
+
+    try {
+
+        await documentService.removeShare(req.params.id, req.params.shareId, req.session.user);
+
+        setFlash(req, "success", "Freigabe entfernt – der Link funktioniert nicht mehr.");
+
+    } catch (err) {
+
+        if (!flashError(req, err)) return next(err);
+
+    }
+
+    res.redirect(`/crm/documents/${req.params.id}#shares`);
+
+};
+
+/**
+ * Im Kundenportal sichtbar ja/nein (vorbereitet)
+ */
+exports.portal = async (req, res, next) => {
+
+    try {
+
+        const document = await documentService.setPortalVisible(req.params.id, (req.body || {}).visible, req.session.user);
+
+        setFlash(req, "success", document.portalVisible
+            ? "Für das Kundenportal freigegeben – Kunden sehen es, sobald das Portal Dokumente anzeigt."
+            : "Nicht mehr für das Kundenportal freigegeben.");
+
+    } catch (err) {
+
+        if (!flashError(req, err)) return next(err);
+
+    }
+
+    res.redirect(`/crm/documents/${req.params.id}`);
+
+};

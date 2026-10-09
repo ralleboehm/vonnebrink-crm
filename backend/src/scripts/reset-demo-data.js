@@ -20,6 +20,7 @@ const Opportunity = require("../models/opportunity.model");
 const Survey = require("../models/survey.model");
 const Document = require("../models/document.model");
 const DocumentFolder = require("../models/documentFolder.model");
+const Contract = require("../models/contract.model");
 const Activity = require("../models/activity.model");
 const Notification = require("../models/notification.model");
 const SyncRun = require("../models/syncRun.model");
@@ -252,6 +253,7 @@ async function resetBusinessData() {
         await Document.deleteMany({});
 
     await DocumentFolder.deleteMany({});
+    await Contract.deleteMany({});
 
     console.log(
         `✔ Dokument-Metadaten: ${documents.deletedCount} (Dateien in Nextcloud bleiben erhalten)`

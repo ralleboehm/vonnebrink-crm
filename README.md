@@ -355,26 +355,41 @@ Ohne diese Werte läuft das CRM wie bisher; der Reiter zeigt dann einen Einricht
 
 ```
 CRM/Customers/CUS-000001 Musterfirma/
-    Contracts/ Offers/ Invoices/ Tickets/ Assets/ Manuals/
-    Licenses/ Reports/ Photos/ Projects/ Other/
+    Contracts/ Offers/ Invoices/ Manuals/ Licenses/ Reports/
+    Photos/ Projects/ Downloads/ Other/
 ```
+
+Ticket-Anhänge und Asset-Dateien bleiben bewusst lokal (`storage/`).
 
 - Neue Firma → Kundenordner entsteht automatisch (im Hintergrund). Vorhandene Ordner werden nie
   neu angelegt. Wird die Firma umbenannt, bleibt der Ordner derselbe.
 - Die **Kategorie** bestimmt den Unterordner (Vertrag → Contracts, Angebot → Offers, Rechnung →
   Invoices, Lizenz → Licenses, Handbuch → Manuals, Bericht → Reports, Foto/Screenshot → Photos,
-  Projektunterlage → Projects, Backup/Konfiguration/Sonstiges → Other). Weitere Kategorien:
+  Projektunterlage → Projects, Download für Kunden → Downloads, Backup/Konfiguration/Sonstiges →
+  Other). Weitere Kategorien:
   `registerCategory()` in `utils/documentRules.js`.
 - **Versionen:** gleicher Dateiname in derselben Kategorie = neue Version; Nextcloud behält die
   alten Fassungen. Gleicher Inhalt wird erkannt und nicht erneut hochgeladen.
 - **Löschen** verschiebt die Datei in den Nextcloud-Papierkorb.
-- Vorschau im Browser für PDF, Bilder und Text; alles andere wird heruntergeladen.
+- Vorschau im Browser für PDF, Bilder und Text; Office-Dateien über „In Nextcloud öffnen“.
+- **Detailseite** je Dokument (Klick auf den Namen): Angaben, **Versionen** (frühere Fassungen
+  herunterladen), **Freigaben** (nur Admin): öffentlicher Link – auf Wunsch mit Passwort und
+  Ablaufdatum – oder intern für einen Nextcloud-Benutzer/eine Nextcloud-Gruppe; Freigaben entfernen.
+- **Kundenportal (vorbereitet):** Dokumente der Kategorien Vertrag, Angebot, Rechnung, Handbuch,
+  Download und Projektunterlage lassen sich „für das Kundenportal freigeben“. Das Portal zeigt sie
+  noch nicht an; `document.service` liefert dafür schon `portalDocuments(firma)` und
+  `getPortalDownload(id, firma)` (nur eigene, freigegebene Dokumente).
+- **Verträge (vorbereitet):** `models/contract.model.js` mit Status (Entwurf, Versendet, Gelesen,
+  Signiert, Aktiv, Abgelaufen, Gekündigt), Unterschrift, Laufzeit, Beginn/Ende, Kündigungsfrist,
+  Verlängerung und Version; Fristen berechnet `utils/contractRules.js`. Dokumente zu einem Vertrag
+  landen immer unter `Contracts/` und erscheinen im Dokumente-Reiter der Firma.
 
 | Recht | Admin | Techniker | Vertrieb |
 |---|---|---|---|
 | Ansehen, Herunterladen | alle Kategorien | alle Kategorien | nur Verträge, Angebote |
 | Hochladen | ✔ | ✔ | nur Verträge, Angebote |
-| Umbenennen, Verschieben, Löschen | ✔ | – | – |
+| Umbenennen, Verschieben, Löschen, Portal-Freigabe | ✔ | – | – |
+| Freigabelinks | ✔ | – | – |
 
 **Technik:** `services/nextcloud.service.js` ist der zentrale Zugang für alle Module (WebDAV:
 Ordner, Hochladen, Herunterladen, Verschieben, Kopieren, Umbenennen, Löschen, Eigenschaften;
@@ -382,9 +397,6 @@ Versionen; Freigaben über die OCS-API) mit Zeitlimit, Wiederholen bei Störunge
 und Log (`NEXTCLOUD_DEBUG=1` zeigt jede Anfrage). Fachlogik: `services/document.service.js`.
 Ereignisse: `document.uploaded`, `.downloaded`, `.updated`, `.deleted`, `.shared`,
 `.versionCreated`. Die Tests laufen gegen einen Nextcloud-Nachbau (`test/helpers/fakeNextcloud.js`).
-
-**Nächste Etappen:** Ticket- und Asset-Ordner (neue Ticket-Anhänge nach Nextcloud), danach
-Versionen und Freigabelinks in der Oberfläche sowie Vorbereitung von Vertragsverwaltung und Portal.
 
 ## Rollen
 

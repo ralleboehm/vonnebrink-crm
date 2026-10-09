@@ -42,10 +42,17 @@ function receiveFile(req, res, next) {
 
 router.post("/", requirePermission(PERMISSIONS.DOCUMENTS_UPLOAD), receiveFile, documentController.upload);
 
+router.get("/:id", requirePermission(PERMISSIONS.DOCUMENTS_VIEW), documentController.show);
 router.get("/:id/download", requirePermission(PERMISSIONS.DOCUMENTS_VIEW), documentController.download);
+router.get("/:id/versions/:versionId/download", requirePermission(PERMISSIONS.DOCUMENTS_VIEW), documentController.downloadVersion);
 
 router.post("/:id/rename", requirePermission(PERMISSIONS.DOCUMENTS_EDIT), documentController.rename);
 router.post("/:id/move", requirePermission(PERMISSIONS.DOCUMENTS_EDIT), documentController.move);
 router.post("/:id/delete", requirePermission(PERMISSIONS.DOCUMENTS_DELETE), documentController.remove);
+router.post("/:id/portal", requirePermission(PERMISSIONS.DOCUMENTS_EDIT), documentController.portal);
+
+// Freigaben (nur Admin)
+router.post("/:id/shares", requirePermission(PERMISSIONS.DOCUMENTS_SHARE), documentController.createShare);
+router.post("/:id/shares/:shareId/delete", requirePermission(PERMISSIONS.DOCUMENTS_SHARE), documentController.removeShare);
 
 module.exports = router;
