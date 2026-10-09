@@ -1,5 +1,7 @@
 extends ../layouts/main
 
+include _tags
+
 block content
 
     h1.mb-4 Neue Firma
@@ -48,6 +50,8 @@ block content
                 id="website"
                 name="website"
             )
+
+        +tagInput(null, tagSuggestions)
 
         hr
 

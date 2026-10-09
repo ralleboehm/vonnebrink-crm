@@ -1,5 +1,7 @@
 extends ../layouts/main
 
+include _tags
+
 block content
 
     h1.mb-4 Firma bearbeiten
@@ -52,6 +54,8 @@ block content
                 name="website"
                 value=company.website
             )
+
+        +tagInput(tagText, tagSuggestions)
 
         hr
 

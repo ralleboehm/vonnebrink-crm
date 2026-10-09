@@ -221,7 +221,8 @@ const COMPANY_FIELDS = [
     "phone",
     "email",
     "website",
-    "notes"
+    "notes",
+    "tags"
 ];
 
 const CONTACT_FIELDS = [

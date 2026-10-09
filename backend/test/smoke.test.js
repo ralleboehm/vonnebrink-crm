@@ -422,6 +422,52 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
 
     });
 
+    await t.test("CRM: Firma mit Adresse und Branche / Gruppen", async () => {
+
+        const created = await crm.post("/crm/companies", {
+            companyName: "Smoke Praxis",
+            status: "active",
+            street: "Testweg",
+            postalCode: "68623",
+            city: "Lampertheim",
+            country: "Deutschland",
+            tags: "Arztpraxis, Newsletter, arztpraxis"
+        });
+
+        assertRedirect(created, "POST /crm/companies");
+
+        const praxis = await Company.findOne({ companyName: "Smoke Praxis" });
+        assert.ok(praxis, "Firma gespeichert");
+        assert.deepEqual([...praxis.tags], ["Arztpraxis", "Newsletter"]);
+        assert.equal(praxis.address.city, "Lampertheim", "Adresse aus dem Formular gespeichert");
+        assert.equal(praxis.address.street, "Testweg");
+
+        assertPage(await crm.get(`/crm/companies/${praxis._id}/edit`), "Bearbeiten mit Schlagwörtern");
+
+        assertRedirect(await crm.post(`/crm/companies/${praxis._id}/update`, {
+            companyName: "Smoke Praxis",
+            status: "active",
+            city: "Viernheim",
+            tags: "Arztpraxis, VIP"
+        }), "Firma ändern");
+
+        const updated = await Company.findById(praxis._id);
+        assert.deepEqual([...updated.tags], ["Arztpraxis", "VIP"]);
+        assert.equal(updated.address.city, "Viernheim");
+        assert.equal(updated.address.street, "Testweg", "nicht gesendete Adressteile bleiben");
+
+        const filtered = await crm.get("/crm/companies?tag=arztpraxis");
+        assertPage(filtered, "Filter nach Schlagwort");
+        assert.match(filtered.text, /Smoke Praxis/);
+        assert.doesNotMatch(filtered.text, /Fremde AG/);
+
+        assertPage(await crm.get(`/crm/companies/${praxis._id}`), "Detailseite mit Schlagwörtern");
+
+        assert.match((await crm.get("/crm/search?q=VIP")).text, /Smoke Praxis/, "Suche findet Schlagwort");
+        assert.match((await crm.get("/crm/import/export/companies/download")).text, /Arztpraxis, VIP/, "Export enthält Schlagwörter");
+
+    });
+
     await t.test("CRM: E-Mail-Protokoll und Test-Mail", async () => {
 
         // Ohne SMTP: Test-Mail wird nicht verschickt, aber protokolliert
@@ -555,7 +601,9 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
             assertPage(page, url);
         }
 
-        assert.match((await viewer.get("/crm/companies")).text, /Bäckerei Sonnenschein/);
+        const companyList = (await viewer.get("/crm/companies")).text;
+        assert.match(companyList, /Bäckerei Sonnenschein/);
+        assert.match(companyList, /Branche \/ Gruppe/, "Schlagwort-Filter mit Beispieldaten");
 
         // Portal-Login mit Beispielzugang
         const customer = createClient(baseUrl);

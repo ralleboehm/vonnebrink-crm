@@ -1,6 +1,7 @@
 "use strict";
 
 const { foldKey } = require("../mapping.service");
+const { normalizeTags } = require("../../../utils/tags");
 
 // ----------------------------------------------------
 // Firmen (Import-Definition)
@@ -104,6 +105,14 @@ const fields = [
         type: "url",
         max: 255,
         synonyms: ["Web", "Homepage", "URL", "Webseite", "Internet", "www"]
+    },
+
+    {
+        key: "tags",
+        label: "Branche / Gruppen",
+        // "Arztpraxis, Newsletter" -> ["Arztpraxis", "Newsletter"]
+        parse: (value) => normalizeTags(value),
+        synonyms: ["Branche", "Branchen", "Kundengruppe", "Kundengruppen", "Gruppe", "Gruppen", "Tags", "Schlagwörter", "Schlagworte", "Segment", "Industry", "Kategorie"]
     },
 
     {
@@ -281,6 +290,7 @@ const entity = {
                 website: d.website,
                 notes: d.notes,
                 address,
+                tags: d.tags || [],
                 isDeleted: false
 
             });
@@ -304,9 +314,16 @@ const entity = {
             set[`address.${key}`] = value;
         }
 
+        const update = { $set: set };
+
+        // Schlagwörter aus der Datei ERGÄNZEN, vorhandene bleiben erhalten
+        if (Array.isArray(d.tags) && d.tags.length) {
+            update.$addToSet = { tags: { $each: d.tags } };
+        }
+
         await Company.updateOne(
             { _id: item.existingId, isDeleted: false },
-            { $set: set },
+            update,
             { runValidators: true }
         );
 

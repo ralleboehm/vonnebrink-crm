@@ -157,8 +157,17 @@ test("ähnlich klingende Spalten werden nicht fälschlich zugeordnet", () => {
     const contacts = mapping.guess(["Kontaktnummer", "Erstellt am", "Kundengruppe"], contactEntity);
     assert.deepEqual(contacts, ["", "", ""]);
 
+    // "Kundengruppe" gehört bei Firmen ins Feld "Branche / Gruppen"
     const companies = mapping.guess(["Kundengruppe", "Kontaktperson", "Hostname"], companyEntity);
-    assert.deepEqual(companies, ["", "", ""]);
+    assert.deepEqual(companies, ["tags", "", ""]);
+});
+
+test("Branche / Gruppen: Spalten werden erkannt und als Liste übernommen", () => {
+    assert.deepEqual(mapping.guess(["Firma", "Branche"], companyEntity), ["companyName", "tags"]);
+
+    const field = companyEntity.fields.find((f) => f.key === "tags");
+    assert.deepEqual(field.parse("Arztpraxis; Newsletter, arztpraxis"), ["Arztpraxis", "Newsletter"]);
+    assert.deepEqual(field.parse(""), []);
 });
 
 test("jedes CRM-Feld wird höchstens einer Spalte zugeordnet", () => {

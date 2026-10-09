@@ -1,14 +1,58 @@
 const Company = require("../models/company.model");
 const counterService = require("./counter.service");
 
-// Alle aktiven Firmen
-exports.getAll = async () => {
+const { normalizeTags } = require("../utils/tags");
+const { escapeRegex } = require("./search.service");
 
-    return await Company.find({
+const ADDRESS_FIELDS = ["street", "houseNumber", "postalCode", "city", "country"];
+
+/**
+ * Formulardaten -> Firmenfelder.
+ *
+ * Die Formulare schicken die Adresse als einzelne Felder (street, city …);
+ * address[...] als Objekt wird ebenfalls verstanden. Nur Felder, die im
+ * Formular vorkommen, werden übernommen – fehlende bleiben unverändert.
+ */
+exports.fromForm = (body = {}) => {
+
+    const data = {};
+
+    for (const key of ["companyName", "status", "phone", "email", "website"]) {
+        if (key in body) data[key] = body[key];
+    }
+
+    const source = body.address && typeof body.address === "object" ? body.address : body;
+    const address = {};
+
+    for (const key of ADDRESS_FIELDS) {
+        if (key in source) address[key] = source[key];
+    }
+
+    if (Object.keys(address).length) data.address = address;
+
+    if ("tags" in body) data.tags = normalizeTags(body.tags);
+
+    return data;
+
+};
+
+// Alle aktiven Firmen (optional nach Schlagwort gefiltert)
+exports.getAll = async (filters = {}) => {
+
+    const query = {
 
         isDeleted: false
 
-    }).sort({
+    };
+
+    if (filters.tag) {
+
+        // Groß-/Kleinschreibung egal, ganzes Schlagwort
+        query.tags = { $regex: `^${escapeRegex(filters.tag)}$`, $options: "i" };
+
+    }
+
+    return await Company.find(query).sort({
 
         companyName: 1
 
@@ -49,14 +93,32 @@ exports.create = async (companyData) => {
 
         address: companyData.address || {},
 
+        tags: normalizeTags(companyData.tags),
+
         isDeleted: false
 
     });
 
 };
 
-// Firma aktualisieren
+// Firma aktualisieren (nur übergebene Felder; Adressteile einzeln)
 exports.update = async (id, companyData) => {
+
+    const set = {};
+
+    for (const key of ["companyName", "status", "phone", "email", "website"]) {
+        if (companyData[key] !== undefined) set[key] = companyData[key];
+    }
+
+    if (companyData.address) {
+        for (const key of ADDRESS_FIELDS) {
+            if (companyData.address[key] !== undefined) set[`address.${key}`] = companyData.address[key];
+        }
+    }
+
+    if (companyData.tags !== undefined) {
+        set.tags = normalizeTags(companyData.tags);
+    }
 
     return await Company.findOneAndUpdate(
 
@@ -68,19 +130,7 @@ exports.update = async (id, companyData) => {
         },
 
         {
-
-            companyName: companyData.companyName,
-
-            status: companyData.status,
-
-            phone: companyData.phone,
-
-            email: companyData.email,
-
-            website: companyData.website,
-
-            address: companyData.address
-
+            $set: set
         },
 
         {
@@ -92,6 +142,22 @@ exports.update = async (id, companyData) => {
         }
 
     );
+
+};
+
+/**
+ * Alle verwendeten Schlagwörter mit Anzahl Firmen (für Filter & Vorschläge)
+ */
+exports.getTagStats = async () => {
+
+    const rows = await Company.aggregate([
+        { $match: { isDeleted: false } },
+        { $unwind: "$tags" },
+        { $group: { _id: { $toLower: "$tags" }, tag: { $first: "$tags" }, count: { $sum: 1 } } },
+        { $sort: { count: -1, tag: 1 } }
+    ]);
+
+    return rows.map((row) => ({ tag: row.tag, count: row.count }));
 
 };
 

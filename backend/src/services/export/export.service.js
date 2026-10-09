@@ -67,6 +67,7 @@ const definitions = {
             { key: "phone", label: "Telefon", get: (c) => c.phone },
             { key: "email", label: "E-Mail", get: (c) => c.email },
             { key: "website", label: "Website", get: (c) => c.website },
+            { key: "tags", label: "Branche / Gruppen", get: (c) => (c.tags || []).join(", ") },
             { key: "notes", label: "Notizen", get: (c) => c.notes },
             { key: "createdAt", label: "Erstellt am", get: (c) => formatDate(c.createdAt) }
         ],

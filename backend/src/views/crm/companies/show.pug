@@ -1,6 +1,7 @@
 extends ../layouts/main
 
 include ../assets/_mixins
+include _tags
 
 block content
 
@@ -139,6 +140,20 @@ block content
                         else
 
                             | -
+
+                    p
+
+                        strong Branche / Gruppen:
+
+                        br
+
+                        if company.tags && company.tags.length
+
+                            +tagBadges(company.tags, true)
+
+                        else
+
+                            span.text-muted -
 
                     p
 

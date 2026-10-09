@@ -3,17 +3,25 @@ const contactService = require("../../services/contact.service");
 const ticketService = require("../../services/ticket.service");
 const assetService = require("../../services/asset.service");
 const assetLabels = require("../../utils/assetLabels");
+const tagUtils = require("../../utils/tags");
 
 // Alle Firmen anzeigen
 exports.index = async (req, res, next) => {
 
     try {
 
-        const companies = await companyService.getAll();
+        const tag = typeof req.query.tag === "string" ? req.query.tag.trim().slice(0, 40) : "";
+
+        const [companies, tagStats] = await Promise.all([
+            companyService.getAll({ tag }),
+            companyService.getTagStats()
+        ]);
 
         res.render("companies/index", {
             title: "Firmen",
-            companies
+            companies,
+            tagStats,
+            selectedTag: tag
         });
 
     } catch (err) {
@@ -28,7 +36,8 @@ exports.index = async (req, res, next) => {
 exports.create = (req, res) => {
 
     res.render("companies/create", {
-        title: "Neue Firma"
+        title: "Neue Firma",
+        tagSuggestions: tagUtils.SUGGESTED
     });
 
 };
@@ -38,16 +47,9 @@ exports.store = async (req, res, next) => {
 
     try {
 
-        const company = await companyService.create({
-
-            companyName: req.body.companyName,
-            status: req.body.status,
-            phone: req.body.phone,
-            email: req.body.email,
-            website: req.body.website,
-            address: req.body.address
-
-        });
+        const company = await companyService.create(
+            companyService.fromForm(req.body)
+        );
 
         res.redirect(`/crm/companies/${company._id}`);
 
@@ -107,9 +109,13 @@ exports.edit = async (req, res, next) => {
             return res.redirect("/crm/companies");
         }
 
+        const tagStats = await companyService.getTagStats();
+
         res.render("companies/edit", {
             title: "Firma bearbeiten",
-            company
+            company,
+            tagText: tagUtils.tagsToText(company.tags),
+            tagSuggestions: [...new Set([...tagStats.map((t) => t.tag), ...tagUtils.SUGGESTED])]
         });
 
     } catch (err) {
@@ -125,16 +131,10 @@ exports.update = async (req, res, next) => {
 
     try {
 
-        await companyService.update(req.params.id, {
-
-            companyName: req.body.companyName,
-            status: req.body.status,
-            phone: req.body.phone,
-            email: req.body.email,
-            website: req.body.website,
-            address: req.body.address
-
-        });
+        await companyService.update(
+            req.params.id,
+            companyService.fromForm(req.body)
+        );
 
         res.redirect(`/crm/companies/${req.params.id}`);
 

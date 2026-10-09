@@ -18,6 +18,7 @@ const COMPANIES = [
     {
         key: "baeckerei",
         companyName: "Bäckerei Sonnenschein GmbH",
+        tags: ["Lebensmittelhandwerk", "Einzelhandel", "Lampertheim", "Newsletter"],
         status: "active",
         phone: "06206 555-100",
         email: "info@baeckerei-sonnenschein.example",
@@ -57,6 +58,7 @@ const COMPANIES = [
     {
         key: "kanzlei",
         companyName: "Steuerkanzlei Weber & Partner",
+        tags: ["Steuerberatung", "DATEV", "Newsletter"],
         status: "active",
         phone: "06251 555-200",
         email: "kanzlei@weber-partner.example",
@@ -105,6 +107,7 @@ const COMPANIES = [
     {
         key: "autohaus",
         companyName: "Autohaus Krämer KG",
+        tags: ["Kfz / Autohaus", "Worms"],
         status: "active",
         phone: "06241 555-300",
         email: "service@autohaus-kraemer.example",
@@ -134,6 +137,7 @@ const COMPANIES = [
     {
         key: "praxis",
         companyName: "Praxis Dr. Lindner",
+        tags: ["Arztpraxis", "Gesundheitswesen", "Newsletter"],
         status: "active",
         phone: "06204 555-400",
         email: "praxis@dr-lindner.example",
@@ -172,6 +176,7 @@ const COMPANIES = [
     {
         key: "holzbau",
         companyName: "Holzbau Müller GmbH",
+        tags: ["Handwerk", "Bau", "Bürstadt"],
         status: "prospect",
         phone: "06206 555-500",
         email: "info@holzbau-mueller.example",
@@ -188,6 +193,7 @@ const COMPANIES = [
     {
         key: "cafe",
         companyName: "Café Rheinblick",
+        tags: ["Gastronomie", "Lampertheim"],
         status: "inactive",
         phone: "06206 555-600",
         email: "hallo@cafe-rheinblick.example",

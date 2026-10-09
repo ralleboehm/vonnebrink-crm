@@ -211,3 +211,22 @@ test("Log-Zeitstempel: Format und morgan-Kanal", () => {
     assert.match(written, /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} GET \/crm 200\n$/);
 
 });
+
+// ----------------------------------------------------
+// Schlagwörter (Branche / Gruppen)
+// ----------------------------------------------------
+
+test("Schlagwörter: Trennzeichen, Dubletten, Grenzen", () => {
+
+    const { normalizeTags, tagsToText, MAX_TAGS } = require("../src/utils/tags");
+
+    assert.deepEqual(normalizeTags("Arztpraxis, Newsletter;  Lampertheim |#VIP\nNewsletter"), ["Arztpraxis", "Newsletter", "Lampertheim", "VIP"]);
+    assert.deepEqual(normalizeTags(["Bau", "bau", " Handwerk , Bau "]), ["Bau", "Handwerk"]);
+    assert.deepEqual(normalizeTags(""), []);
+    assert.deepEqual(normalizeTags(null), []);
+    assert.equal(normalizeTags("x".repeat(80))[0].length, 40);
+    assert.equal(normalizeTags(Array.from({ length: 30 }, (_, i) => `T${i}`)).length, MAX_TAGS);
+    assert.equal(tagsToText(["A", "B"]), "A, B");
+    assert.equal(tagsToText(undefined), "");
+
+});

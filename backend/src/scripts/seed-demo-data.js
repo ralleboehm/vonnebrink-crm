@@ -76,7 +76,8 @@ async function seed(options = {}) {
             phone: data.phone,
             email: data.email,
             website: data.website,
-            address: data.address
+            address: data.address,
+            tags: data.tags || []
         });
 
         summary.companies++;

@@ -82,6 +82,20 @@ const companySchema = new mongoose.Schema(
             trim: true
         },
 
+        // Branche / Gruppen: freie Schlagwörter für Marketing & Kampagnen
+        // (bereinigt über utils/tags.js)
+        tags: {
+            type: [
+                {
+                    type: String,
+                    trim: true,
+                    maxlength: 40
+                }
+            ],
+            default: [],
+            index: true
+        },
+
         // Verknüpfung mit einer Organisation in Action1 (RMM).
         // Wird auf der Seite "Action1" (nur Admins) gepflegt.
         action1: {

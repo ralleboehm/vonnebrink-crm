@@ -1,0 +1,78 @@
+//- Eingabefeld "Branche / Gruppen" mit anklickbaren Vorschlägen
+//- Erwartet: value (Text, z. B. "Arztpraxis, Newsletter"), suggestions (Liste)
+
+mixin tagInput(value, suggestions)
+
+    .mb-3
+
+        label.form-label(for="tags") Branche / Gruppen
+
+        input.form-control(
+            type="text"
+            id="tags"
+            name="tags"
+            value=value || ""
+            maxlength="900"
+            placeholder="z. B. Arztpraxis, Newsletter, Lampertheim"
+            autocomplete="off"
+        )
+
+        .form-text
+            | Mehrere Begriffe mit Komma trennen. Grundlage für Marketing & Kampagnen.
+
+        if suggestions && suggestions.length
+
+            .d-flex.flex-wrap.gap-1.mt-2#tagSuggestions
+
+                each suggestion in suggestions
+
+                    button.btn.btn-sm.btn-outline-secondary.py-0(type="button" data-tag=suggestion)
+
+                        i.bi.bi-plus.me-1
+
+                        = suggestion
+
+            script.
+                (function () {
+                    var input = document.getElementById("tags");
+                    var box = document.getElementById("tagSuggestions");
+                    if (!input || !box) return;
+                    function current() {
+                        return input.value.split(/[,;]/).map(function (t) { return t.trim(); }).filter(Boolean);
+                    }
+                    function refresh() {
+                        var lower = current().map(function (t) { return t.toLowerCase(); });
+                        Array.prototype.forEach.call(box.querySelectorAll("[data-tag]"), function (btn) {
+                            btn.classList.toggle("d-none", lower.indexOf(btn.dataset.tag.toLowerCase()) !== -1);
+                        });
+                    }
+                    box.addEventListener("click", function (event) {
+                        var btn = event.target.closest("[data-tag]");
+                        if (!btn) return;
+                        var tags = current();
+                        tags.push(btn.dataset.tag);
+                        input.value = tags.join(", ");
+                        refresh();
+                        input.focus();
+                    });
+                    input.addEventListener("input", refresh);
+                    refresh();
+                })();
+
+//- Schlagwörter als Badges (Liste & Detailseite)
+mixin tagBadges(tags, linked)
+
+    if tags && tags.length
+
+        each tag in tags
+
+            if linked
+
+                a.badge.rounded-pill.text-bg-light.border.text-decoration-none.me-1(
+                    href=`/crm/companies?tag=${encodeURIComponent(tag)}`
+                    title=`Alle Firmen mit „${tag}“`
+                )= tag
+
+            else
+
+                span.badge.rounded-pill.text-bg-light.border.me-1= tag

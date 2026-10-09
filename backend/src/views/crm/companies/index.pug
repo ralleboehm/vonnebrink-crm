@@ -1,5 +1,7 @@
 extends ../layouts/main
 
+include _tags
+
 block content
 
     .d-flex.justify-content-between.align-items-center.mb-4
@@ -8,6 +10,34 @@ block content
 
         a.btn.btn-primary(href="/crm/companies/new")
             | ➕ Neue Firma
+
+    // Filter nach Branche / Gruppe
+    if tagStats.length
+
+        .d-flex.flex-wrap.align-items-center.gap-1.mb-3
+
+            span.text-muted.small.me-1
+                i.bi.bi-tags.me-1
+                | Branche / Gruppe:
+
+            a.badge.rounded-pill.text-decoration-none(
+                href="/crm/companies"
+                class=selectedTag ? "text-bg-light border" : "text-bg-primary"
+            ) Alle
+
+            each entry in tagStats
+
+                a.badge.rounded-pill.text-decoration-none(
+                    href=`/crm/companies?tag=${encodeURIComponent(entry.tag)}`
+                    class=selectedTag && selectedTag.toLowerCase() === entry.tag.toLowerCase() ? "text-bg-primary" : "text-bg-light border"
+                ) #{entry.tag} (#{entry.count})
+
+    if selectedTag
+
+        p.text-muted.small
+
+            | #{companies.length} #{companies.length === 1 ? "Firma" : "Firmen"} mit „#{selectedTag}“ ·
+            a.ms-1(href="/crm/companies") Filter aufheben
 
     if companies.length
 
@@ -23,6 +53,7 @@ block content
                             th Kundennummer
                             th Firma
                             th Status
+                            th Branche / Gruppen
                             th Telefon
                             th E-Mail
                             th.text-end Aktionen
@@ -54,6 +85,9 @@ block content
                                         default
                                             span.badge.bg-light.text-dark Unbekannt
 
+                                td
+                                    +tagBadges(company.tags, true)
+
                                 td= company.phone
 
                                 td= company.email
@@ -82,4 +116,10 @@ block content
 
         .alert.alert-info
 
-            | Es sind noch keine Firmen vorhanden.
+            if selectedTag
+
+                | Keine Firmen mit „#{selectedTag}“.
+
+            else
+
+                | Es sind noch keine Firmen vorhanden.

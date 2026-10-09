@@ -8,7 +8,8 @@ A self-hosted CRM, Helpdesk and Customer Portal designed for Managed Service Pro
 
 ### CRM
 
-- Customer Management
+- Customer Management (inkl. Branche / Gruppen als Schlagwörter – Filter in der Firmenübersicht,
+  Suche, CSV-Import/-Export; Grundlage für Marketing & Kampagnen)
 - Contact Management
 - Ticket Management
 - User & Role Management
