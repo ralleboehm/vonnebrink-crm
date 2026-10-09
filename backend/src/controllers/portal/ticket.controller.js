@@ -4,6 +4,17 @@ const attachmentService = require("../../services/attachment.service");
 const formatFileSize = require("../../utils/formatFileSize");
 const notificationService = require("../../services/notification.service");
 
+/**
+ * "Hans Müller" aus der Portal-Sitzung
+ */
+function portalAuthorName(req) {
+
+    const user = req.session.portalUser || {};
+
+    return [user.firstName, user.lastName].filter(Boolean).join(" ");
+
+}
+
 // ----------------------------------------------------
 // Meine Tickets
 // ----------------------------------------------------
@@ -169,6 +180,14 @@ exports.addMessage = async (req, res, next) => {
 
         });
 
+        // Glocke für den Bearbeiter (scheitert nie)
+        await notificationService.ticketUpdated(ticket, {
+            kind: "message",
+            source: "portal",
+            authorName: portalAuthorName(req),
+            message
+        });
+
         res.redirect(`/portal/tickets/${ticket._id}`);
 
     } catch (err) {
@@ -205,6 +224,14 @@ exports.uploadAttachment = async (req, res, next) => {
 
             isInternal: false
 
+        });
+
+        // Glocke für den Bearbeiter (scheitert nie)
+        await notificationService.ticketUpdated(ticket, {
+            kind: "attachment",
+            source: "portal",
+            authorName: portalAuthorName(req),
+            fileName: req.file.originalname
         });
 
         res.redirect(`/portal/tickets/${ticket._id}`);

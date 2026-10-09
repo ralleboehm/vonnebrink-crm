@@ -299,6 +299,93 @@ test("ticket.created ohne Kontakt-E-Mail: keine Eingangsbestätigung", async () 
 
 });
 
+// ----------------------------------------------------
+// Handler ticket.updated (Kunde antwortet im Portal)
+// ----------------------------------------------------
+
+test("Register: ticket.updated ist angemeldet", () => {
+
+    assert.equal(events.hasHandler(events.EVENTS.TICKET_UPDATED), true);
+
+});
+
+test("ticket.updated: Antwort geht nur an den zugewiesenen Bearbeiter", async () => {
+
+    const { ctx, calls } = fakeContext({
+        loadTicket: async () => ({
+            _id: "t1", ticketNumber: "TIC-000007", priority: "normal",
+            company: { companyName: "Holz Müller GmbH" },
+            contact: { salutation: "mr", lastName: "Müller" },
+            assignedTo: { _id: "u2", firstName: "Tom" }
+        })
+    });
+
+    const result = await ticketHandlers.ticketUpdated({
+        ticket: "t1", kind: "message", source: "portal",
+        authorName: "Hans Müller", message: "  Drucker   geht\nwieder nicht  "
+    }, ctx);
+
+    assert.deepEqual(result, { ticketNumber: "TIC-000007", notified: 1 });
+    assert.deepEqual(calls.notifications[0].ids, ["u2"]);
+
+    const data = calls.notifications[0].data;
+
+    assert.equal(data.title, "Antwort vom Kunden – TIC-000007");
+    assert.equal(data.message, "Hans Müller, Holz Müller GmbH: Drucker geht wieder nicht");
+    assert.equal(data.icon, "bi-chat-left-text");
+    assert.equal(data.link, "/crm/tickets/t1");
+    assert.equal(data.event, "ticket.updated");
+    assert.equal(calls.emails.length, 0, "keine E-Mail");
+
+});
+
+test("ticket.updated: ohne (aktiven) Bearbeiter bekommt das ganze Team die Glocke", async () => {
+
+    const ticket = { _id: "t1", ticketNumber: "TIC-1", priority: "urgent", company: { companyName: "A" }, contact: null };
+
+    // niemand zugewiesen
+    let { ctx, calls } = fakeContext({ loadTicket: async () => ({ ...ticket, assignedTo: null }) });
+    await ticketHandlers.ticketUpdated({ ticket: "t1", kind: "attachment", source: "portal", fileName: "rechnung.pdf" }, ctx);
+
+    assert.deepEqual(calls.notifications[0].ids, ["u1", "u2"]);
+    assert.equal(calls.notifications[0].data.title, "Datei vom Kunden – TIC-1");
+    assert.equal(calls.notifications[0].data.message, "A: rechnung.pdf");
+    assert.equal(calls.notifications[0].data.icon, "bi-paperclip");
+    assert.equal(calls.notifications[0].data.type, "danger");
+
+    // zugewiesen an jemanden, der nicht (mehr) im Support-Team ist
+    ({ ctx, calls } = fakeContext({ loadTicket: async () => ({ ...ticket, assignedTo: "u9" }) }));
+    await ticketHandlers.ticketUpdated({ ticket: "t1", kind: "message", source: "portal", message: "x" }, ctx);
+
+    assert.deepEqual(calls.notifications[0].ids, ["u1", "u2"]);
+
+});
+
+test("ticket.updated: nur Portal, unbekannte Art wird abgelehnt", async () => {
+
+    const { ctx, calls } = fakeContext();
+
+    const crm = await ticketHandlers.ticketUpdated({ ticket: "t1", kind: "message", source: "crm" }, ctx);
+    assert.equal(crm.notified, 0);
+    assert.equal(calls.notifications.length, 0);
+
+    await assert.rejects(ticketHandlers.ticketUpdated({ ticket: "t1", kind: "status", source: "portal" }, ctx), /unbekannte Art/);
+    await assert.rejects(ticketHandlers.ticketUpdated({ kind: "message", source: "portal" }, ctx), /ohne Ticket/);
+
+});
+
+test("ticket.updated: lange Antworten werden für die Glocke gekürzt", () => {
+
+    const long = "a".repeat(500);
+    const out = ticketHandlers.excerpt(long);
+
+    assert.equal(out.length, 160);
+    assert.ok(out.endsWith("…"));
+    assert.equal(ticketHandlers.excerpt("kurz"), "kurz");
+    assert.equal(ticketHandlers.excerpt(null), "");
+
+});
+
 test("Anrede für Kunden", () => {
 
     assert.equal(ticketHandlers.customerName({ salutation: "mrs", firstName: "Anna", lastName: "Jung" }), "Frau Jung");

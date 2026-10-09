@@ -9,6 +9,11 @@
 //   2. E-Mail an alle Support-Mitarbeiter (Vorlage ticket-created-internal)
 //   3. Eingangsbestätigung an den Kunden (Vorlage ticket-created)
 //
+// ticket.updated (Kunde antwortet oder lädt eine Datei im Portal hoch)
+//   Interne Benachrichtigung (Glocke) für den zugewiesenen Bearbeiter.
+//   Ist niemand (aktiv) zugewiesen, bekommt das ganze Support-Team sie.
+//   Keine E-Mail.
+//
 // Wer ein Ticket selbst im CRM anlegt, wird darüber nicht benachrichtigt.
 // Tickets aus dem Kundenportal benachrichtigen immer das ganze Team.
 // Die Eingangsbestätigung an den Kunden geht in beiden Fällen raus,
@@ -194,9 +199,108 @@ async function ticketCreated(payload, ctx) {
 
 register(EVENTS.TICKET_CREATED, ticketCreated);
 
+// ----------------------------------------------------
+// ticket.updated
+// ----------------------------------------------------
+
+const UPDATE_KINDS = {
+    message: { title: "Antwort vom Kunden", icon: "bi-chat-left-text" },
+    attachment: { title: "Datei vom Kunden", icon: "bi-paperclip" }
+};
+
+const EXCERPT_LENGTH = 160;
+
+/**
+ * Kurzer Auszug für die Glocke: Leerraum zusammenfassen, kürzen
+ */
+function excerpt(text, max = EXCERPT_LENGTH) {
+
+    const clean = String(text || "").replace(/\s+/g, " ").trim();
+
+    if (clean.length <= max) return clean;
+
+    return `${clean.slice(0, max - 1).trimEnd()}…`;
+
+}
+
+/**
+ * Wer wird benachrichtigt? Der zugewiesene Bearbeiter, sofern er aktiv
+ * zum Support-Team gehört – sonst das ganze Team.
+ */
+function updateRecipients(ticket, staff) {
+
+    const assignedId = idString(ticket.assignedTo);
+
+    if (assignedId) {
+
+        const assigned = staff.filter((user) => String(user._id) === assignedId);
+
+        if (assigned.length) return assigned;
+
+    }
+
+    return staff;
+
+}
+
+async function ticketUpdated(payload, ctx) {
+
+    const ticketId = idString(payload.ticket);
+
+    if (!ticketId) {
+        throw new Error("ticket.updated ohne Ticket aufgerufen.");
+    }
+
+    const kind = UPDATE_KINDS[payload.kind];
+
+    if (!kind) {
+        throw new Error(`ticket.updated: unbekannte Art "${payload.kind}".`);
+    }
+
+    // Vorerst nur Änderungen aus dem Kundenportal
+    if (payload.source !== "portal") {
+        return { ticketNumber: null, notified: 0, skipped: "nicht aus dem Portal" };
+    }
+
+    const ticket = await ctx.loadTicket(ticketId);
+
+    if (!ticket) {
+        throw new Error(`Ticket ${ticketId} nicht gefunden.`);
+    }
+
+    const company = ticket.company && typeof ticket.company === "object" ? ticket.company.companyName : "";
+    const author = payload.authorName || customerName(ticket.contact && typeof ticket.contact === "object" ? ticket.contact : null);
+
+    const detail = payload.kind === "attachment"
+        ? excerpt(payload.fileName, 120)
+        : excerpt(payload.message);
+
+    const recipients = updateRecipients(ticket, await ctx.getSupportStaff());
+
+    const notified = await ctx.notifyUsers(recipients.map((user) => user._id), {
+        title: `${kind.title} – ${ticket.ticketNumber}`,
+        message: [[author, company].filter(Boolean).join(", "), detail].filter(Boolean).join(": "),
+        type: notificationType(ticket.priority),
+        icon: kind.icon,
+        link: `/crm/tickets/${ticket._id}`,
+        event: EVENTS.TICKET_UPDATED
+    });
+
+    return {
+        ticketNumber: ticket.ticketNumber,
+        notified
+    };
+
+}
+
+register(EVENTS.TICKET_UPDATED, ticketUpdated);
+
 module.exports = {
     customerName,
     ticketData,
     notificationType,
-    ticketCreated
+    excerpt,
+    updateRecipients,
+    ticketCreated,
+    ticketUpdated
 };

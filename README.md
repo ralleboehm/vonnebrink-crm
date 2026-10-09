@@ -212,6 +212,8 @@ die globale Suche findet Assets auch über Seriennummer, IP und Benutzer, und
   `{{ticketNumber}}` und Abschnitten `{{#if agent}} … {{/if}}`.
 - **Neues Ticket** (CRM oder Portal): Glocke + E-Mail an Admins/Techniker, Eingangsbestätigung
   an den Ansprechpartner. Wer ein Ticket selbst im CRM anlegt, wird darüber nicht benachrichtigt.
+- **Antwort oder Datei vom Kunden** (Portal): Glocke für den zugewiesenen Bearbeiter mit Auszug
+  der Antwort bzw. Dateinamen; ist niemand (aktiv) zugewiesen, für alle Admins/Techniker. Keine E-Mail.
 - **E-Mail-Protokoll** (Benutzermenü → E-Mail-Protokoll, nur Admins): jede Vorlagen-Mail mit
   Ergebnis (verschickt / fehlgeschlagen mit Grund / nicht verschickt), Verbindungstest und
   Test-Mail an sich selbst. Einträge werden nach 180 Tagen gelöscht.

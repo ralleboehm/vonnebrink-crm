@@ -370,6 +370,35 @@ async function ticketCreated(ticket, options = {}) {
 
 }
 
+/**
+ * Kunde hat im Portal geantwortet oder eine Datei hochgeladen:
+ * Glocke für den zugewiesenen Bearbeiter (sonst das ganze Team).
+ *
+ * @param {object} ticket  Ticket-Dokument (ID genügt)
+ * @param {object} details
+ * @param {"message"|"attachment"} details.kind
+ * @param {"portal"} [details.source]
+ * @param {string} [details.authorName]  z. B. "Hans Müller"
+ * @param {string} [details.message]     Text der Antwort (für den Auszug)
+ * @param {string} [details.fileName]    Name der hochgeladenen Datei
+ */
+async function ticketUpdated(ticket, details = {}) {
+
+    const results = await bus.emit(EVENTS.TICKET_UPDATED, {
+        ticket,
+        kind: details.kind,
+        source: details.source || "portal",
+        authorName: details.authorName || "",
+        message: details.message || "",
+        fileName: details.fileName || ""
+    });
+
+    const own = results.find((entry) => entry.listener === BUS_LISTENER_NAME);
+
+    return own && own.result ? own.result : { ok: true, event: EVENTS.TICKET_UPDATED, result: null };
+
+}
+
 // ----------------------------------------------------
 // Am Event-Bus anmelden
 // ----------------------------------------------------
@@ -422,6 +451,7 @@ module.exports = {
     buildContext,
 
     ticketCreated,
+    ticketUpdated,
 
     // für Tests
     _buildNotification: buildNotification,

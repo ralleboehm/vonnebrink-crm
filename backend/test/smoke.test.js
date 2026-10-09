@@ -828,8 +828,16 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
 
         assertRedirect(await portal.post(`/portal/tickets/${ticket._id}/messages`, { message: "Antwort vom Kunden" }), "Nachricht Portal", `/portal/tickets/${ticket._id}`);
 
+        const reply = await Notification.findOne({ user: admin._id, event: "ticket.updated", link: `/crm/tickets/${ticket._id}` }).lean();
+        assert.ok(reply, "Antwort vom Kunden in der Glocke");
+        assert.match(reply.title, /Antwort vom Kunden/);
+        assert.match(reply.message, /Antwort vom Kunden/);
+
         const uploaded = await portal.upload(`/portal/tickets/${ticket._id}/attachments`, uploadForm("portal.txt", "Inhalt aus dem Portal"));
         assertRedirect(uploaded, "Upload Portal", `/portal/tickets/${ticket._id}`);
+
+        assert.ok(await Notification.exists({ user: admin._id, event: "ticket.updated", title: /Datei vom Kunden/, message: /portal\.txt/ }), "Datei vom Kunden in der Glocke");
+        assert.match((await crm.get("/crm/notifications")).text, /Datei vom Kunden/, "Übersicht zeigt die Benachrichtigung");
 
         const attachment = await Attachment.findOne({ ticket: ticket._id, originalName: "portal.txt" });
         assert.ok(attachment, "Portal-Anhang gespeichert");
