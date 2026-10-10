@@ -123,9 +123,9 @@ block content
                         dd.col-7.mb-0
                             code.small.text-break= doc.nextcloud.path
 
-            //- Kundenportal (vorbereitet)
+            //- Kundenportal: wer darf das Dokument sehen?
 
-            .card.shadow-sm.mt-4
+            .card.shadow-sm.mt-4#portal
 
                 .card-header
 
@@ -143,13 +143,17 @@ block content
 
                     else
 
-                        p.mb-2
+                        - const opts = page.portal.options
+
+                        p.mb-3
 
                             if page.portal.visible
 
-                                span.badge.bg-success.me-2 Freigegeben
+                                span.badge.bg-success.me-2= page.portal.label
 
-                                | Kunden sehen dieses Dokument, sobald das Portal Dokumente anzeigt.
+                                if opts
+
+                                    | Sichtbar für #{opts.seenBy} #{opts.seenBy === 1 ? "Person" : "Personen"} mit Portalzugang.
 
                             else
 
@@ -157,15 +161,97 @@ block content
 
                                 | Nur intern sichtbar.
 
-                        if page.portal.mayChange
+                        if page.portal.mayChange && opts
 
-                            form.m-0(method="POST" action=`${base}/portal`)
+                            form.m-0#portalForm(method="POST" action=`${base}/portal`)
 
-                                input(type="hidden" name="visible" value=page.portal.visible ? "0" : "1")
+                                fieldset.mb-3
 
-                                button.btn.btn-sm(type="submit" class=page.portal.visible ? "btn-outline-secondary" : "btn-outline-primary")
+                                    legend.form-label.small.fw-semibold.mb-1 Wer darf es im Portal sehen?
 
-                                    = page.portal.visible ? "Freigabe zurücknehmen" : "Für das Kundenportal freigeben"
+                                    .form-check
+
+                                        input.form-check-input#portalNone(type="radio" name="mode" value="none" checked=opts.mode === "none")
+
+                                        label.form-check-label(for="portalNone") Niemand (nur intern)
+
+                                    .form-check
+
+                                        input.form-check-input#portalCompany(type="radio" name="mode" value="company" checked=opts.mode === "company")
+
+                                        label.form-check-label(for="portalCompany") Alle Portal-Nutzer der Firma
+
+                                    .form-check
+
+                                        input.form-check-input#portalSelected(type="radio" name="mode" value="selected" checked=opts.mode === "selected")
+
+                                        label.form-check-label(for="portalSelected") Ausgewählte Merkmale und Personen
+
+                                .vb-portal-select.ps-3.border-start.mb-3
+
+                                    .fw-semibold.mb-1 Merkmale
+
+                                    .d-flex.flex-wrap.gap-2.mb-3
+
+                                        each entry, index in opts.tags
+
+                                            .form-check.form-check-inline.me-0
+
+                                                input.form-check-input(type="checkbox" name="tags" value=entry.tag id=`portalTag${index}` checked=entry.selected)
+
+                                                label.form-check-label(for=`portalTag${index}`)= entry.tag
+
+                                    .fw-semibold.mb-1 Personen
+
+                                    if opts.contacts.length
+
+                                        each person in opts.contacts
+
+                                            .form-check
+
+                                                input.form-check-input(type="checkbox" name="contacts" value=String(person._id) id=`portalContact${person._id}` checked=person.selected)
+
+                                                label.form-check-label(for=`portalContact${person._id}`)
+
+                                                    = person.name
+
+                                                    if person.tags.length
+
+                                                        span.text-muted.ms-1 (#{person.tags.join(", ")})
+
+                                                    if !person.hasPortal
+
+                                                        span.badge.text-bg-light.border.ms-1 kein Portalzugang
+
+                                                    else if person.sees
+
+                                                        i.bi.bi-eye.text-success.ms-1(title="Sieht das Dokument" aria-label="sieht das Dokument")
+
+                                    else
+
+                                        p.text-muted.mb-0 Diese Firma hat noch keine Kontakte.
+
+                                    p.text-muted.mt-2.mb-0
+                                        | Sichtbar für alle, die eines der Merkmale haben oder einzeln angehakt sind.
+                                        | Merkmale vergeben Sie beim Kontakt („Portal-Merkmale“).
+
+                                button.btn.btn-sm.btn-primary(type="submit")
+
+                                    i.bi.bi-check-lg.me-1
+
+                                    | Freigabe speichern
+
+                            script.
+                                (function () {
+                                    var form = document.getElementById("portalForm");
+                                    var box = form.querySelector(".vb-portal-select");
+                                    function update() {
+                                        var selected = form.querySelector("input[name=mode]:checked");
+                                        box.style.display = selected && selected.value === "selected" ? "" : "none";
+                                    }
+                                    form.addEventListener("change", update);
+                                    update();
+                                })();
 
         .col-lg-7
 

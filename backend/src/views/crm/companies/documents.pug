@@ -238,7 +238,7 @@ block content
 
                                                     if doc.portalVisible
 
-                                                        span.badge.text-bg-success.ms-2(title="Für das Kundenportal freigegeben") Kundenportal
+                                                        span.badge.text-bg-success.ms-2(title="Im Kundenportal sichtbar")= rules.portalLabel(doc)
 
                                                     if doc.reference && doc.reference.type === "contract"
 

@@ -324,17 +324,23 @@ exports.removeShare = async (req, res, next) => {
 };
 
 /**
- * Im Kundenportal sichtbar ja/nein (vorbereitet)
+ * Kundenportal: wer darf das Dokument sehen?
  */
 exports.portal = async (req, res, next) => {
 
+    const body = req.body || {};
+
     try {
 
-        const document = await documentService.setPortalVisible(req.params.id, (req.body || {}).visible, req.session.user);
+        const document = await documentService.setPortalAccess(req.params.id, {
+            mode: body.mode,
+            tags: body.tags,
+            contacts: body.contacts
+        }, req.session.user);
 
         setFlash(req, "success", document.portalVisible
-            ? "Für das Kundenportal freigegeben – Kunden sehen es, sobald das Portal Dokumente anzeigt."
-            : "Nicht mehr für das Kundenportal freigegeben.");
+            ? `Gespeichert – ${rules.portalLabel(document)}.`
+            : "Nicht mehr im Kundenportal sichtbar.");
 
     } catch (err) {
 
@@ -342,6 +348,6 @@ exports.portal = async (req, res, next) => {
 
     }
 
-    res.redirect(`/crm/documents/${req.params.id}`);
+    res.redirect(`/crm/documents/${req.params.id}#portal`);
 
 };

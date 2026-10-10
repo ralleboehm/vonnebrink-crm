@@ -277,3 +277,29 @@ test("Verträge: Erinnerungsstufen 60/30/7 Tage, jede nur einmal", () => {
     assert.deepEqual(contracts.reminderDays(""), [7, 30, 60]);
 
 });
+
+test("Kundenportal: wer sieht welches Dokument?", () => {
+
+    const doc = { portalVisible: true, category: "invoice", company: "c1", portalAudience: "selected", portalTags: ["Buchhaltung"], portalContacts: ["p2"] };
+    const anna = { _id: "p1", company: "c1", portalTags: ["buchhaltung"] };
+    const max = { _id: "p3", company: "c1", portalTags: ["Technik"] };
+    const paul = { _id: "p2", company: "c1", portalTags: [] };
+    const foreign = { _id: "p9", company: "c9", portalTags: ["Buchhaltung"] };
+
+    assert.equal(rules.portalAccess(doc, anna), true, "Merkmal (Groß/klein egal)");
+    assert.equal(rules.portalAccess(doc, max), false, "anderes Merkmal");
+    assert.equal(rules.portalAccess(doc, paul), true, "einzeln angehakt");
+    assert.equal(rules.portalAccess(doc, foreign), false, "fremde Firma nie");
+
+    assert.equal(rules.portalAccess({ ...doc, portalAudience: "company" }, max), true, "alle der Firma");
+    assert.equal(rules.portalAccess({ ...doc, portalAudience: "company" }, foreign), false);
+    assert.equal(rules.portalAccess({ ...doc, portalVisible: false }, anna), false, "nicht freigegeben");
+    assert.equal(rules.portalAccess({ ...doc, category: "backup" }, anna), false, "keine Portal-Kategorie");
+    assert.equal(rules.portalAccess({ ...doc, isDeleted: true }, anna), false);
+
+    assert.equal(rules.portalLabel(doc), "Kundenportal: Buchhaltung, 1 Person");
+    assert.equal(rules.portalLabel({ ...doc, portalAudience: "company" }), "Kundenportal: alle");
+    assert.equal(rules.portalLabel({ ...doc, portalVisible: false }), "");
+    assert.ok(rules.PORTAL_TAG_SUGGESTIONS.includes("Buchhaltung"));
+
+});

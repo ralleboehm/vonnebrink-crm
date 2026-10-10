@@ -7,6 +7,7 @@ const format = require("../../utils/format");
 const assetService = require("../../services/asset.service");
 const assetLabels = require("../../utils/assetLabels");
 const { can } = require("../../core/permissions");
+const { PORTAL_TAG_SUGGESTIONS } = require("../../utils/documentRules");
 
 // Alle Kontakte anzeigen
 exports.index = async (req, res, next) => {
@@ -38,6 +39,7 @@ exports.create = async (req, res, next) => {
         res.render("contacts/create", {
             title: "Neuer Kontakt",
             companies,
+            portalTagSuggestions: PORTAL_TAG_SUGGESTIONS,
             selectedCompany: req.query.company || null
         });
 
@@ -65,7 +67,8 @@ exports.store = async (req, res, next) => {
             phone: req.body.phone,
             mobile: req.body.mobile,
             status: req.body.status,
-            notes: req.body.notes
+            notes: req.body.notes,
+            portalTags: req.body.portalTags
 
         });
 
@@ -147,6 +150,7 @@ exports.edit = async (req, res, next) => {
             title: "Kontakt bearbeiten",
             contact,
             companies,
+            portalTagSuggestions: PORTAL_TAG_SUGGESTIONS,
             portalAccount,
             generatedPassword: req.session.generatedPortalPassword || null
         });
@@ -177,7 +181,8 @@ exports.update = async (req, res, next) => {
             phone: req.body.phone,
             mobile: req.body.mobile,
             status: req.body.status,
-            notes: req.body.notes
+            notes: req.body.notes,
+            portalTags: req.body.portalTags
 
         });
 

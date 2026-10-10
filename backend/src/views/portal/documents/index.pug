@@ -1,0 +1,77 @@
+extends ../layouts/main
+
+block content
+
+    .d-flex.justify-content-between.align-items-center.mb-4.flex-wrap.gap-2
+
+        div
+
+            h1.mb-0
+
+                i.bi.bi-folder2-open.me-2
+
+                | Meine Dokumente
+
+            p.text-muted.mb-0 Verträge, Angebote, Rechnungen und Unterlagen, die wir für Sie bereitgestellt haben.
+
+    if unavailable
+
+        .alert.alert-warning(role="alert")
+
+            i.bi.bi-exclamation-triangle.me-2
+
+            | Der Download ist gerade nicht möglich. Bitte versuchen Sie es später noch einmal oder wenden Sie sich an uns.
+
+    if groups.length
+
+        each group in groups
+
+            .card.shadow-sm.mb-4
+
+                .card-header
+
+                    h2.h5.mb-0
+
+                        i.bi.me-2(class=group.icon)
+
+                        | #{group.label} (#{group.documents.length})
+
+                ul.list-group.list-group-flush
+
+                    each doc in group.documents
+
+                        li.list-group-item.d-flex.justify-content-between.align-items-center.gap-3.flex-wrap
+
+                            div.text-break
+
+                                i.bi.me-2.text-muted(class=rules.fileIcon(doc.extension) aria-hidden="true")
+
+                                strong= doc.fileName
+
+                                .small.text-muted #{format.formatDate(doc.uploadedAt)} · #{rules.formatSize(doc.size)}
+
+                            .d-flex.gap-2
+
+                                if rules.isPreviewable(doc.mimeType)
+
+                                    a.btn.btn-sm.btn-outline-primary(href=`/portal/documents/${doc._id}/download?ansehen=1` target="_blank" rel="noopener" aria-label=`Ansehen: ${doc.fileName}`)
+
+                                        i.bi.bi-eye.me-1
+
+                                        | Ansehen
+
+                                a.btn.btn-sm.btn-primary(href=`/portal/documents/${doc._id}/download` aria-label=`Herunterladen: ${doc.fileName}`)
+
+                                    i.bi.bi-download.me-1
+
+                                    | Herunterladen
+
+    else
+
+        .card.shadow-sm
+
+            .card-body.text-center.text-muted.py-5
+
+                i.bi.bi-folder2.display-6.d-block.mb-2
+
+                | Für Sie sind noch keine Dokumente bereitgestellt.

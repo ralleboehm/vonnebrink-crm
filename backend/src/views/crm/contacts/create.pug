@@ -1,5 +1,7 @@
 extends ../layouts/main
 
+include _portalTags
+
 block content
 
     h1.mb-4 Neuer Kontakt
@@ -58,6 +60,8 @@ block content
                 id="position"
                 name="position"
             )
+
+        +portalTagsField([])
 
         .row
 

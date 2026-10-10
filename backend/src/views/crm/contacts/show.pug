@@ -86,6 +86,14 @@ block content
                         br
                         = contact.position || "-"
 
+                    if contact.portalTags && contact.portalTags.length
+
+                        p
+                            strong Portal-Merkmale:
+                            br
+                            each tag in contact.portalTags
+                                span.badge.text-bg-light.border.me-1= tag
+
                 .col-md-6
 
                     p

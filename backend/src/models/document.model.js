@@ -39,8 +39,14 @@ const documentSchema = new mongoose.Schema(
 
         company: { type: mongoose.Schema.Types.ObjectId, ref: "Company", default: null, index: true },
 
-        // Für das Kundenportal freigegeben (nur Portal-Kategorien, siehe documentRules)
+        // Kundenportal (nur Portal-Kategorien, siehe documentRules):
+        //   portalVisible  freigegeben ja/nein
+        //   portalAudience "company" = alle Portal-Nutzer der Firma,
+        //                  "selected" = nur Kontakte mit einem der Merkmale oder einzeln gewählte
         portalVisible: { type: Boolean, default: false },
+        portalAudience: { type: String, enum: ["company", "selected"], default: "company" },
+        portalTags: [{ type: String, trim: true, maxlength: 30 }],
+        portalContacts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Contact" }],
 
         uploadedAt: { type: Date, default: Date.now },
         uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },

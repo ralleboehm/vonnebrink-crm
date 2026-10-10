@@ -17,8 +17,8 @@
 //   Versionen        versions(id, user), downloadVersion(id, versionId, user)
 //   Detailseite      detailPage(id, user)
 //   Freigaben        createShare(id, options, user), removeShare(id, shareId, user)
-//   Kundenportal     setPortalVisible(id, visible, user) – vorbereitet:
-//                    portalDocuments(companyId), getPortalDownload(id, companyId)
+//   Kundenportal     setPortalAccess(id, {mode, tags, contacts}, user),
+//                    portalDocuments(portalUser), getPortalDownload(id, portalUser)
 //
 // Bezüge: registerReference(type, resolver) – ein Resolver sagt, zu welcher
 // Firma ein Bezug gehört und in welchen Unterordner seine Dokumente kommen.
@@ -720,7 +720,9 @@ async function detailPage(id, user) {
         portal: {
             eligible: rules.isPortalCategory(document.category),
             visible: Boolean(document.portalVisible),
-            mayChange: can(user, "documents.edit")
+            mayChange: can(user, "documents.edit"),
+            label: rules.portalLabel(document),
+            options: rules.isPortalCategory(document.category) ? await portalOptions(document) : null
         }
     };
 
@@ -843,43 +845,137 @@ async function removeShare(id, shareId, user) {
 }
 
 // ----------------------------------------------------
-// Kundenportal (vorbereitet – noch ohne Portalseite)
+// Kundenportal
 // ----------------------------------------------------
+//
+// Freigabe je Dokument: nicht freigegeben / alle Portal-Nutzer der Firma /
+// ausgewählt (Kontakte mit einem der Merkmale und/oder einzeln gewählte).
+// Wer was sieht, entscheidet documentRules.portalAccess().
+
+function contactModel() {
+
+    return require("../models/contact.model");
+
+}
 
 /**
- * Dokument für das Kundenportal freigeben oder zurücknehmen
+ * Freigabe fürs Kundenportal setzen
+ *
+ * @param {object} access
+ * @param {"none"|"company"|"selected"} access.mode
+ * @param {string|string[]} [access.tags]      Merkmale (bei "selected")
+ * @param {string|string[]} [access.contacts]  Kontakt-IDs der Firma (bei "selected")
  */
-async function setPortalVisible(id, visible, user) {
+async function setPortalAccess(id, { mode, tags, contacts } = {}, user) {
 
     assertPermission(user, "documents.edit");
 
     const document = await loadVisible(id, user);
-    const show = visible === true || visible === "1" || visible === "on";
 
-    if (show && !rules.isPortalCategory(document.category)) {
+    if (!["none", "company", "selected"].includes(mode)) throw httpError("Bitte wählen, wer das Dokument sehen darf.", 422);
+
+    if (mode !== "none" && !rules.isPortalCategory(document.category)) {
         throw httpError(`Dokumente der Kategorie „${(rules.CATEGORIES[document.category] || {}).label || document.category}“ sind nicht für das Kundenportal vorgesehen.`, 422);
     }
 
-    if (Boolean(document.portalVisible) === show) return document;
+    const update = { portalVisible: mode !== "none" };
 
-    document.set({ portalVisible: show });
+    if (mode === "company" || mode === "none") {
+
+        update.portalAudience = "company";
+        update.portalTags = [];
+        update.portalContacts = [];
+
+    } else {
+
+        const wantedIds = [].concat(contacts || []).map(String).filter((value) => mongoose.isValidObjectId(value));
+
+        // Nur Kontakte derselben Firma
+        const own = wantedIds.length
+            ? await contactModel().find({ _id: { $in: wantedIds }, company: document.company, isDeleted: false }, "_id").lean()
+            : [];
+
+        update.portalAudience = "selected";
+        update.portalTags = rules.parseTags(tags);
+        update.portalContacts = own.map((c) => c._id);
+
+        if (!update.portalTags.length && !update.portalContacts.length) {
+            throw httpError("Bitte mindestens ein Merkmal oder eine Person auswählen.", 422);
+        }
+
+    }
+
+    document.set(update);
     await document.save();
 
-    emit(EVENTS.DOCUMENT_UPDATED, { document: document.toObject(), userId: userId(user), change: show ? "portalShown" : "portalHidden" });
+    emit(EVENTS.DOCUMENT_UPDATED, { document: document.toObject(), userId: userId(user), change: "portalAccess", mode });
 
     return document;
 
 }
 
 /**
- * Für das Portal freigegebene Dokumente einer Firma
+ * Für die Detailseite: Kontakte der Firma (mit Portalzugang?) und vorhandene Merkmale
  */
-async function portalDocuments(companyId) {
+async function portalOptions(document) {
 
-    if (!mongoose.isValidObjectId(companyId)) return [];
+    const Contact = contactModel();
+    const PortalAccount = require("../models/portalAccount.model");
 
-    return Document.find({
-        company: companyId,
+    const contacts = await Contact.find({ company: document.company, isDeleted: false }, "firstName lastName email portalTags").sort({ lastName: 1, firstName: 1 }).lean();
+    const accounts = await PortalAccount.find({ contact: { $in: contacts.map((c) => c._id) }, active: true }, "contact").lean();
+    const withAccess = new Set(accounts.map((a) => String(a.contact)));
+
+    const tagSet = new Map();
+
+    for (const tag of [...rules.PORTAL_TAG_SUGGESTIONS, ...(document.portalTags || [])]) tagSet.set(tag.toLowerCase(), tag);
+    for (const contact of contacts) for (const tag of contact.portalTags || []) tagSet.set(tag.toLowerCase(), tag);
+
+    const selectedContacts = new Set((document.portalContacts || []).map(String));
+    const selectedTags = new Set((document.portalTags || []).map((t) => t.toLowerCase()));
+
+    const people = contacts.map((contact) => ({
+        _id: contact._id,
+        name: `${contact.firstName || ""} ${contact.lastName || ""}`.trim() || contact.email || "—",
+        tags: contact.portalTags || [],
+        hasPortal: withAccess.has(String(contact._id)),
+        selected: selectedContacts.has(String(contact._id)),
+        // Sieht das Dokument mit der aktuellen Freigabe?
+        sees: withAccess.has(String(contact._id)) && rules.portalAccess(document, { ...contact, company: document.company })
+    }));
+
+    return {
+        mode: document.portalVisible ? (document.portalAudience === "selected" ? "selected" : "company") : "none",
+        tags: [...tagSet.values()].sort((a, b) => a.localeCompare(b, "de")).map((tag) => ({ tag, selected: selectedTags.has(tag.toLowerCase()) })),
+        contacts: people,
+        seenBy: people.filter((p) => p.sees).length
+    };
+
+}
+
+async function loadPortalContact(portalUser) {
+
+    const contactId = portalUser && (portalUser.contact || portalUser.contactId);
+
+    if (!mongoose.isValidObjectId(contactId)) return null;
+
+    return contactModel().findOne({ _id: contactId, isDeleted: false }, "company portalTags").lean();
+
+}
+
+/**
+ * Dokumente, die dieser Portal-Nutzer sehen darf (neueste zuerst)
+ *
+ * @param {{contact, company}} portalUser  aus req.session.portalUser
+ */
+async function portalDocuments(portalUser) {
+
+    const contact = await loadPortalContact(portalUser);
+
+    if (!contact) return [];
+
+    const candidates = await Document.find({
+        company: contact.company,
         portalVisible: true,
         isDeleted: false,
         category: { $in: rules.PORTAL_CATEGORIES }
@@ -887,24 +983,25 @@ async function portalDocuments(companyId) {
         .sort({ uploadedAt: -1 })
         .lean();
 
+    return candidates.filter((doc) => rules.portalAccess(doc, contact));
+
 }
 
 /**
- * Download für das Portal – nur eigene, freigegebene Dokumente
+ * Download im Portal – nur Dokumente, die der Kontakt sehen darf
  */
-async function getPortalDownload(id, companyId) {
+async function getPortalDownload(id, portalUser) {
 
     assertConfigured();
 
-    if (!mongoose.isValidObjectId(id) || !mongoose.isValidObjectId(companyId)) throw httpError("Dokument nicht gefunden.", 404);
+    const contact = await loadPortalContact(portalUser);
+    const document = contact && mongoose.isValidObjectId(id) ? await Document.findOne({ _id: id, isDeleted: false }) : null;
 
-    const document = await Document.findOne({ _id: id, company: companyId, portalVisible: true, isDeleted: false });
-
-    if (!document || !rules.isPortalCategory(document.category)) throw httpError("Dokument nicht gefunden.", 404);
+    if (!document || !rules.portalAccess(document, contact)) throw httpError("Dokument nicht gefunden.", 404);
 
     const file = await nextcloud.download(document.nextcloud.path);
 
-    emit(EVENTS.DOCUMENT_DOWNLOADED, { document: document.toObject(), portal: true });
+    emit(EVENTS.DOCUMENT_DOWNLOADED, { document: document.toObject(), portal: true, contactId: String(contact._id) });
 
     return { document, stream: file.stream, contentType: document.mimeType || file.contentType, size: file.size };
 
@@ -934,7 +1031,8 @@ module.exports = {
     createShare,
     removeShare,
 
-    setPortalVisible,
+    setPortalAccess,
+    portalOptions,
     portalDocuments,
     getPortalDownload
 };

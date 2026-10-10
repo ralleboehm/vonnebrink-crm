@@ -855,7 +855,21 @@ test("Dokument-Detailseite: Versionen, Freigaben, Kundenportal", { skip: !pug &&
         office: false,
         versions: { list: [{ versionId: "1760000000", size: 1024, lastModified: new Date("2026-10-01T08:00:00Z") }], error: null },
         shares: { allowed: true, list: [{ id: "s1", type: "public", url: "https://cloud.example.de/s/abc", expiration: new Date("2026-12-31T00:00:00Z"), hasPassword: true }], error: null },
-        portal: { eligible: true, visible: false, mayChange: true },
+        portal: {
+            eligible: true,
+            visible: false,
+            mayChange: true,
+            label: "",
+            options: {
+                mode: "none",
+                tags: [{ tag: "Buchhaltung", selected: false }, { tag: "Geschäftsführung", selected: false }],
+                contacts: [
+                    { _id: "p1", name: "Anna Jung", tags: ["Buchhaltung"], hasPortal: true, selected: false, sees: false },
+                    { _id: "p2", name: "Max Ohne", tags: [], hasPortal: false, selected: false, sees: false }
+                ],
+                seenBy: 0
+            }
+        },
         ...overrides
     });
 
@@ -872,18 +886,31 @@ test("Dokument-Detailseite: Versionen, Freigaben, Kundenportal", { skip: !pug &&
     assert.match(admin, /action="\/crm\/documents\/d1\/shares\/s1\/delete"/);
     assert.match(admin, /action="\/crm\/documents\/d1\/shares"/);
     assert.match(admin, /min="2026-10-09"/);
-    assert.match(admin, /Für das Kundenportal freigeben/);
+    assert.match(admin, /action="\/crm\/documents\/d1\/portal"/);
+    assert.match(admin, /name="mode" value="none" checked/);
+    assert.match(admin, /name="tags" value="Buchhaltung"/);
+    assert.match(admin, /name="contacts" value="p1"/);
+    assert.match(admin, /Anna Jung/);
+    assert.match(admin, /kein Portalzugang/, "Max hat keinen Portalzugang");
+    assert.match(admin, /Nicht freigegeben/);
+
+    const shared = render("crm/documents/show.pug", locals(pageOf({ portal: { eligible: true, visible: true, mayChange: true, label: "Kundenportal: Buchhaltung", options: { mode: "selected", tags: [{ tag: "Buchhaltung", selected: true }], contacts: [{ _id: "p1", name: "Anna Jung", tags: ["Buchhaltung"], hasPortal: true, selected: false, sees: true }], seenBy: 1 } } })));
+    assert.match(shared, /Kundenportal: Buchhaltung/);
+    assert.match(shared, /Sichtbar für 1 Person mit Portalzugang/);
+    assert.match(shared, /name="mode" value="selected" checked/);
+    assert.match(shared, /name="tags" value="Buchhaltung" id="portalTag0" checked/);
     assert.match(admin, /href="https:\/\/cloud\.example\.de\/index\.php\/f\/77"/, "In Nextcloud öffnen");
     assert.match(admin, /href="\/crm\/companies\/c1\/documents"/, "Zurück");
 
     // Techniker: keine Freigaben, Portal nicht änderbar
-    const tech = render("crm/documents/show.pug", locals(pageOf({ shares: { allowed: false, list: [], error: null }, portal: { eligible: true, visible: true, mayChange: false } })), "technician");
+    const tech = render("crm/documents/show.pug", locals(pageOf({ shares: { allowed: false, list: [], error: null }, portal: { eligible: true, visible: true, mayChange: false, label: "Kundenportal: alle", options: { mode: "company", tags: [], contacts: [], seenBy: 3 } } })), "technician");
     assert.doesNotMatch(tech, /Freigabe erstellen/);
     assert.doesNotMatch(tech, /\/portal"/);
-    assert.match(tech, /Freigegeben/);
+    assert.match(tech, /Kundenportal: alle/);
+    assert.doesNotMatch(tech, /name="mode"/, "Techniker ändert die Freigabe nicht");
 
     // Kategorie nicht fürs Portal, Nextcloud aus
-    const off = render("crm/documents/show.pug", locals(pageOf({ status: { configured: false }, webLink: null, versions: { list: [], error: null }, portal: { eligible: false, visible: false, mayChange: true } })));
+    const off = render("crm/documents/show.pug", locals(pageOf({ status: { configured: false }, webLink: null, versions: { list: [], error: null }, portal: { eligible: false, visible: false, mayChange: true, label: "", options: null } })));
     assert.match(off, /nicht eingerichtet/);
     assert.doesNotMatch(off, /\/download/);
     assert.doesNotMatch(off, /Freigabe erstellen/);
@@ -1002,5 +1029,47 @@ test("Verträge: Liste, Detailseite, Formular, Karte auf der Firmenseite", { ski
     assert.match(companyPage, /href="\/crm\/contracts\/k1"/);
     assert.match(companyPage, /href="\/crm\/contracts\/new\?company=c1"/);
     assert.match(companyPage, new RegExp(`badge ${labels.STATUS_BADGES.active}">${labels.STATUS_LABELS.active}<`), "Asset-Status bleibt Asset-Status");
+
+});
+
+test("Kundenportal: Meine Dokumente und Portal-Merkmale am Kontakt", { skip: !pug && "pug nicht installiert" }, () => {
+
+    const portalUser = { id: "a1", contact: "p1", company: "c1", companyName: "Holz Müller GmbH", firstName: "Anna", lastName: "Jung" };
+
+    const renderPortal = (locals) => pug.renderFile(path.join(VIEWS, "portal/documents/index.pug"), {
+        session: { portalUser },
+        currentPortalUser: portalUser,
+        audience: "customer",
+        currentPath: "/portal/documents",
+        title: "Meine Dokumente",
+        ...locals
+    });
+
+    const doc = { _id: "d1", fileName: "Rechnung 2026-10.pdf", extension: "pdf", mimeType: "application/pdf", size: 4096, uploadedAt: new Date("2026-10-01T10:00:00Z"), category: "invoice" };
+    const groups = [{ key: "invoice", ...documentRules.CATEGORIES.invoice, documents: [doc] }];
+
+    const page = renderPortal({ groups, total: 1, unavailable: false, rules: documentRules, format });
+
+    assert.match(page, /Meine Dokumente/);
+    assert.match(page, /Rechnung \(1\)/);
+    assert.match(page, /Rechnung 2026-10\.pdf/);
+    assert.match(page, /href="\/portal\/documents\/d1\/download"/);
+    assert.match(page, /href="\/portal\/documents\/d1\/download\?ansehen=1"/);
+    assert.match(page, /class="nav-link active" href="\/portal\/documents"|href="\/portal\/documents" class="nav-link active"/, "Menü aktiv");
+    assert.doesNotMatch(page, /\/crm\//, "keine CRM-Links im Portal");
+
+    const empty = renderPortal({ groups: [], total: 0, unavailable: true, rules: documentRules, format });
+    assert.match(empty, /noch keine Dokumente/);
+    assert.match(empty, /gerade nicht möglich/);
+
+    // Kontaktformular: Feld Portal-Merkmale mit Vorschlägen
+    const form = render("crm/contacts/edit.pug", {
+        contact: { _id: "p1", company: { _id: "c1" }, firstName: "Anna", lastName: "Jung", portalTags: ["Buchhaltung", "Technik"] },
+        companies: [company],
+        portalTagSuggestions: documentRules.PORTAL_TAG_SUGGESTIONS
+    });
+
+    assert.match(form, /name="portalTags" value="Buchhaltung, Technik"/);
+    assert.match(form, /<option value="Geschäftsführung">/);
 
 });

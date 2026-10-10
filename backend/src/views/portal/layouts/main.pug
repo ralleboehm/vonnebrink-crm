@@ -39,7 +39,7 @@ html(lang="de")
         )
 
     - const path = typeof currentPath !== "undefined" ? currentPath : ""
-    - const isActive = (target) => target === "/portal" ? path === "/portal" || path === "/portal/" : path === target || (target === "/portal/tickets" && path.startsWith("/portal/tickets/") && path !== "/portal/tickets/new")
+    - const isActive = (target) => target === "/portal" ? path === "/portal" || path === "/portal/" : path === target || (target === "/portal/tickets" && path.startsWith("/portal/tickets/") && path !== "/portal/tickets/new") || (target === "/portal/documents" && path.startsWith("/portal/documents/"))
 
     body.vb-portal
 
@@ -94,6 +94,12 @@ html(lang="de")
                                     a.nav-link(href="/portal/tickets/new" class=isActive("/portal/tickets/new") ? "active" : "")
 
                                         | Neues Ticket
+
+                                li.nav-item
+
+                                    a.nav-link(href="/portal/documents" class=isActive("/portal/documents") ? "active" : "")
+
+                                        | Dokumente
 
                             ul.navbar-nav.ms-auto
 

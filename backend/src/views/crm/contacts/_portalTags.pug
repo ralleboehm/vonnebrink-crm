@@ -1,0 +1,12 @@
+//- Feld „Portal-Merkmale“ für Neu und Bearbeiten (erwartet portalTagSuggestions)
+
+mixin portalTagsField(tags)
+    .mb-3
+        label.form-label(for="portalTags") Portal-Merkmale
+            span.text-muted.small.ms-1 (freiwillig)
+        input.form-control#portalTags(type="text" name="portalTags" value=(tags || []).join(", ") maxlength="300" list="portalTagSuggestions" placeholder="z. B. Buchhaltung, Geschäftsführung" aria-describedby="portalTagsHelp")
+        datalist#portalTagSuggestions
+            each tag in (portalTagSuggestions || [])
+                option(value=tag)
+        .form-text#portalTagsHelp
+            | Steuert, welche freigegebenen Dokumente der Kontakt im Kundenportal sieht. Mehrere mit Komma trennen.

@@ -1,6 +1,7 @@
 const Contact = require("../models/contact.model");
 const counterService = require("./counter.service");
 const portalAccountService = require("./portalAccount.service");
+const { parseTags } = require("../utils/documentRules");
 
 // Alle aktiven Kontakte
 exports.getAll = async () => {
@@ -79,6 +80,8 @@ exports.create = async (contactData) => {
 
         notes: contactData.notes,
 
+        portalTags: parseTags(contactData.portalTags),
+
         isDeleted: false
 
     });
@@ -117,7 +120,10 @@ exports.update = async (id, contactData) => {
 
             status: contactData.status,
 
-            notes: contactData.notes
+            notes: contactData.notes,
+
+            // Nur ändern, wenn das Formular das Feld mitschickt
+            ...(contactData.portalTags !== undefined ? { portalTags: parseTags(contactData.portalTags) } : {})
 
         },
 

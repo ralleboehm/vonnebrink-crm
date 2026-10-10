@@ -609,10 +609,21 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         assert.match((await crm.get(detailUrl)).text, /gibt es nicht/);
 
         // Kundenportal (vorbereitet): freigeben
-        assertRedirect(await crm.post(`${detailUrl}/portal`, { visible: "1" }), "Portal");
+        assertRedirect(await crm.post(`${detailUrl}/portal`, { mode: "company" }), "Portal");
         assert.equal((await Document.findById(doc._id)).portalVisible, true);
         assert.match((await crm.get(pageUrl)).text, /Kundenportal/);
-        assert.equal((await documentService.portalDocuments(company._id)).length, 1);
+        assert.equal((await documentService.portalDocuments({ contact: contact._id })).length, 1, "Hans sieht es (alle der Firma)");
+        assert.equal((await documentService.portalDocuments({ contact: otherContact._id })).length, 0, "fremde Firma nicht");
+
+        assertRedirect(await crm.post(`${detailUrl}/portal`, { mode: "selected" }), "Portal ohne Auswahl");
+        assert.match((await crm.get(detailUrl)).text, /mindestens ein Merkmal oder eine Person/);
+        assertRedirect(await crm.post(`${detailUrl}/portal`, { mode: "selected", tags: "Buchhaltung", contacts: String(otherContact._id) }), "Portal: Merkmal, fremder Kontakt");
+        const selectedDoc = await Document.findById(doc._id);
+        assert.equal(selectedDoc.portalAudience, "selected");
+        assert.deepEqual([...selectedDoc.portalTags], ["Buchhaltung"]);
+        assert.equal(selectedDoc.portalContacts.length, 0, "Kontakt einer fremden Firma wird ignoriert");
+        assert.equal((await documentService.portalDocuments({ contact: contact._id })).length, 0, "Hans ohne Merkmal");
+        assertRedirect(await crm.post(`${detailUrl}/portal`, { mode: "company" }), "Portal: wieder alle");
 
         // Vertrag (vorbereitet): Dokumente landen unter Contracts/
         const Contract = require("../src/models/contract.model");
@@ -651,7 +662,7 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         assertPage(techDetail, "Techniker Details");
         assert.doesNotMatch(techDetail.text, /Freigabe erstellen/, "Techniker: keine Freigaben");
         assert.equal((await tech.post(`/crm/documents/${doc._id}/shares`, { type: "public" })).status, 403);
-        assert.equal((await tech.post(`/crm/documents/${doc._id}/portal`, { visible: "0" })).status, 403);
+        assert.equal((await tech.post(`/crm/documents/${doc._id}/portal`, { mode: "none" })).status, 403);
 
         // Vertrieb: nur Verträge und Angebote
         const sales = createClient(baseUrl);
@@ -1625,6 +1636,55 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         for (const url of ["/portal", "/portal/tickets", "/portal/tickets/new", `/portal/tickets/${ticket._id}`, "/portal/profile", "/portal/profile/password"]) {
             assertPage(await portal.get(url), url);
         }
+
+    });
+
+    await t.test("Portal: Dokumente nach Freigabe (alle, Merkmal, Person)", async () => {
+
+        const Document = require("../src/models/document.model");
+        const shared = await Document.findOne({ fileName: "Angebot Q4.pdf", isDeleted: false });
+        const accessUrl = `/crm/documents/${shared._id}/portal`;
+        const downloadUrl = `/portal/documents/${shared._id}/download`;
+
+        // Freigegeben für alle der Firma (aus dem Dokumente-Test)
+        const list = await portal.get("/portal/documents");
+        assertPage(list, "Portal Dokumente");
+        assert.match(list.text, /Angebot Q4\.pdf/);
+        assert.doesNotMatch(list.text, /Rahmenvertrag\.pdf/, "nicht freigegeben → unsichtbar");
+
+        const download = await portal.get(downloadUrl);
+        assert.equal(download.status, 200);
+        assert.equal(download.text, "%PDF Version 2");
+        assert.match(download.contentType, /application\/pdf/);
+
+        // Nur für das Merkmal „Buchhaltung“ – Hans hat es nicht
+        assertRedirect(await crm.post(accessUrl, { mode: "selected", tags: "Buchhaltung" }), "nur Buchhaltung");
+        assert.doesNotMatch((await portal.get("/portal/documents")).text, /Angebot Q4\.pdf/);
+        assert.equal((await portal.get(downloadUrl)).status, 404, "kein Download ohne Freigabe");
+
+        // Hans bekommt das Merkmal
+        await Contact.updateOne({ _id: contact._id }, { $set: { portalTags: ["buchhaltung"] } });
+        assert.match((await portal.get("/portal/documents")).text, /Angebot Q4\.pdf/, "Merkmal passt (Groß/klein egal)");
+        assert.match((await crm.get(`/crm/documents/${shared._id}`)).text, /Sichtbar für 1 Person mit Portalzugang/);
+
+        // Nur einzelne Person: Hans ohne Merkmal, aber angehakt
+        await Contact.updateOne({ _id: contact._id }, { $set: { portalTags: [] } });
+        assertRedirect(await crm.post(accessUrl, { mode: "selected", contacts: String(contact._id) }), "nur Hans");
+        assert.match((await portal.get("/portal/documents")).text, /Angebot Q4\.pdf/);
+
+        // Niemand
+        assertRedirect(await crm.post(accessUrl, { mode: "none" }), "niemand");
+        assert.doesNotMatch((await portal.get("/portal/documents")).text, /Angebot Q4\.pdf/);
+        assert.equal((await Document.findById(shared._id)).portalVisible, false);
+
+        assert.equal((await portal.get("/portal/documents/kaputt/download")).status, 404);
+
+        // Portal-Merkmale über das Kontaktformular
+        const contactForm = await crm.get(`/crm/contacts/${contact._id}/edit`);
+        assertPage(contactForm, "Kontakt bearbeiten");
+        assert.match(contactForm.text, /name="portalTags"/);
+
+        assertRedirect(await crm.post(accessUrl, { mode: "company" }), "wieder alle");
 
     });
 

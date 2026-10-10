@@ -78,6 +78,10 @@ const contactSchema = new mongoose.Schema({
         default: "active"
     },
 
+    // Merkmale fürs Kundenportal (z. B. „Buchhaltung“) – steuern, welche
+    // freigegebenen Dokumente der Kontakt im Portal sieht
+    portalTags: [{ type: String, trim: true, maxlength: 30 }],
+
     notes: {
         type: String,
         trim: true

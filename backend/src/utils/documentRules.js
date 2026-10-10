@@ -73,6 +73,53 @@ function isPortalCategory(category) {
 
 }
 
+// Vorschläge für Portal-Merkmale am Kontakt (frei erweiterbar)
+const PORTAL_TAG_SUGGESTIONS = ["Geschäftsführung", "Buchhaltung", "Technik", "Einkauf", "Projektleitung"];
+
+function sameId(a, b) {
+
+    return Boolean(a) && Boolean(b) && String(a._id || a) === String(b._id || b);
+
+}
+
+/**
+ * Darf dieser Kontakt das Dokument im Portal sehen?
+ *
+ * @param {object} doc      Dokument (portalVisible, portalAudience, portalTags, portalContacts, company, category)
+ * @param {object} contact  Kontakt (_id, company, portalTags)
+ */
+function portalAccess(doc, contact) {
+
+    if (!doc || !contact || !doc.portalVisible || doc.isDeleted) return false;
+    if (!isPortalCategory(doc.category) || !sameId(doc.company, contact.company)) return false;
+
+    if (doc.portalAudience !== "selected") return true;
+
+    if ((doc.portalContacts || []).some((id) => sameId(id, contact._id))) return true;
+
+    const wanted = new Set((doc.portalTags || []).map((t) => String(t).toLowerCase()));
+
+    return (contact.portalTags || []).some((t) => wanted.has(String(t).toLowerCase()));
+
+}
+
+/**
+ * Kurzbeschreibung der Freigabe für Listen
+ */
+function portalLabel(doc) {
+
+    if (!doc || !doc.portalVisible) return "";
+    if (doc.portalAudience !== "selected") return "Kundenportal: alle";
+
+    const parts = [...(doc.portalTags || [])];
+    const people = (doc.portalContacts || []).length;
+
+    if (people) parts.push(`${people} ${people === 1 ? "Person" : "Personen"}`);
+
+    return `Kundenportal: ${parts.join(", ") || "niemand"}`;
+
+}
+
 // Welche Kategorien eine Rolle sehen und hochladen darf (fehlt = alle).
 // Admin und Techniker: alle. Vertrieb: Verträge und Angebote.
 const ROLE_CATEGORIES = {
@@ -260,7 +307,10 @@ module.exports = {
     REFERENCE_TYPES,
     ROLE_CATEGORIES,
     PORTAL_CATEGORIES,
+    PORTAL_TAG_SUGGESTIONS,
     isPortalCategory,
+    portalAccess,
+    portalLabel,
     registerCategory,
     isCategory,
     isReferenceType,

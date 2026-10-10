@@ -376,10 +376,12 @@ Ticket-Anhänge und Asset-Dateien bleiben bewusst lokal (`storage/`).
 - **Detailseite** je Dokument (Klick auf den Namen): Angaben, **Versionen** (frühere Fassungen
   herunterladen), **Freigaben** (nur Admin): öffentlicher Link – auf Wunsch mit Passwort und
   Ablaufdatum – oder intern für einen Nextcloud-Benutzer/eine Nextcloud-Gruppe; Freigaben entfernen.
-- **Kundenportal (vorbereitet):** Dokumente der Kategorien Vertrag, Angebot, Rechnung, Handbuch,
-  Download und Projektunterlage lassen sich „für das Kundenportal freigeben“. Das Portal zeigt sie
-  noch nicht an; `document.service` liefert dafür schon `portalDocuments(firma)` und
-  `getPortalDownload(id, firma)` (nur eigene, freigegebene Dokumente).
+- **Kundenportal:** Dokumente der Kategorien Vertrag, Angebot, Rechnung, Handbuch, Download und
+  Projektunterlage gibst du auf der Dokumentseite frei – für **niemand**, **alle Portal-Nutzer der
+  Firma** oder **ausgewählt**: Kontakte mit bestimmten **Portal-Merkmalen** (z. B. „Buchhaltung“,
+  „Geschäftsführung“ – am Kontakt unter „Portal-Merkmale“) und/oder **einzelne Personen**. Die Seite
+  zeigt, wie viele Personen mit Portalzugang das Dokument sehen. Kunden finden ihre Dokumente im
+  Portal unter **Dokumente** (ansehen/herunterladen); fremde Firmen sehen nie etwas.
 - **Verträge:** Dokumente zu einem Vertrag landen immer unter `Contracts/` und erscheinen auf der
   Vertragsseite und im Dokumente-Reiter der Firma (siehe Abschnitt Verträge).
 
