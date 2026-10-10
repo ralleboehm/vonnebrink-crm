@@ -421,6 +421,18 @@ Menü **Kunden → Verträge** (`/crm/contracts`), außerdem eine Karte auf jede
   bzw. `CONTRACT_REMINDER_DAYS=aus` in der `.env`.
 - Regeln und Fristen: `utils/contractRules.js`, Fachlogik: `services/contract.service.js`.
 
+## Dashboard
+
+Das Dashboard (`/crm`) richtet sich nach der Rolle:
+
+| Rolle | Karten |
+|---|---|
+| Techniker | Meine Tickets, Unzugewiesen, Dringend/hoch, In Bearbeitung · Meine offenen Tickets · Noch niemandem zugewiesen · Handlungsbedarf (kritische Updates) · Verwaltete Assets · Action1-Abdeckung |
+| Vertrieb | Offene Chancen, Pipeline/Monat, Prognose/Monat, Kündigungsfristen · Heute zu tun (überfällig, heute, ohne Schritt) · Kündigungsfristen · Letzte Firmen und Kontakte |
+| Admin | alle Karten in den Abschnitten Technik, Vertrieb und Verwaltung (zusätzlich Gesamtzahlen, NPS der letzten 90 Tage, fehlgeschlagene Mails, letzte Tickets) |
+
+Karten und Rollen: `utils/dashboardCards.js`, Daten: `services/dashboard.service.js` (lädt nur, was angezeigt wird).
+
 ## Rollen
 
 | Bereich | Administrator | Techniker | Vertrieb |

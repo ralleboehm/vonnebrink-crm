@@ -227,24 +227,12 @@ test("Action1-Seite (eingerichtet, nicht eingerichtet, Sync läuft)", { skip: !p
 
 });
 
-test("Dashboard mit Assets und Action1-Abdeckung", { skip: !pug && "pug nicht installiert" }, () => {
+test("Dashboard je Rolle: Techniker, Vertrieb, Admin mit allen Karten", { skip: !pug && "pug nicht installiert" }, () => {
 
     const { coverageFrom } = require("../src/utils/action1Coverage");
-
-    const base = {
-        companyCount: 3,
-        contactCount: 5,
-        userCount: 1,
-        openTicketCount: 2,
-        inProgressTicketCount: 1,
-        recentCompanies: [{ ...company, status: "active" }],
-        recentContacts: [{ _id: "p1", firstName: "Anna", lastName: "Jung", company }],
-        recentTickets: [{ _id: "t1", ticketNumber: "TIC-000001", subject: "Drucker", status: "open", company }],
-        assetSummary: { total: 3, active: 2, workstations: 1, servers: 1, online: 1, offline: 1, criticalUpdates: 1, rebootRequired: 0, warrantyExpired: 1 },
-        attentionAssets: [action1Asset],
-        lastRun: null,
-        labels
-    };
+    const cards = require("../src/utils/dashboardCards");
+    const salesRules = require("../src/utils/salesRules");
+    const contractRules = require("../src/utils/contractRules");
 
     const coverage = coverageFrom({
         startedAt: new Date(),
@@ -252,14 +240,75 @@ test("Dashboard mit Assets und Action1-Abdeckung", { skip: !pug && "pug nicht in
         organizations: [{ id: "o2", name: "Org ohne Firma", endpoints: 1, mapped: false }]
     });
 
-    const html = render("crm/dashboard/index.pug", { ...base, coverage });
+    const contract = { _id: "k1", title: "Managed Services", company, period: { noticeDeadline: new Date("2026-10-31T00:00:00Z") }, noticeDue: true };
 
-    assert.match(html, /Verwaltete Assets/);
-    assert.match(html, /von 2 einer Firma zugeordnet/);
-    assert.match(html, /Org ohne Firma/);
-    assert.match(html, /PC-EMPFANG/);
+    const data = {
+        techKpis: { mine: 2, unassigned: 1, urgent: 1, inProgress: 3 },
+        myTickets: [{ _id: "t1", ticketNumber: "TIC-000001", subject: "Drucker", priority: "urgent", company }],
+        unassignedTickets: [],
+        attentionAssets: [action1Asset],
+        assetSummary: { total: 3, active: 2, workstations: 1, servers: 1, online: 1, offline: 1, criticalUpdates: 1, rebootRequired: 0, warrantyExpired: 1 },
+        coverage,
+        lastRun: null,
+        salesKpis: { open: 4, mrr: 2500, weightedMrr: 1200, noticeDue: 1, warningDays: 60 },
+        salesTodo: [{ _id: "o1", title: "Managed IT 12 AP", company, nextStep: { text: "Angebot nachfassen" }, owner: { firstName: "Vera", lastName: "Vertrieb" }, stepState: "overdue" }],
+        contractsDue: [contract],
+        contractWarningDays: 60,
+        recentCompanies: [{ ...company, status: "active" }],
+        recentContacts: [{ _id: "p1", firstName: "Anna", lastName: "Jung", company }],
+        overviewKpis: { companyCount: 3, contactCount: 5, openTicketCount: 2, inProgressTicketCount: 1 },
+        adminHealth: { nps: 40, answers: 12, responseRate: 50, failedMails: 2, userCount: 3 },
+        recentTickets: [{ _id: "t9", ticketNumber: "TIC-000009", subject: "Server langsam", status: "open", company }],
+        labels,
+        euro: salesRules.formatEuro,
+        stageLabels: salesRules.STAGE_LABELS,
+        statuses: contractRules.STATUSES,
+        format
+    };
 
-    assert.match(render("crm/dashboard/index.pug", { ...base, coverage: null }), /Noch kein Sync gelaufen/);
+    const as = (role) => {
+        const visible = cards.cardsFor({ role });
+        const set = new Set(visible);
+        return render("crm/dashboard/index.pug", { ...data, cards: visible, sections: cards.sectionsFor({ role }), show: (key) => set.has(key) }, role);
+    };
+
+    // Techniker
+    const tech = as("technician");
+    assert.match(tech, /Meine offenen Tickets/);
+    assert.match(tech, /TIC-000001/);
+    assert.match(tech, /Dringend/);
+    assert.match(tech, /Alle offenen Tickets sind verteilt/);
+    assert.match(tech, /Verwaltete Assets/);
+    assert.match(tech, /PC-EMPFANG/);
+    assert.match(tech, /von 2 einer Firma zugeordnet/);
+    assert.doesNotMatch(tech, /Heute zu tun/);
+    assert.doesNotMatch(tech, /Kündigungsfristen/);
+    assert.doesNotMatch(tech, /vb-dashboard-section/, "nur ein Abschnitt – keine Überschriften");
+
+    // Vertrieb
+    const sales = as("sales");
+    assert.match(sales, /Offene Chancen/);
+    assert.match(sales, /2\.500\s€/);
+    assert.match(sales, /Heute zu tun/);
+    assert.match(sales, /Angebot nachfassen/);
+    assert.match(sales, /überfällig/);
+    assert.match(sales, /Managed Services/);
+    assert.match(sales, /Letzte Firmen/);
+    assert.doesNotMatch(sales, /Meine offenen Tickets/);
+    assert.doesNotMatch(sales, /Verwaltete Assets/);
+    assert.doesNotMatch(sales, /Fehlgeschlagene Mails/);
+
+    // Admin: alles, mit Abschnitten
+    const admin = as("admin");
+    for (const text of ["Meine offenen Tickets", "Verwaltete Assets", "Heute zu tun", "Kündigungsfristen", "Letzte Kontakte", "Fehlgeschlagene Mails", "NPS (90 Tage)", "+40", "TIC-000009", "Server langsam"]) {
+        assert.ok(admin.includes(text), `Admin sieht: ${text}`);
+    }
+    const headings = [...admin.matchAll(/vb-dashboard-section"><i[^>]*><\/i>([^<]+)</g)].map((m) => m[1]);
+    assert.deepEqual(headings, ["Technik", "Vertrieb", "Verwaltung"], "Abschnitte in Reihenfolge");
+
+    // Ohne Sync
+    const visible = cards.cardsFor({ role: "technician" });
+    assert.match(render("crm/dashboard/index.pug", { ...data, coverage: null, cards: visible, sections: cards.sectionsFor({ role: "technician" }), show: () => true }, "technician"), /Noch kein Sync gelaufen/);
 
 });
 

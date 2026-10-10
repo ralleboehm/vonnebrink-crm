@@ -1,6 +1,7 @@
 extends ../layouts/main
 
 include ../assets/_mixins
+include ../contracts/_mixins
 
 //- Kennzahl-Kachel; die ganze Kachel ist ein Link
 mixin kpi(label, value, icon, href, tone)
@@ -21,7 +22,28 @@ mixin stat(label, value, href, tone)
         .text-muted.small= label
         .fs-4.fw-semibold(class=tone ? `text-${tone}` : null)= value
 
+//- Ticketliste für Meine/Unzugewiesene Tickets
+mixin ticketList(tickets, emptyText)
+    if tickets.length
+        ul.list-group.list-group-flush
+            each ticket in tickets
+                li.list-group-item.d-flex.justify-content-between.align-items-start.gap-2
+                    div
+                        a.fw-semibold.text-decoration-none(href=`/crm/tickets/${ticket._id}`)= ticket.ticketNumber
+                        span.ms-2= ticket.subject
+                        if ticket.company
+                            br
+                            small.text-muted= ticket.company.companyName
+                    span.badge.text-nowrap(class=ticket.priority === "urgent" ? "bg-danger" : (ticket.priority === "high" ? "bg-warning text-dark" : "bg-light text-dark border"))
+                        = ({ urgent: "Dringend", high: "Hoch", normal: "Normal", low: "Niedrig" })[ticket.priority] || ticket.priority
+    else
+        .p-4.text-center.text-muted
+            i.bi.bi-check2-circle.fs-2.d-block.mb-2.text-success
+            = emptyText
+
 block content
+
+    - const multi = sections.length > 1
 
     .d-flex.justify-content-between.align-items-center.mb-4
 
@@ -29,421 +51,678 @@ block content
 
         small.text-muted= labels.formatDateTime(new Date())
 
-    // =====================================================
-    // Kennzahlen
-    // =====================================================
+    if !cards.length
 
-    .row.g-3.mb-4
+        .card.shadow-sm
 
-        .col-xl-3.col-md-6
-            +kpi("Firmen", companyCount, "bi-buildings", "/crm/companies", "primary")
+            .card-body.text-muted Für Ihre Rolle gibt es noch keine Dashboard-Karten.
 
-        .col-xl-3.col-md-6
-            +kpi("Kontakte", contactCount, "bi-people", "/crm/contacts", "info")
+    each section in sections
 
-        .col-xl-3.col-md-6
-            +kpi("Offene Tickets", openTicketCount, "bi-ticket-detailed", "/crm/tickets?status=open", openTicketCount ? "danger" : "success")
+        if multi
 
-        .col-xl-3.col-md-6
-            +kpi("In Bearbeitung", inProgressTicketCount, "bi-hourglass-split", "/crm/tickets?status=in_progress", "warning")
+            h2.h5.text-muted.text-uppercase.small.fw-semibold.mt-2.mb-3.vb-dashboard-section
 
-    // =====================================================
-    // Assets & Action1
-    // =====================================================
+                i.bi.me-2(class=section.icon)
 
-    .row.g-3.mb-4
+                = section.label
 
-        // ------------------ Verwaltete Assets ------------------
+        //- =================================================
+        //- Technik
+        //- =================================================
 
-        .col-lg-7
+        if section.key === "technik"
 
-            .card.shadow-sm.h-100
+            if show("techKpis")
 
-                .card-header.d-flex.justify-content-between.align-items-center
+                .row.g-3.mb-4
 
-                    h5.mb-0
+                    .col-xl-3.col-md-6
+                        +kpi("Meine Tickets", techKpis.mine, "bi-person-check", "#my-tickets", techKpis.mine ? "primary" : "success")
 
-                        i.bi.bi-pc-display.me-2
+                    .col-xl-3.col-md-6
+                        +kpi("Unzugewiesen", techKpis.unassigned, "bi-inbox", "#unassigned-tickets", techKpis.unassigned ? "danger" : "success")
 
-                        | Verwaltete Assets
+                    .col-xl-3.col-md-6
+                        +kpi("Dringend / hoch", techKpis.urgent, "bi-exclamation-octagon", "/crm/tickets?priority=urgent", techKpis.urgent ? "danger" : "success")
 
-                    a.btn.btn-sm.btn-outline-primary(href="/crm/assets") Alle Assets
+                    .col-xl-3.col-md-6
+                        +kpi("In Bearbeitung", techKpis.inProgress, "bi-hourglass-split", "/crm/tickets?status=in_progress", "warning")
 
-                .card-body
+            if show("myTickets") || show("unassigned")
 
-                    .d-flex.align-items-baseline.mb-3
+                .row.g-3.mb-4
 
-                        span.display-5.fw-semibold.me-2= assetSummary.total
+                    if show("myTickets")
 
-                        span.text-muted
+                        .col-lg-6#my-tickets
 
-                            | Assets gesamt · #{assetSummary.active} in Betrieb
+                            .card.shadow-sm.h-100
 
-                    .row.g-2
+                                .card-header.d-flex.justify-content-between.align-items-center
 
-                        .col-6.col-md-3
-                            +stat("Arbeitsplätze", assetSummary.workstations, "/crm/assets?status=active")
+                                    h5.mb-0
 
-                        .col-6.col-md-3
-                            +stat("Server & VMs", assetSummary.servers, "/crm/assets?status=active")
+                                        i.bi.bi-person-check.me-2
 
-                        .col-6.col-md-3
-                            +stat("Online", assetSummary.online, "/crm/assets?online=online", "success")
+                                        | Meine offenen Tickets
 
-                        .col-6.col-md-3
-                            +stat("Offline", assetSummary.offline, "/crm/assets?online=offline", assetSummary.offline ? "secondary" : null)
+                                    a.btn.btn-sm.btn-outline-primary(href="/crm/tickets") Alle Tickets
 
-                    if assetSummary.criticalUpdates || assetSummary.rebootRequired || assetSummary.warrantyExpired
+                                +ticketList(myTickets, "Keine offenen Tickets auf Ihrem Tisch.")
 
-                        .d-flex.flex-wrap.gap-2.mt-3
+                    if show("unassigned")
 
-                            if assetSummary.criticalUpdates
+                        .col-lg-6#unassigned-tickets
 
-                                a.badge.bg-danger.text-decoration-none.fs-6.fw-normal(href="/crm/assets?updates=critical")
+                            .card.shadow-sm.h-100
 
-                                    i.bi.bi-shield-exclamation.me-1
+                                .card-header
 
-                                    | #{assetSummary.criticalUpdates} mit fehlenden kritischen Updates
+                                    h5.mb-0
 
-                            if assetSummary.rebootRequired
+                                        i.bi.bi-inbox.me-2
 
-                                span.badge.bg-info.text-dark.fs-6.fw-normal
+                                        | Noch niemandem zugewiesen
 
-                                    i.bi.bi-bootstrap-reboot.me-1
+                                +ticketList(unassignedTickets, "Alle offenen Tickets sind verteilt.")
 
-                                    | #{assetSummary.rebootRequired} Neustart erforderlich
+            if show("attention") || show("assets")
 
-                            if assetSummary.warrantyExpired
+                .row.g-3.mb-4
 
-                                span.badge.bg-warning.text-dark.fs-6.fw-normal
+                    if show("assets")
 
-                                    i.bi.bi-calendar-x.me-1
 
-                                    | #{assetSummary.warrantyExpired} Garantie abgelaufen
+                        .col-lg-7
 
-        // ------------------ Action1-Abdeckung ------------------
+                            .card.shadow-sm.h-100
 
-        .col-lg-5
+                                .card-header.d-flex.justify-content-between.align-items-center
 
-            .card.shadow-sm.h-100
+                                    h5.mb-0
 
-                .card-header.d-flex.justify-content-between.align-items-center
+                                        i.bi.bi-pc-display.me-2
 
-                    h5.mb-0
+                                        | Verwaltete Assets
 
-                        i.bi.bi-arrow-repeat.me-2
+                                    a.btn.btn-sm.btn-outline-primary(href="/crm/assets") Alle Assets
 
-                        | Action1-Geräte
+                                .card-body
 
-                    if currentUser && currentUser.role === "admin"
+                                    .d-flex.align-items-baseline.mb-3
 
-                        a.btn.btn-sm.btn-outline-secondary(href="/crm/integrations/action1") Zuordnung
+                                        span.display-5.fw-semibold.me-2= assetSummary.total
 
-                .card-body
+                                        span.text-muted
 
-                    if coverage
+                                            | Assets gesamt · #{assetSummary.active} in Betrieb
 
-                        .d-flex.align-items-baseline.mb-1
+                                    .row.g-2
 
-                            span.display-5.fw-semibold.me-2= coverage.assigned
+                                        .col-6.col-md-3
+                                            +stat("Arbeitsplätze", assetSummary.workstations, "/crm/assets?status=active")
 
-                            span.text-muted von #{coverage.total} einer Firma zugeordnet
+                                        .col-6.col-md-3
+                                            +stat("Server & VMs", assetSummary.servers, "/crm/assets?status=active")
 
-                        .progress.mb-2(
-                            role="progressbar"
-                            aria-label="Anteil zugeordneter Action1-Geräte"
-                            aria-valuenow=coverage.percent
-                            aria-valuemin="0"
-                            aria-valuemax="100"
-                            style="height: 10px;"
-                        )
+                                        .col-6.col-md-3
+                                            +stat("Online", assetSummary.online, "/crm/assets?online=online", "success")
 
-                            .progress-bar(
-                                class=coverage.unassigned ? "bg-warning" : "bg-success"
-                                style=`width: ${coverage.percent}%`
-                            )
+                                        .col-6.col-md-3
+                                            +stat("Offline", assetSummary.offline, "/crm/assets?online=offline", assetSummary.offline ? "secondary" : null)
 
-                        if coverage.unassigned
+                                    if assetSummary.criticalUpdates || assetSummary.rebootRequired || assetSummary.warrantyExpired
 
-                            p.small.mb-2
+                                        .d-flex.flex-wrap.gap-2.mt-3
 
-                                strong= coverage.unassigned
+                                            if assetSummary.criticalUpdates
 
-                                |  #{coverage.unassigned === 1 ? "Gerät liegt" : "Geräte liegen"} in Organisationen ohne Firma:
+                                                a.badge.bg-danger.text-decoration-none.fs-6.fw-normal(href="/crm/assets?updates=critical")
 
-                            ul.list-unstyled.small.mb-2
+                                                    i.bi.bi-shield-exclamation.me-1
 
-                                each org in coverage.unmappedOrgs.slice(0, 5)
+                                                    | #{assetSummary.criticalUpdates} mit fehlenden kritischen Updates
 
-                                    li.d-flex.justify-content-between.border-bottom.py-1
+                                            if assetSummary.rebootRequired
 
-                                        span= org.name
+                                                span.badge.bg-info.text-dark.fs-6.fw-normal
 
-                                        span.text-muted #{org.endpoints} #{org.endpoints === 1 ? "Gerät" : "Geräte"}
+                                                    i.bi.bi-bootstrap-reboot.me-1
 
-                        else
+                                                    | #{assetSummary.rebootRequired} Neustart erforderlich
 
-                            p.small.text-success.mb-2
+                                            if assetSummary.warrantyExpired
 
-                                i.bi.bi-check-circle.me-1
+                                                span.badge.bg-warning.text-dark.fs-6.fw-normal
 
-                                | Alle Geräte sind einer Firma zugeordnet.
+                                                    i.bi.bi-calendar-x.me-1
 
-                        small.text-muted Stand: letzter Sync #{labels.timeAgo(coverage.at)}
+                                                    | #{assetSummary.warrantyExpired} Garantie abgelaufen
 
-                    else if lastRun
 
-                        p.text-muted.mb-0
+                    if show("attention")
 
-                            | Beim letzten Sync konnten nicht alle Organisationen gezählt werden.
-                            | Details auf der Action1-Seite.
+                        .col-lg-5
 
-                    else
+                            .card.shadow-sm.h-100
 
-                        p.text-muted.mb-0
+                                .card-header.d-flex.justify-content-between.align-items-center
 
-                            | Noch kein Sync gelaufen. Nach der ersten Synchronisation sehen Sie hier,
-                            | wie viele Action1-Geräte einer Firma zugeordnet sind.
+                                    h5.mb-0
 
-    // =====================================================
-    // Tickets & Handlungsbedarf
-    // =====================================================
+                                        i.bi.bi-shield-exclamation.me-2
 
-    .row.g-3.mb-4
+                                        | Handlungsbedarf
 
-        .col-lg-7
+                                    if attentionAssets.length
 
-            .card.shadow-sm.h-100
+                                        a.btn.btn-sm.btn-outline-danger(href="/crm/assets?updates=critical") Alle
 
-                .card-header.d-flex.justify-content-between.align-items-center
+                                .card-body.p-0
 
-                    h5.mb-0
+                                    if attentionAssets.length
 
-                        i.bi.bi-ticket-detailed.me-2
+                                        ul.list-group.list-group-flush
 
-                        | Letzte Tickets
+                                            each asset in attentionAssets
 
-                    a.btn.btn-sm.btn-outline-primary(href="/crm/tickets") Alle Tickets
+                                                li.list-group-item.d-flex.justify-content-between.align-items-center
 
-                .card-body.p-0
+                                                    div
 
-                    if recentTickets.length
+                                                        +onlineDot(asset)
 
-                        .table-responsive
+                                                        a.ms-2.text-decoration-none(href=`/crm/assets/${asset._id}`)= asset.name
 
-                            table.table.table-hover.align-middle.mb-0
+                                                        if asset.company
 
-                                thead.table-light
+                                                            br
 
-                                    tr
-                                        th Ticket
-                                        th Betreff
-                                        th Firma
-                                        th Status
+                                                            small.text-muted.ms-4= asset.company.companyName
 
-                                tbody
+                                                    span.badge.bg-danger(title="Fehlende kritische Updates")
 
-                                    each ticket in recentTickets
+                                                        | #{asset.action1.missingCriticalUpdates} kritisch
 
-                                        tr
+                                    else
 
-                                            td.text-nowrap
+                                        .p-4.text-center.text-muted
 
-                                                if can("tickets.view")
+                                            i.bi.bi-shield-check.fs-2.d-block.mb-2.text-success
 
-                                                    a.text-decoration-none(href=`/crm/tickets/${ticket._id}`)= ticket.ticketNumber
+                                            | Keine Geräte mit fehlenden kritischen Updates.
 
-                                                else
 
-                                                    = ticket.ticketNumber
+            if show("action1")
 
-                                            td
+                .row.g-3.mb-4
 
-                                                = ticket.subject
 
-                                                if ticket.assignedTo
+                    .col-lg-6
+
+                        .card.shadow-sm.h-100
+
+                            .card-header.d-flex.justify-content-between.align-items-center
+
+                                h5.mb-0
+
+                                    i.bi.bi-arrow-repeat.me-2
+
+                                    | Action1-Geräte
+
+                                if currentUser && currentUser.role === "admin"
+
+                                    a.btn.btn-sm.btn-outline-secondary(href="/crm/integrations/action1") Zuordnung
+
+                            .card-body
+
+                                if coverage
+
+                                    .d-flex.align-items-baseline.mb-1
+
+                                        span.display-5.fw-semibold.me-2= coverage.assigned
+
+                                        span.text-muted von #{coverage.total} einer Firma zugeordnet
+
+                                    .progress.mb-2(
+                                        role="progressbar"
+                                        aria-label="Anteil zugeordneter Action1-Geräte"
+                                        aria-valuenow=coverage.percent
+                                        aria-valuemin="0"
+                                        aria-valuemax="100"
+                                        style="height: 10px;"
+                                    )
+
+                                        .progress-bar(
+                                            class=coverage.unassigned ? "bg-warning" : "bg-success"
+                                            style=`width: ${coverage.percent}%`
+                                        )
+
+                                    if coverage.unassigned
+
+                                        p.small.mb-2
+
+                                            strong= coverage.unassigned
+
+                                            |  #{coverage.unassigned === 1 ? "Gerät liegt" : "Geräte liegen"} in Organisationen ohne Firma:
+
+                                        ul.list-unstyled.small.mb-2
+
+                                            each org in coverage.unmappedOrgs.slice(0, 5)
+
+                                                li.d-flex.justify-content-between.border-bottom.py-1
+
+                                                    span= org.name
+
+                                                    span.text-muted #{org.endpoints} #{org.endpoints === 1 ? "Gerät" : "Geräte"}
+
+                                    else
+
+                                        p.small.text-success.mb-2
+
+                                            i.bi.bi-check-circle.me-1
+
+                                            | Alle Geräte sind einer Firma zugeordnet.
+
+                                    small.text-muted Stand: letzter Sync #{labels.timeAgo(coverage.at)}
+
+                                else if lastRun
+
+                                    p.text-muted.mb-0
+
+                                        | Beim letzten Sync konnten nicht alle Organisationen gezählt werden.
+                                        | Details auf der Action1-Seite.
+
+                                else
+
+                                    p.text-muted.mb-0
+
+                                        | Noch kein Sync gelaufen. Nach der ersten Synchronisation sehen Sie hier,
+                                        | wie viele Action1-Geräte einer Firma zugeordnet sind.
+
+
+        //- =================================================
+        //- Vertrieb
+        //- =================================================
+
+        if section.key === "vertrieb"
+
+            if show("salesKpis")
+
+                .row.g-3.mb-4
+
+                    .col-xl-3.col-md-6
+                        +kpi("Offene Chancen", salesKpis.open, "bi-briefcase", "/crm/sales", "primary")
+
+                    .col-xl-3.col-md-6
+                        +kpi("Pipeline / Monat", euro(salesKpis.mrr), "bi-graph-up", "/crm/sales", "info")
+
+                    .col-xl-3.col-md-6
+                        +kpi("Prognose / Monat", euro(salesKpis.weightedMrr), "bi-bullseye", "/crm/sales", "success")
+
+                    .col-xl-3.col-md-6
+                        +kpi(`Kündigungsfristen (${salesKpis.warningDays} Tage)`, salesKpis.noticeDue, "bi-alarm", "/crm/contracts?due=notice", salesKpis.noticeDue ? "danger" : "success")
+
+            if show("salesTodo") || show("contractsDue")
+
+                .row.g-3.mb-4
+
+                    if show("salesTodo")
+
+                        .col-lg-7
+
+                            .card.shadow-sm.h-100
+
+                                .card-header.d-flex.justify-content-between.align-items-center
+
+                                    h5.mb-0
+
+                                        i.bi.bi-list-check.me-2
+
+                                        | Heute zu tun
+
+                                    a.btn.btn-sm.btn-outline-primary(href="/crm/sales") Pipeline
+
+                                if salesTodo.length
+
+                                    ul.list-group.list-group-flush
+
+                                        each opp in salesTodo
+
+                                            li.list-group-item.d-flex.justify-content-between.align-items-start.gap-2
+
+                                                div
+
+                                                    a.fw-semibold.text-decoration-none(href=`/crm/sales/${opp._id}`)= opp.title
+
+                                                    if opp.company
+
+                                                        span.text-muted.ms-1 · #{opp.company.companyName}
 
                                                     br
 
-                                                    small.text-muted #{ticket.assignedTo.firstName} #{ticket.assignedTo.lastName}
+                                                    small.text-muted
 
-                                            td
+                                                        if opp.nextStep && opp.nextStep.text
 
-                                                if ticket.company
+                                                            | #{opp.nextStep.text}
 
-                                                    = ticket.company.companyName
+                                                        else
 
+                                                            | Kein nächster Schritt geplant
+
+                                                        if opp.owner
+
+                                                            |  · #{opp.owner.firstName} #{opp.owner.lastName}
+
+                                                if opp.stepState === "overdue"
+                                                    span.badge.bg-danger.text-nowrap überfällig
+                                                else if opp.stepState === "today"
+                                                    span.badge.bg-warning.text-dark.text-nowrap heute
+                                                else if opp.stepState === "soon"
+                                                    span.badge.bg-info.text-dark.text-nowrap bald
                                                 else
+                                                    span.badge.bg-secondary.text-nowrap ohne Schritt
 
-                                                    | -
+                                else
 
-                                            td
+                                    .p-4.text-center.text-muted
 
-                                                if ticket.status === "open"
-                                                    span.badge.bg-primary Offen
-                                                else if ticket.status === "in_progress"
-                                                    span.badge.bg-warning.text-dark In Bearbeitung
-                                                else if ticket.status === "waiting"
-                                                    span.badge.bg-secondary Wartend
-                                                else if ticket.status === "resolved"
-                                                    span.badge.bg-success Gelöst
-                                                else
-                                                    span.badge.bg-dark Geschlossen
+                                        i.bi.bi-check2-circle.fs-2.d-block.mb-2.text-success
 
-                    else
+                                        | Nichts Überfälliges – alle Chancen haben einen nächsten Schritt.
 
-                        .p-3.text-muted Noch keine Tickets vorhanden.
+                    if show("contractsDue")
 
-        .col-lg-5
+                        .col-lg-5
 
-            .card.shadow-sm.h-100
+                            .card.shadow-sm.h-100
 
-                .card-header.d-flex.justify-content-between.align-items-center
+                                .card-header.d-flex.justify-content-between.align-items-center
 
-                    h5.mb-0
+                                    h5.mb-0
 
-                        i.bi.bi-shield-exclamation.me-2
+                                        i.bi.bi-alarm.me-2
 
-                        | Handlungsbedarf
+                                        | Kündigungsfristen
 
-                    if attentionAssets.length
+                                    a.btn.btn-sm.btn-outline-primary(href="/crm/contracts?due=notice") Alle
 
-                        a.btn.btn-sm.btn-outline-danger(href="/crm/assets?updates=critical") Alle
+                                if contractsDue.length
 
-                .card-body.p-0
+                                    ul.list-group.list-group-flush
 
-                    if attentionAssets.length
+                                        each contract in contractsDue
 
-                        ul.list-group.list-group-flush
+                                            li.list-group-item.d-flex.justify-content-between.align-items-start.gap-2
 
-                            each asset in attentionAssets
+                                                div
 
-                                li.list-group-item.d-flex.justify-content-between.align-items-center
+                                                    a.text-decoration-none(href=`/crm/contracts/${contract._id}`)= contract.title
 
-                                    div
+                                                    if contract.company
 
-                                        +onlineDot(asset)
+                                                        br
 
-                                        a.ms-2.text-decoration-none(href=`/crm/assets/${asset._id}`)= asset.name
+                                                        small.text-muted= contract.company.companyName
 
-                                        if asset.company
+                                                span.text-nowrap.small
 
-                                            br
+                                                    +noticeDate(contract)
 
-                                            small.text-muted.ms-4= asset.company.companyName
+                                else
 
-                                    span.badge.bg-danger(title="Fehlende kritische Updates")
+                                    .p-4.text-center.text-muted
 
-                                        | #{asset.action1.missingCriticalUpdates} kritisch
+                                        i.bi.bi-calendar-check.fs-2.d-block.mb-2.text-success
 
-                    else
+                                        | Keine Kündigungsfrist in den nächsten #{contractWarningDays} Tagen.
 
-                        .p-4.text-center.text-muted
+            if show("recentCompanies") || show("recentContacts")
 
-                            i.bi.bi-shield-check.fs-2.d-block.mb-2.text-success
+                .row.g-3.mb-4
 
-                            | Keine Geräte mit fehlenden kritischen Updates.
+                    if show("recentCompanies")
 
-    // =====================================================
-    // Zuletzt angelegt
-    // =====================================================
+                        .col-lg-6
 
-    .row.g-3
+                            .card.shadow-sm.h-100
 
-        .col-lg-6
+                                .card-header
 
-            .card.shadow-sm.h-100
+                                    h5.mb-0 Letzte Firmen
 
-                .card-header
+                                .card-body.p-0
 
-                    h5.mb-0 Letzte Firmen
+                                    if recentCompanies.length
 
-                .card-body.p-0
+                                        .table-responsive
 
-                    if recentCompanies.length
+                                            table.table.table-hover.mb-0
 
-                        .table-responsive
+                                                thead.table-light
 
-                            table.table.table-hover.mb-0
+                                                    tr
+                                                        th Kundennr.
+                                                        th Firma
+                                                        th Status
 
-                                thead.table-light
+                                                tbody
 
-                                    tr
-                                        th Kundennr.
-                                        th Firma
-                                        th Status
+                                                    each company in recentCompanies
 
-                                tbody
+                                                        tr
 
-                                    each company in recentCompanies
+                                                            td= company.customerNumber
 
-                                        tr
+                                                            td
 
-                                            td= company.customerNumber
+                                                                a.text-decoration-none(href=`/crm/companies/${company._id}`)= company.companyName
 
-                                            td
+                                                            td
 
-                                                a.text-decoration-none(href=`/crm/companies/${company._id}`)= company.companyName
+                                                                case company.status
+                                                                    when "prospect"
+                                                                        span.badge.bg-warning.text-dark Interessent
+                                                                    when "active"
+                                                                        span.badge.bg-success Aktiv
+                                                                    when "inactive"
+                                                                        span.badge.bg-secondary Inaktiv
+                                                                    default
+                                                                        span.badge.bg-light.text-dark -
 
-                                            td
+                                    else
 
-                                                case company.status
-                                                    when "prospect"
-                                                        span.badge.bg-warning.text-dark Interessent
-                                                    when "active"
-                                                        span.badge.bg-success Aktiv
-                                                    when "inactive"
-                                                        span.badge.bg-secondary Inaktiv
-                                                    default
-                                                        span.badge.bg-light.text-dark -
+                                        .p-3.text-muted Noch keine Firmen vorhanden.
 
-                    else
 
-                        .p-3.text-muted Noch keine Firmen vorhanden.
+                    if show("recentContacts")
 
-        .col-lg-6
+                        .col-lg-6
 
-            .card.shadow-sm.h-100
+                            .card.shadow-sm.h-100
 
-                .card-header
+                                .card-header
 
-                    h5.mb-0 Letzte Kontakte
+                                    h5.mb-0 Letzte Kontakte
 
-                .card-body.p-0
+                                .card-body.p-0
 
-                    if recentContacts.length
+                                    if recentContacts.length
 
-                        .table-responsive
+                                        .table-responsive
 
-                            table.table.table-hover.mb-0
+                                            table.table.table-hover.mb-0
 
-                                thead.table-light
+                                                thead.table-light
 
-                                    tr
-                                        th Name
-                                        th Firma
+                                                    tr
+                                                        th Name
+                                                        th Firma
 
-                                tbody
+                                                tbody
 
-                                    each contact in recentContacts
+                                                    each contact in recentContacts
 
-                                        tr
+                                                        tr
 
-                                            td
+                                                            td
 
-                                                a.text-decoration-none(href=`/crm/contacts/${contact._id}`)
-                                                    | #{contact.firstName} #{contact.lastName}
+                                                                a.text-decoration-none(href=`/crm/contacts/${contact._id}`)
+                                                                    | #{contact.firstName} #{contact.lastName}
 
-                                            td
+                                                            td
 
-                                                if contact.company
+                                                                if contact.company
 
-                                                    = contact.company.companyName
+                                                                    = contact.company.companyName
 
-                                                else
+                                                                else
 
-                                                    | -
+                                                                    | -
 
-                    else
+                                    else
 
-                        .p-3.text-muted Noch keine Kontakte vorhanden.
+                                        .p-3.text-muted Noch keine Kontakte vorhanden.
+
+        //- =================================================
+        //- Verwaltung (Admin)
+        //- =================================================
+
+        if section.key === "verwaltung"
+
+            if show("overviewKpis")
+
+                .row.g-3.mb-4
+
+                    .col-xl-3.col-md-6
+                        +kpi("Firmen", overviewKpis.companyCount, "bi-buildings", "/crm/companies", "primary")
+
+                    .col-xl-3.col-md-6
+                        +kpi("Kontakte", overviewKpis.contactCount, "bi-people", "/crm/contacts", "info")
+
+                    .col-xl-3.col-md-6
+                        +kpi("Offene Tickets", overviewKpis.openTicketCount, "bi-ticket-detailed", "/crm/tickets?status=open", overviewKpis.openTicketCount ? "danger" : "success")
+
+                    .col-xl-3.col-md-6
+                        +kpi("In Bearbeitung", overviewKpis.inProgressTicketCount, "bi-hourglass-split", "/crm/tickets?status=in_progress", "warning")
+
+            if show("adminHealth") || show("recentTickets")
+
+                .row.g-3.mb-4
+
+                    if show("adminHealth")
+
+                        .col-lg-5
+
+                            .card.shadow-sm.h-100
+
+                                .card-header
+
+                                    h5.mb-0
+
+                                        i.bi.bi-heart-pulse.me-2
+
+                                        | Betrieb
+
+                                .card-body
+
+                                    .row.g-2
+
+                                        .col-6
+                                            +stat("NPS (90 Tage)", adminHealth.nps === null ? "—" : (adminHealth.nps > 0 ? "+" + adminHealth.nps : String(adminHealth.nps)), "/crm/surveys?period=90")
+
+                                        .col-6
+                                            +stat("Umfrage-Antworten", adminHealth.answers, "/crm/surveys?period=90")
+
+                                        .col-6
+                                            +stat("Fehlgeschlagene Mails (7 Tage)", adminHealth.failedMails, "/crm/email-log?status=failed", adminHealth.failedMails ? "danger" : null)
+
+                                        .col-6
+                                            +stat("Aktive Benutzer", adminHealth.userCount, "/crm/users")
+
+                    if show("recentTickets")
+
+                        .col-lg-7
+
+                            .card.shadow-sm.h-100
+
+                                .card-header.d-flex.justify-content-between.align-items-center
+
+                                    h5.mb-0
+
+                                        i.bi.bi-ticket-detailed.me-2
+
+                                        | Letzte Tickets
+
+                                    a.btn.btn-sm.btn-outline-primary(href="/crm/tickets") Alle Tickets
+
+                                .card-body.p-0
+
+                                    if recentTickets.length
+
+                                        .table-responsive
+
+                                            table.table.table-hover.align-middle.mb-0
+
+                                                thead.table-light
+
+                                                    tr
+                                                        th Ticket
+                                                        th Betreff
+                                                        th Firma
+                                                        th Status
+
+                                                tbody
+
+                                                    each ticket in recentTickets
+
+                                                        tr
+
+                                                            td.text-nowrap
+
+                                                                if can("tickets.view")
+
+                                                                    a.text-decoration-none(href=`/crm/tickets/${ticket._id}`)= ticket.ticketNumber
+
+                                                                else
+
+                                                                    = ticket.ticketNumber
+
+                                                            td
+
+                                                                = ticket.subject
+
+                                                                if ticket.assignedTo
+
+                                                                    br
+
+                                                                    small.text-muted #{ticket.assignedTo.firstName} #{ticket.assignedTo.lastName}
+
+                                                            td
+
+                                                                if ticket.company
+
+                                                                    = ticket.company.companyName
+
+                                                                else
+
+                                                                    | -
+
+                                                            td
+
+                                                                if ticket.status === "open"
+                                                                    span.badge.bg-primary Offen
+                                                                else if ticket.status === "in_progress"
+                                                                    span.badge.bg-warning.text-dark In Bearbeitung
+                                                                else if ticket.status === "waiting"
+                                                                    span.badge.bg-secondary Wartend
+                                                                else if ticket.status === "resolved"
+                                                                    span.badge.bg-success Gelöst
+                                                                else
+                                                                    span.badge.bg-dark Geschlossen
+
+                                    else
+
+                                        .p-3.text-muted Noch keine Tickets vorhanden.

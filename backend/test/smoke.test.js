@@ -372,6 +372,9 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         assert.match(dashboard.text, /Verwaltung/, "Navigation: Menü Verwaltung");
         assert.match(dashboard.text, /\/crm\/marketing\/groups/, "Navigation: Menü Marketing");
         assert.match(dashboard.text, /Verwaltete Assets/);
+        for (const text of ["Meine offenen Tickets", "Heute zu tun", "Kündigungsfristen", "Fehlgeschlagene Mails"]) {
+            assert.ok(dashboard.text.includes(text), `Admin-Dashboard: ${text}`);
+        }
         assert.match(dashboard.text, /Smoke-Benachrichtigung/, "Glocke zeigt Benachrichtigung");
 
     });
@@ -1533,7 +1536,10 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
 
         assert.equal((await tech.get("/crm/marketing")).status, 403, "Techniker: kein Marketing");
         assert.equal((await tech.get("/crm/marketing/groups")).status, 403);
-        assert.doesNotMatch((await tech.get("/crm")).text, /\/crm\/marketing/, "kein Marketing-Menü");
+        const techDashboard = (await tech.get("/crm")).text;
+        assert.doesNotMatch(techDashboard, /\/crm\/marketing/, "kein Marketing-Menü");
+        assert.match(techDashboard, /Meine offenen Tickets/, "Techniker-Dashboard");
+        assert.doesNotMatch(techDashboard, /Heute zu tun/, "keine Vertriebskarten");
 
         const before = (await Contact.findById(contact._id)).marketing.history.length;
         assert.equal((await tech.post(`/crm/contacts/${contact._id}/marketing`, { consent: "revoked" })).status, 403);
@@ -1552,6 +1558,11 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         for (const url of ["/crm", "/crm/companies", `/crm/companies/${company._id}`, "/crm/contacts", `/crm/contacts/${contact._id}`, "/crm/assets", `/crm/assets/${manualAsset._id}`, "/crm/marketing", "/crm/marketing/groups", "/crm/search?q=Smoke"]) {
             assertPage(await sales.get(url), `Vertrieb ${url}`);
         }
+
+        const salesDashboard = (await sales.get("/crm")).text;
+        assert.match(salesDashboard, /Heute zu tun/, "Vertriebs-Dashboard");
+        assert.match(salesDashboard, /Offene Chancen/);
+        assert.doesNotMatch(salesDashboard, /Meine offenen Tickets|Verwaltete Assets/, "keine Technikkarten");
 
         // Liste: Betreff und Status ja, aber kein Link ins Ticket
         const list = await sales.get("/crm/tickets");
