@@ -1,0 +1,170 @@
+//- Formular für Neu und Bearbeiten
+//- Erwartet: contract, action, cancelUrl, companies, contacts, statuses, signatures, error
+
+- const c = contract || {}
+- const idOf = (value) => value && value._id ? String(value._id) : (value ? String(value) : "")
+- const dateValue = (value) => { if (!value) return ""; const d = new Date(value); return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10); }
+- const monthValue = (value) => Number.isInteger(value) ? String(value) : ""
+
+if error
+
+    .alert.alert-danger
+
+        i.bi.bi-exclamation-triangle.me-2
+
+        = error
+
+form#contractForm(method="POST" action=action)
+
+    .row.g-4
+
+        .col-lg-7
+
+            .card.mb-4
+
+                .card-header.fw-semibold
+
+                    i.bi.bi-file-earmark-text.me-2
+
+                    | Vertrag
+
+                .card-body
+
+                    .mb-3
+
+                        label.form-label(for="title") Titel
+
+                        input.form-control#title(type="text" name="title" value=c.title required maxlength="200" placeholder="z. B. Managed Services – 12 Arbeitsplätze")
+
+                    .row.g-3
+
+                        .col-md-6
+
+                            label.form-label(for="company") Firma
+
+                            select.form-select#company(name="company" required)
+
+                                option(value="") — Firma wählen —
+
+                                each company in companies
+
+                                    option(value=String(company._id) selected=idOf(c.company) === String(company._id))= company.companyName
+
+                        .col-md-6
+
+                            label.form-label(for="contact") Ansprechpartner
+
+                            select.form-select#contact(name="contact")
+
+                                option(value="") — keiner —
+
+                                each contact in contacts
+
+                                    option(value=String(contact._id) data-company=idOf(contact.company) selected=idOf(c.contact) === String(contact._id)) #{contact.firstName} #{contact.lastName}
+
+                    .row.g-3.mt-1
+
+                        .col-md-5
+
+                            label.form-label(for="status") Status
+
+                            select.form-select#status(name="status")
+
+                                each entry, key in statuses
+
+                                    option(value=key selected=(c.status || "draft") === key)= entry.label
+
+                        .col-md-5
+
+                            label.form-label(for="signatureStatus") Unterschrift
+
+                            select.form-select#signatureStatus(name="signatureStatus")
+
+                                each entry, key in signatures
+
+                                    option(value=key selected=(c.signatureStatus || "unsigned") === key)= entry.label
+
+                        .col-md-2
+
+                            label.form-label(for="version") Version
+
+                            input.form-control#version(type="number" name="version" min="1" max="999" value=c.version || 1)
+
+                    .mt-3
+
+                        label.form-label(for="notes") Notizen
+
+                        textarea.form-control#notes(name="notes" rows="4" maxlength="5000")= c.notes
+
+        .col-lg-5
+
+            .card.mb-4
+
+                .card-header.fw-semibold
+
+                    i.bi.bi-calendar-range.me-2
+
+                    | Laufzeit und Fristen
+
+                .card-body
+
+                    .mb-3
+
+                        label.form-label(for="startDate") Vertragsbeginn
+
+                        input.form-control#startDate(type="date" name="startDate" value=dateValue(c.startDate))
+
+                    .row.g-3
+
+                        .col-6
+
+                            label.form-label(for="termMonths") Laufzeit (Monate)
+
+                            input.form-control#termMonths(type="number" name="termMonths" min="1" max="240" value=monthValue(c.termMonths) placeholder="unbefristet")
+
+                        .col-6
+
+                            label.form-label(for="noticePeriodMonths") Kündigungsfrist (Monate)
+
+                            input.form-control#noticePeriodMonths(type="number" name="noticePeriodMonths" min="0" max="240" value=monthValue(c.noticePeriodMonths))
+
+                    .mt-3
+
+                        label.form-label(for="renewalMonths") Automatische Verlängerung um (Monate)
+
+                        input.form-control#renewalMonths(type="number" name="renewalMonths" min="0" max="240" value=monthValue(c.renewalMonths) placeholder="keine")
+
+                    p.small.text-muted.mt-3.mb-0
+                        | Vertragsende, „Kündigung bis“ und Verlängerungstermin werden daraus berechnet.
+                        | Beispiel: Beginn 01.01., 12 Monate, 3 Monate Frist → läuft bis 31.12., Kündigung bis 30.09.
+
+            .d-flex.gap-2
+
+                button.btn.btn-primary(type="submit")
+
+                    i.bi.bi-check-lg.me-2
+
+                    | Speichern
+
+                a.btn.btn-outline-secondary(href=cancelUrl) Abbrechen
+
+script.
+    (function () {
+        var company = document.getElementById("company");
+        var contact = document.getElementById("contact");
+
+        // Ansprechpartner nur der gewählten Firma anzeigen
+        function filterContacts() {
+            var id = company.value;
+            Array.prototype.forEach.call(contact.options, function (option) {
+                if (!option.value) return;
+                var match = !id || option.getAttribute("data-company") === id;
+                option.hidden = !match;
+                option.disabled = !match;
+                if (!match && option.selected) contact.value = "";
+            });
+        }
+
+        company.addEventListener("change", filterContacts);
+        filterContacts();
+    })();

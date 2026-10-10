@@ -154,7 +154,9 @@ test("Verträge: Status, Unterschrift, Fristen", () => {
     const day = (d) => d.toISOString().slice(0, 10);
 
     assert.equal(day(contracts.endDate("2026-01-01", 12)), "2026-12-31");
-    assert.equal(day(contracts.endDate("2026-01-31", 1)), "2026-02-27", "31.1. + 1 Monat → 28.2., Ende ein Tag davor");
+    assert.equal(day(contracts.endDate("2026-01-31", 1)), "2026-02-28", "31.1. + 1 Monat → 28.2. (§ 188 BGB)");
+    assert.equal(day(contracts.endDate("2026-03-01", 1)), "2026-03-31");
+    assert.equal(day(contracts.endDate("2026-03-15", 1)), "2026-04-14");
     assert.equal(day(contracts.addMonths("2028-01-31", 1)), "2028-02-29", "Schaltjahr");
     assert.equal(contracts.endDate("2026-01-01", 0), null);
 
@@ -169,5 +171,73 @@ test("Verträge: Status, Unterschrift, Fristen", () => {
     assert.equal(contracts.noticeDue({ status: "active", noticeDeadline: d.noticeDeadline }, now), true);
     assert.equal(contracts.noticeDue({ status: "draft", noticeDeadline: d.noticeDeadline }, now), false);
     assert.equal(contracts.noticeDue({ status: "active", noticeDeadline: d.noticeDeadline }, new Date("2027-01-01T00:00:00Z")), false);
+
+});
+
+test("Verträge: automatische Verlängerung und Prüfung", () => {
+
+    const contracts = require("../src/utils/contractRules");
+    const day = (d) => d.toISOString().slice(0, 10);
+    const now = new Date("2026-10-10T00:00:00Z");
+
+    // Endete 31.12.2025, verlängert sich um je 12 Monate → läuft jetzt bis 31.12.2026
+    const rolling = { status: "active", endDate: new Date("2025-12-31T00:00:00Z"), noticePeriodMonths: 3, renewalMonths: 12 };
+    const period = contracts.currentPeriod(rolling, now);
+    assert.equal(day(period.endDate), "2026-12-31");
+    assert.equal(day(period.noticeDeadline), "2026-09-30");
+    assert.equal(day(period.renewalDate), "2027-01-01");
+    assert.equal(period.renewals, 1);
+    assert.equal(period.expired, false);
+
+    // Ohne Verlängerung: abgelaufen; gekündigt: keine Verlängerung
+    assert.equal(contracts.currentPeriod({ ...rolling, renewalMonths: null }, now).expired, true);
+    assert.equal(contracts.currentPeriod({ ...rolling, status: "terminated" }, now).renewals, 0);
+    assert.equal(contracts.currentPeriod({ status: "active" }, now).endDate, null, "unbefristet");
+
+    // Frist der laufenden Periode zählt
+    assert.equal(contracts.noticeDue(rolling, new Date("2026-09-15T00:00:00Z"), 60), true);
+
+    const valid = { title: "Managed Services", company: "507f1f77bcf86cd799439011", status: "active", signatureStatus: "complete", startDate: new Date("2026-01-01"), termMonths: 12, noticePeriodMonths: 3, renewalMonths: 12, version: 1 };
+
+    assert.equal(contracts.validate(valid), null);
+    assert.match(contracts.validate({ ...valid, title: " " }), /Titel/);
+    assert.match(contracts.validate({ ...valid, company: null }), /Firma/);
+    assert.match(contracts.validate({ ...valid, status: "x" }), /Status/);
+    assert.match(contracts.validate({ ...valid, startDate: undefined }), /Vertragsbeginn/);
+    assert.match(contracts.validate({ ...valid, termMonths: NaN }), /Laufzeit: bitte ganze Monate/);
+    assert.match(contracts.validate({ ...valid, termMonths: 0 }), /mindestens 1 Monat/);
+    assert.match(contracts.validate({ ...valid, startDate: null }), /Vertragsbeginn angeben/);
+    assert.match(contracts.validate({ ...valid, noticePeriodMonths: 12 }), /kürzer als die Laufzeit/);
+    assert.match(contracts.validate({ ...valid, version: NaN }), /Version/);
+    assert.equal(contracts.validate({ ...valid, termMonths: null, startDate: null, noticePeriodMonths: null, renewalMonths: null }), null, "unbefristet ohne Beginn");
+
+    assert.equal(contracts.parseMonths(""), null);
+    assert.equal(contracts.parseMonths("12"), 12);
+    assert.ok(Number.isNaN(contracts.parseMonths("zwölf")));
+    assert.equal(contracts.parseDate("2026-01-01").toISOString(), "2026-01-01T00:00:00.000Z");
+    assert.equal(contracts.parseDate("01.01.2026"), undefined);
+
+});
+
+test("Rechte Verträge: alle sehen, Admin und Vertrieb bearbeiten, nur Admin löscht", () => {
+
+    for (const role of ["admin", "technician", "sales"]) assert.equal(can(role, "contracts.view"), true, role);
+
+    assert.equal(can("sales", "contracts.edit"), true);
+    assert.equal(can("technician", "contracts.edit"), false);
+    assert.equal(can("admin", "contracts.delete"), true);
+    assert.equal(can("sales", "contracts.delete"), false);
+
+});
+
+test("Verträge: Statuswechsel per Knopf nur in erlaubter Reihenfolge", () => {
+
+    const contracts = require("../src/utils/contractRules");
+
+    assert.equal(contracts.canTransition("draft", "sent"), true);
+    assert.equal(contracts.canTransition("active", "terminated"), true);
+    assert.equal(contracts.canTransition("terminated", "draft"), false);
+    assert.equal(contracts.canTransition("draft", "active"), false);
+    assert.equal(contracts.currentPeriod({ status: "draft", endDate: new Date("2020-12-31T00:00:00Z") }, new Date("2026-10-10")).expired, false, "Entwurf ist nie abgelaufen");
 
 });

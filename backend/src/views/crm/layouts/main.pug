@@ -84,6 +84,11 @@ html(lang="de")
                                     a.dropdown-item(href="/crm/contacts")
                                         i.bi.bi-people.me-2
                                         | Kontakte
+                                if can("contracts.view")
+                                    li
+                                        a.dropdown-item(href="/crm/contracts")
+                                            i.bi.bi-file-earmark-text.me-2
+                                            | Verträge
 
                         if can("tickets.list") || can("assets.view")
 

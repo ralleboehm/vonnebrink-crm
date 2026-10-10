@@ -1,0 +1,22 @@
+extends ../layouts/main
+
+block content
+
+    .mb-4
+
+        a.text-decoration-none.small(href="/crm/contracts")
+
+            i.bi.bi-arrow-left.me-1
+
+            | Verträge
+
+        h1.mb-0.mt-1
+
+            i.bi.bi-plus-circle.me-2
+
+            | Neuer Vertrag
+
+    - const action = "/crm/contracts"
+    - const cancelUrl = "/crm/contracts"
+
+    include _form

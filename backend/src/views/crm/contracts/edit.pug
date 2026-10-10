@@ -1,0 +1,22 @@
+extends ../layouts/main
+
+block content
+
+    .mb-4
+
+        a.text-decoration-none.small(href=`/crm/contracts/${contract._id}`)
+
+            i.bi.bi-arrow-left.me-1
+
+            | Zurück zum Vertrag
+
+        h1.mb-0.mt-1
+
+            i.bi.bi-pencil.me-2
+
+            | #{contract.contractNumber} bearbeiten
+
+    - const action = `/crm/contracts/${contract._id}/update`
+    - const cancelUrl = `/crm/contracts/${contract._id}`
+
+    include _form

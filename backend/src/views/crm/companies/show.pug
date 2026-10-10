@@ -3,6 +3,7 @@ extends ../layouts/main
 include ../assets/_mixins
 include _tags
 include _tabs
+include ../contracts/_mixins
 
 block content
 
@@ -339,6 +340,74 @@ block content
                 .card-body.text-muted.small
 
                     | Noch keine Verkaufschancen für diese Firma.
+
+    //- =====================================================
+    //- Verträge
+    //- =====================================================
+
+    if contracts
+
+        .card.shadow-sm.mb-4#contracts
+
+            .card-header.d-flex.justify-content-between.align-items-center
+
+                h5.mb-0
+
+                    i.bi.bi-file-earmark-text.me-2
+
+                    | Verträge
+
+                if can("contracts.edit")
+
+                    a.btn.btn-sm.btn-primary(href=`/crm/contracts/new?company=${company._id}`)
+
+                        i.bi.bi-plus-circle.me-2
+
+                        | Neuer Vertrag
+
+            if contracts.length
+
+                .table-responsive
+
+                    table.table.table-hover.align-middle.mb-0
+
+                        thead.table-light
+
+                            tr
+                                th Vertrag
+                                th Status
+                                th Läuft bis
+                                th Kündigung bis
+
+                        tbody
+
+                            each contract in contracts
+
+                                tr
+
+                                    td
+
+                                        a.text-decoration-none(href=`/crm/contracts/${contract._id}`)
+
+                                            strong= contract.title
+
+                                        .small.text-muted= contract.contractNumber
+
+                                    td
+
+                                        +contractStatusBadge(contract.status)
+
+                                    td.text-nowrap
+
+                                        +periodEnd(contract)
+
+                                    td.text-nowrap
+
+                                        +noticeDate(contract)
+
+            else
+
+                .card-body.text-muted.small Noch keine Verträge mit dieser Firma.
 
     // =====================================================
     // Assets

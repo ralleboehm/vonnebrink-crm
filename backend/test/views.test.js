@@ -895,3 +895,112 @@ test("Dokument-Detailseite: Versionen, Freigaben, Kundenportal", { skip: !pug &&
     assert.match(broken, /Freigaben konnten nicht geladen werden/);
 
 });
+
+const contractRules = require("../src/utils/contractRules");
+
+test("Verträge: Liste, Detailseite, Formular, Karte auf der Firmenseite", { skip: !pug && "pug nicht installiert" }, () => {
+
+    const now = new Date("2026-10-10T00:00:00Z");
+    const decorate = (c) => ({ ...c, period: contractRules.currentPeriod(c, now), noticeDue: contractRules.noticeDue(c, now, 60) });
+
+    const contract = decorate({
+        _id: "k1",
+        contractNumber: "VTR-000001",
+        title: "Managed Services",
+        company,
+        contact: { firstName: "Anna", lastName: "Jung", email: "anna@example.de" },
+        status: "active",
+        signatureStatus: "complete",
+        version: 2,
+        startDate: new Date("2025-01-01T00:00:00Z"),
+        termMonths: 12,
+        endDate: new Date("2025-12-31T00:00:00Z"),
+        noticePeriodMonths: 3,
+        renewalMonths: 12,
+        notes: "SLA Gold"
+    });
+
+    const helpers = { statuses: contractRules.STATUSES, signatures: contractRules.SIGNATURE_STATUSES, transitions: contractRules.TRANSITIONS, format };
+
+    // Liste
+    const list = render("crm/contracts/index.pug", {
+        contracts: [contract],
+        summary: { total: 1, byStatus: { draft: 0, sent: 0, read: 0, signed: 0, active: 1, expired: 0, terminated: 0 }, noticeDue: 0, warningDays: 60 },
+        companies: [company],
+        filters: { search: "", status: "", company: "", due: "" },
+        flash: null,
+        ...helpers
+    });
+
+    assert.match(list, /Managed Services/);
+    assert.match(list, /VTR-000001/);
+    assert.match(list, /31\.12\.2026/, "laufende Periode nach Verlängerung");
+    assert.match(list, /\(verlängert\)/);
+    assert.match(list, /30\.9\.2026|30\.09\.2026/, "Kündigung bis");
+    assert.match(list, /href="\/crm\/contracts\/new"/);
+
+    const techList = render("crm/contracts/index.pug", { contracts: [], summary: { total: 0, byStatus: { draft: 0, sent: 0, read: 0, signed: 0, active: 0, expired: 0, terminated: 0 }, noticeDue: 0, warningDays: 60 }, companies: [], filters: { search: "", status: "", company: "", due: "" }, flash: null, ...helpers }, "technician");
+    assert.doesNotMatch(techList, /\/crm\/contracts\/new/, "Techniker: nur ansehen");
+    assert.match(techList, /Noch keine Verträge/);
+    assert.match(techList, /dropdown-item" href="\/crm\/contracts"/, "Menüpunkt Verträge");
+
+    // Detailseite
+    const documents = {
+        status: { configured: true },
+        folder: { path: "CRM/Customers/CUS-000001 Holz Müller GmbH", error: null },
+        categories: documentRules.allowedCategories("admin").map((key) => ({ key, ...documentRules.CATEGORIES[key], count: 0 })),
+        documents: [{ _id: "d1", fileName: "Rahmenvertrag.pdf", extension: "pdf", size: 2048, version: 1, uploadedAt: new Date() }]
+    };
+
+    const showLocals = { contract, documents, documentRules, returnTo: "/crm/contracts/k1", maxUploadMb: 100, flash: null, ...helpers };
+    const show = render("crm/contracts/show.pug", showLocals);
+
+    assert.match(show, /Managed Services/);
+    assert.match(show, /Von beiden unterschrieben/);
+    assert.match(show, /Version 2/);
+    assert.match(show, /1× automatisch verlängert/);
+    assert.match(show, /href="\/crm\/documents\/d1"/);
+    assert.match(show, /name="referenceType" value="contract"/);
+    assert.match(show, /value="contract" selected/);
+    assert.match(show, /action="\/crm\/contracts\/k1\/status"/);
+    assert.match(show, /→ Gekündigt/);
+    assert.match(show, /action="\/crm\/contracts\/k1\/delete"/);
+    assert.match(show, /SLA Gold/);
+
+    const salesShow = render("crm/contracts/show.pug", showLocals, "sales");
+    assert.match(salesShow, /\/crm\/contracts\/k1\/edit/);
+    assert.doesNotMatch(salesShow, /\/crm\/contracts\/k1\/delete/, "Vertrieb löscht nicht");
+
+    const techShow = render("crm/contracts/show.pug", showLocals, "technician");
+    assert.doesNotMatch(techShow, /\/crm\/contracts\/k1\/edit/);
+    assert.doesNotMatch(techShow, /\/status"/);
+
+    // Kündigungsfrist naht
+    const due = decorate({ ...contract, endDate: new Date("2026-12-31T00:00:00Z"), noticePeriodMonths: 2, renewalMonths: 12 });
+    assert.match(render("crm/contracts/show.pug", { ...showLocals, contract: due }), /Kündigungsfrist läuft ab/);
+
+    // Formular mit Fehler
+    const form = render("crm/contracts/edit.pug", { contract: { ...contract, company: "c1" }, companies: [company], contacts: [{ _id: "p1", firstName: "Anna", lastName: "Jung", company: { _id: "c1" } }], error: "Die Kündigungsfrist muss kürzer als die Laufzeit sein.", ...helpers });
+    assert.match(form, /action="\/crm\/contracts\/k1\/update"/);
+    assert.match(form, /Kündigungsfrist muss kürzer/);
+    assert.match(form, /value="c1" selected/);
+    assert.match(form, /name="termMonths"[^>]*value="12"/);
+    assert.match(form, /value="2025-01-01"/);
+
+    // Karte auf der Firmenseite
+    const companyPage = render("crm/companies/show.pug", {
+        company: { ...company, status: "active", address: {} },
+        contacts: [],
+        recentTickets: [],
+        assets: [action1Asset],
+        assetSummary: { active: 1, workstations: 1, servers: 0, criticalUpdates: 0 },
+        labels,
+        contracts: [contract],
+        statuses: contractRules.STATUSES,
+        format
+    });
+    assert.match(companyPage, /href="\/crm\/contracts\/k1"/);
+    assert.match(companyPage, /href="\/crm\/contracts\/new\?company=c1"/);
+    assert.match(companyPage, new RegExp(`badge ${labels.STATUS_BADGES.active}">${labels.STATUS_LABELS.active}<`), "Asset-Status bleibt Asset-Status");
+
+});

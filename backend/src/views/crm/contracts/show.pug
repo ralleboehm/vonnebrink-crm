@@ -1,0 +1,301 @@
+extends ../layouts/main
+
+include _mixins
+
+block content
+
+    - const c = contract
+    - const base = `/crm/contracts/${c._id}`
+    - const period = c.period || {}
+    - const fmt = (date) => date ? format.formatDate(date) : "—"
+    - const months = (value, empty) => Number.isInteger(value) && value > 0 ? `${value} ${value === 1 ? "Monat" : "Monate"}` : empty
+    - const nextStatus = transitions
+    - const docsAllowed = documents && documents.status.configured && can("documents.upload") && !documents.folder.error
+    - const actionQuery = "?returnTo=" + encodeURIComponent(returnTo)
+
+    .d-flex.justify-content-between.align-items-start.mb-4.flex-wrap.gap-2
+
+        div
+
+            .small.text-muted.mb-1
+
+                | #{c.contractNumber}
+
+                if c.company
+
+                    |  ·
+
+                    a(href=`/crm/companies/${c.company._id}`)= c.company.companyName
+
+            h1.h3.mb-2= c.title
+
+            +contractStatusBadge(c.status)
+
+            span.badge.text-bg-light.border.ms-2= (signatures[c.signatureStatus] || { label: c.signatureStatus }).label
+
+            span.badge.text-bg-light.border.ms-2 Version #{c.version || 1}
+
+        .d-flex.gap-2.flex-wrap
+
+            if can("contracts.edit")
+
+                a.btn.btn-outline-secondary(href=`${base}/edit`)
+
+                    i.bi.bi-pencil.me-2
+
+                    | Bearbeiten
+
+            a.btn.btn-secondary(href="/crm/contracts")
+
+                i.bi.bi-arrow-left.me-2
+
+                | Verträge
+
+    if flash
+
+        .alert(class=`alert-${flash.type}`)= flash.text
+
+    if c.noticeDue
+
+        .alert.alert-warning
+
+            i.bi.bi-alarm.me-2
+
+            strong Kündigungsfrist läuft ab:
+
+            |  Kündigung bis #{fmt(period.noticeDeadline)} möglich.
+
+            if period.renewalDate
+
+                |  Sonst verlängert sich der Vertrag am #{fmt(period.renewalDate)} automatisch um #{months(c.renewalMonths, "")}.
+
+            else
+
+                |  Der Vertrag endet am #{fmt(period.endDate)}.
+
+    else if period.expired && c.status !== "expired" && c.status !== "terminated"
+
+        .alert.alert-warning
+
+            i.bi.bi-exclamation-triangle.me-2
+
+            | Das Vertragsende (#{fmt(period.endDate)}) ist erreicht und es gibt keine automatische Verlängerung – Status prüfen.
+
+    .row.g-4
+
+        .col-lg-5
+
+            //- Fristen
+
+            .card.shadow-sm
+
+                .card-header
+
+                    h2.h5.mb-0
+
+                        i.bi.bi-calendar-range.me-2
+
+                        | Laufzeit und Fristen
+
+                .card-body
+
+                    dl.row.mb-0
+
+                        dt.col-6 Beginn
+                        dd.col-6= fmt(c.startDate)
+
+                        dt.col-6 Laufzeit
+                        dd.col-6= months(c.termMonths, "unbefristet")
+
+                        dt.col-6 Läuft bis
+                        dd.col-6
+                            +periodEnd(c)
+
+                        dt.col-6 Kündigungsfrist
+                        dd.col-6= months(c.noticePeriodMonths, "—")
+
+                        dt.col-6 Kündigung bis
+                        dd.col-6
+                            +noticeDate(c)
+
+                        dt.col-6 Verlängerung
+                        dd.col-6.mb-0
+                            if period.renewalDate
+                                | um #{months(c.renewalMonths, "")} am #{fmt(period.renewalDate)}
+                            else
+                                span.text-muted keine
+
+                    if period.renewals
+
+                        p.small.text-muted.mt-3.mb-0 Ursprünglich bis #{fmt(c.endDate)}, seitdem #{period.renewals}× automatisch verlängert.
+
+            //- Status
+
+            if can("contracts.edit") && (nextStatus[c.status] || []).length
+
+                .card.shadow-sm.mt-4
+
+                    .card-header
+
+                        h2.h5.mb-0 Status ändern
+
+                    .card-body.d-flex.flex-wrap.gap-2
+
+                        each key in nextStatus[c.status]
+
+                            form.m-0(method="POST" action=`${base}/status`)
+
+                                input(type="hidden" name="status" value=key)
+
+                                button.btn.btn-sm(type="submit" class=key === "terminated" ? "btn-outline-danger" : "btn-outline-primary")
+
+                                    | → #{statuses[key].label}
+
+            //- Kontakt, Notizen
+
+            .card.shadow-sm.mt-4
+
+                .card-body
+
+                    if c.contact
+
+                        .small.text-muted Ansprechpartner
+
+                        p.mb-3
+
+                            | #{c.contact.firstName} #{c.contact.lastName}
+
+                            if c.contact.email
+
+                                br
+
+                                a.small(href=`mailto:${c.contact.email}`)= c.contact.email
+
+                    .small.text-muted Notizen
+
+                    if c.notes
+
+                        p.mb-0(style="white-space: pre-line")= c.notes
+
+                    else
+
+                        p.mb-0.text-muted —
+
+            if can("contracts.delete")
+
+                form.mt-4(method="POST" action=`${base}/delete` onsubmit="return confirm('Vertrag wirklich löschen? Die Dokumente bleiben beim Kunden erhalten.');")
+
+                    button.btn.btn-sm.btn-outline-danger(type="submit")
+
+                        i.bi.bi-trash.me-1
+
+                        | Vertrag löschen
+
+        //- =================================================
+        //- Vertragsdokumente
+        //- =================================================
+
+        .col-lg-7
+
+            .card.shadow-sm#documents
+
+                .card-header
+
+                    h2.h5.mb-0
+
+                        i.bi.bi-folder2-open.me-2
+
+                        | Vertragsdokumente
+
+                if !documents
+
+                    .card-body.text-muted.small Keine Berechtigung für Dokumente.
+
+                else
+
+                    if !documents.status.configured
+
+                        .card-body.small.text-muted
+
+                            i.bi.bi-cloud-slash.me-2
+
+                            | Die Dokumentenablage (Nextcloud) ist noch nicht eingerichtet.
+
+                    else if documents.folder.error
+
+                        .card-body.small.text-warning
+
+                            i.bi.bi-exclamation-triangle.me-2
+
+                            | Nextcloud ist gerade nicht erreichbar: #{documents.folder.error}
+
+                    if documents.documents.length
+
+                        ul.list-group.list-group-flush
+
+                            each doc in documents.documents
+
+                                li.list-group-item.d-flex.justify-content-between.align-items-center.gap-2
+
+                                    div.text-break
+
+                                        i.bi.me-2.text-muted(class=documentRules.fileIcon(doc.extension) aria-hidden="true")
+
+                                        a.text-decoration-none(href=`/crm/documents/${doc._id}`)= doc.fileName
+
+                                        if doc.version > 1
+
+                                            span.badge.text-bg-light.border.ms-2 Version #{doc.version}
+
+                                        .small.text-muted #{format.formatDateTime(doc.uploadedAt)} · #{documentRules.formatSize(doc.size)}
+
+                                    if documents.status.configured
+
+                                        a.btn.btn-sm.btn-outline-secondary(href=`/crm/documents/${doc._id}/download` aria-label=`Herunterladen: ${doc.fileName}`)
+
+                                            i.bi.bi-download
+
+                    else
+
+                        .card-body.text-muted.small Noch keine Dokumente zu diesem Vertrag.
+
+                    if docsAllowed
+
+                        .card-body.border-top
+
+                            form(method="POST" action=`/crm/documents${actionQuery}` enctype="multipart/form-data")
+
+                                input(type="hidden" name="referenceType" value="contract")
+
+                                input(type="hidden" name="referenceId" value=String(c._id))
+
+                                .row.g-2.align-items-end
+
+                                    .col-md-6
+
+                                        label.form-label.small(for="contractFile") Datei
+
+                                        input.form-control.form-control-sm#contractFile(type="file" name="file" required)
+
+                                    .col-md-4
+
+                                        label.form-label.small(for="contractCategory") Kategorie
+
+                                        select.form-select.form-select-sm#contractCategory(name="category")
+
+                                            each entry in documents.categories
+
+                                                option(value=entry.key selected=entry.key === "contract")= entry.label
+
+                                    .col-md-2.d-grid
+
+                                        button.btn.btn-sm.btn-primary(type="submit")
+
+                                            i.bi.bi-upload.me-1
+
+                                            | Hochladen
+
+                                p.small.text-muted.mt-2.mb-0
+                                    | Landet in Nextcloud im Kundenordner unter
+                                    code.mx-1 Contracts/
+                                    | · höchstens #{maxUploadMb} MB · gleicher Name = neue Version.

@@ -132,8 +132,8 @@ registerReference("contract", async (id) => {
 
     return {
         company,
-        title: `Vertrag ${contract.contractNumber || contract.title}`,
-        link: `/crm/companies/${company._id}/documents`,
+        title: `Vertrag ${contract.contractNumber || ""} ${contract.title}`.replace(/\s+/g, " ").trim(),
+        link: `/crm/contracts/${contract._id}`,
         folder: () => ["Contracts"]
     };
 

@@ -1,0 +1,25 @@
+//- Bausteine für Vertragsansichten (erwartet statuses, signatures, format)
+
+mixin contractStatusBadge(status)
+    - const entry = statuses[status] || { label: status, badge: "bg-light text-dark" }
+    span.badge(class=entry.badge)= entry.label
+
+//- Datum der laufenden Periode mit Hinweis auf Verlängerung
+mixin periodEnd(contract)
+    if contract.period && contract.period.endDate
+        = format.formatDate(contract.period.endDate)
+        if contract.period.renewals
+            span.small.text-muted.ms-1(title=`${contract.period.renewals}× automatisch verlängert`) (verlängert)
+        else if contract.period.expired && contract.status !== "expired"
+            span.badge.text-bg-warning.ms-1(title="Ende erreicht – Status prüfen") abgelaufen
+    else
+        span.text-muted unbefristet
+
+mixin noticeDate(contract)
+    if contract.period && contract.period.noticeDeadline
+        span(class=contract.noticeDue ? "fw-semibold text-danger" : "")
+            if contract.noticeDue
+                i.bi.bi-alarm.me-1(aria-hidden="true")
+            = format.formatDate(contract.period.noticeDeadline)
+    else
+        span.text-muted —

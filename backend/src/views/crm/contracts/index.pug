@@ -1,0 +1,184 @@
+extends ../layouts/main
+
+include _mixins
+
+block content
+
+    - const query = (extra) => { const p = new URLSearchParams(); for (const key of ["search", "status", "company", "due"]) { if (filters[key]) p.set(key, filters[key]); } for (const [k, v] of Object.entries(extra)) { if (v) p.set(k, v); else p.delete(k); } const s = p.toString(); return "/crm/contracts" + (s ? "?" + s : ""); }
+
+    .d-flex.justify-content-between.align-items-center.mb-4.flex-wrap.gap-2
+
+        div
+
+            h1.mb-0
+
+                i.bi.bi-file-earmark-text.me-2
+
+                | Verträge
+
+            small.text-muted Laufzeiten, Kündigungsfristen und automatische Verlängerung im Blick
+
+        if can("contracts.edit")
+
+            a.btn.btn-primary(href="/crm/contracts/new")
+
+                i.bi.bi-plus-lg.me-2
+
+                | Neuer Vertrag
+
+    if flash
+
+        .alert(class=`alert-${flash.type}`)= flash.text
+
+    //- Kennzahlen
+
+    .row.g-3.mb-4
+
+        .col-6.col-md-3
+
+            a.card.shadow-sm.h-100.text-decoration-none.text-reset(href=query({ status: "active", due: "" }))
+
+                .card-body
+
+                    .text-muted.small Aktiv
+
+                    .fs-3.fw-semibold= summary.byStatus.active
+
+        .col-6.col-md-3
+
+            a.card.shadow-sm.h-100.text-decoration-none.text-reset(href=query({ due: "notice", status: "" }))
+
+                .card-body
+
+                    .text-muted.small Kündigungsfrist in #{summary.warningDays} Tagen
+
+                    .fs-3.fw-semibold(class=summary.noticeDue ? "text-danger" : "")= summary.noticeDue
+
+        .col-6.col-md-3
+
+            a.card.shadow-sm.h-100.text-decoration-none.text-reset(href=query({ status: "sent", due: "" }))
+
+                .card-body
+
+                    .text-muted.small Versendet, offen
+
+                    .fs-3.fw-semibold= summary.byStatus.sent + summary.byStatus.read
+
+        .col-6.col-md-3
+
+            a.card.shadow-sm.h-100.text-decoration-none.text-reset(href=query({ status: "draft", due: "" }))
+
+                .card-body
+
+                    .text-muted.small Entwürfe
+
+                    .fs-3.fw-semibold= summary.byStatus.draft
+
+    //- Filter
+
+    form.row.g-2.mb-3(method="GET" action="/crm/contracts")
+
+        .col-md-4
+
+            input.form-control(type="search" name="search" value=filters.search placeholder="Titel, Nummer, Firma …" maxlength="100" aria-label="Suche")
+
+        .col-md-2
+
+            select.form-select(name="status" aria-label="Status")
+
+                option(value="") Alle Status
+
+                each entry, key in statuses
+
+                    option(value=key selected=filters.status === key)= entry.label
+
+        .col-md-3
+
+            select.form-select(name="company" aria-label="Firma")
+
+                option(value="") Alle Firmen
+
+                each company in companies
+
+                    option(value=String(company._id) selected=filters.company === String(company._id))= company.companyName
+
+        .col-md-3.d-flex.gap-2
+
+            .form-check.align-self-center.mb-0
+
+                input.form-check-input#filterDue(type="checkbox" name="due" value="notice" checked=filters.due === "notice")
+
+                label.form-check-label.small(for="filterDue") Frist bald
+
+            button.btn.btn-primary(type="submit")
+
+                i.bi.bi-funnel.me-1
+
+                | Filtern
+
+            a.btn.btn-outline-secondary(href="/crm/contracts" title="Zurücksetzen" aria-label="Filter zurücksetzen")
+
+                i.bi.bi-x-lg
+
+    if contracts.length
+
+        .card.shadow-sm
+
+            .table-responsive
+
+                table.table.table-hover.align-middle.mb-0
+
+                    thead.table-light
+
+                        tr
+                            th Vertrag
+                            th Firma
+                            th Status
+                            th Läuft bis
+                            th Kündigung bis
+
+                    tbody
+
+                        each contract in contracts
+
+                            tr
+
+                                td
+
+                                    a.fw-semibold.text-decoration-none(href=`/crm/contracts/${contract._id}`)= contract.title
+
+                                    .small.text-muted= contract.contractNumber
+
+                                td
+
+                                    if contract.company
+
+                                        a(href=`/crm/companies/${contract.company._id}`)= contract.company.companyName
+
+                                td
+
+                                    +contractStatusBadge(contract.status)
+
+                                td.text-nowrap
+
+                                    +periodEnd(contract)
+
+                                td.text-nowrap
+
+                                    +noticeDate(contract)
+
+    else
+
+        .card.shadow-sm
+
+            .card-body.text-center.text-muted.py-5
+
+                i.bi.bi-file-earmark-text.display-6.d-block.mb-2
+
+                if filters.search || filters.status || filters.company || filters.due
+
+                    | Keine Verträge für diese Filter.
+
+                else
+
+                    | Noch keine Verträge.

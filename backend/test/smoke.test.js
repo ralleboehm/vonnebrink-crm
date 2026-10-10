@@ -708,6 +708,110 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
 
     });
 
+    await t.test("Verträge: anlegen, Fristen, Status, Rechte", async () => {
+
+        const Contract = require("../src/models/contract.model");
+
+        assertPage(await crm.get("/crm/contracts"), "Vertragsliste");
+        assertPage(await crm.get(`/crm/contracts/new?company=${company._id}`), "Neuer Vertrag");
+
+        const form = {
+            title: "Managed Services Smoke",
+            company: String(company._id),
+            contact: String(contact._id),
+            status: "active",
+            signatureStatus: "complete",
+            startDate: "2025-01-01",
+            termMonths: "12",
+            noticePeriodMonths: "3",
+            renewalMonths: "12",
+            version: "1",
+            notes: "SLA Gold"
+        };
+
+        // Prüfung
+        const invalid = await crm.post("/crm/contracts", { ...form, noticePeriodMonths: "12" });
+        assert.equal(invalid.status, 422);
+        assert.match(invalid.text, /kürzer als die Laufzeit/);
+        assert.match(invalid.text, /Managed Services Smoke/, "Eingaben bleiben stehen");
+
+        const foreignContact = await crm.post("/crm/contracts", { ...form, contact: String(otherContact._id) });
+        assert.equal(foreignContact.status, 422);
+        assert.match(foreignContact.text, /gehört nicht zu dieser Firma/);
+
+        // Anlegen: Fristen werden berechnet
+        const created = await crm.post("/crm/contracts", form);
+        assertRedirect(created, "Vertrag anlegen");
+
+        const contract = await Contract.findOne({ title: "Managed Services Smoke" });
+        assert.ok(contract);
+        assert.match(contract.contractNumber, /^VTR-\d{6}$/);
+        assert.equal(created.location, `/crm/contracts/${contract._id}`);
+        assert.equal(contract.endDate.toISOString().slice(0, 10), "2025-12-31");
+        assert.equal(contract.noticeDeadline.toISOString().slice(0, 10), "2025-09-30");
+        assert.equal(contract.renewalDate.toISOString().slice(0, 10), "2026-01-01");
+
+        const show = await crm.get(`/crm/contracts/${contract._id}`);
+        assertPage(show, "Vertrag");
+        assert.match(show.text, /automatisch verlängert/, "Ende 2025 ist vorbei, Verlängerung läuft");
+        assert.match(show.text, /Vertragsdokumente/);
+        assert.match(show.text, /SLA Gold/);
+
+        // Liste, Filter, Firmenseite
+        assert.match((await crm.get("/crm/contracts?status=active")).text, /Managed Services Smoke/);
+        assert.doesNotMatch((await crm.get("/crm/contracts?status=draft")).text, /Managed Services Smoke/);
+        assert.match((await crm.get("/crm/contracts?search=Smoke%20GmbH")).text, /Managed Services Smoke/, "Suche nach Firma");
+        assertPage(await crm.get("/crm/contracts?due=notice&status=quatsch&company=kaputt"), "kaputte Filter");
+        assert.match((await crm.get(`/crm/companies/${company._id}`)).text, new RegExp(`/crm/contracts/${contract._id}`), "Karte auf der Firmenseite");
+
+        // Bearbeiten und Status
+        assertPage(await crm.get(`/crm/contracts/${contract._id}/edit`), "Vertrag bearbeiten");
+        assertRedirect(await crm.post(`/crm/contracts/${contract._id}/update`, { ...form, renewalMonths: "", version: "2" }), "Vertrag speichern");
+        let saved = await Contract.findById(contract._id);
+        assert.equal(saved.renewalDate, null, "ohne Verlängerung");
+        assert.equal(saved.version, 2);
+        assert.match((await crm.get(`/crm/contracts/${contract._id}`)).text, /Status prüfen/, "abgelaufen ohne Verlängerung");
+
+        assertRedirect(await crm.post(`/crm/contracts/${contract._id}/status`, { status: "terminated" }), "kündigen");
+        assert.equal((await Contract.findById(contract._id)).status, "terminated");
+        assertRedirect(await crm.post(`/crm/contracts/${contract._id}/status`, { status: "quatsch" }), "falscher Status");
+        assert.equal((await Contract.findById(contract._id)).status, "terminated");
+
+        // Vertragsdokument landet unter Contracts/ und die Seite zeigt es
+        assertRedirect(await crm.upload(`/crm/documents?returnTo=${encodeURIComponent(`/crm/contracts/${contract._id}`)}`, (() => {
+            const f = new FormData();
+            f.append("referenceType", "contract");
+            f.append("referenceId", String(contract._id));
+            f.append("category", "contract");
+            f.append("file", new Blob(["%PDF Smoke"], { type: "application/pdf" }), "Vertrag Smoke.pdf");
+            return f;
+        })()), "Vertragsdokument", `/crm/contracts/${contract._id}`);
+        assert.match((await crm.get(`/crm/contracts/${contract._id}`)).text, /Vertrag Smoke\.pdf/);
+
+        // Techniker: nur ansehen
+        const tech = createClient(baseUrl);
+        assertRedirect(await tech.post("/crm/login", { username: "smoke-tech", password: PASSWORD }), "Login Techniker");
+        assertPage(await tech.get("/crm/contracts"), "Techniker Verträge");
+        assertPage(await tech.get(`/crm/contracts/${contract._id}`), "Techniker Vertrag");
+        assert.equal((await tech.get("/crm/contracts/new")).status, 403);
+        assert.equal((await tech.post(`/crm/contracts/${contract._id}/status`, { status: "active" })).status, 403);
+
+        // Vertrieb: bearbeiten ja, löschen nein
+        const sales = createClient(baseUrl);
+        assertRedirect(await sales.post("/crm/login", { username: "smoke-sales", password: PASSWORD }), "Login Vertrieb");
+        assertPage(await sales.get(`/crm/contracts/${contract._id}/edit`), "Vertrieb bearbeiten");
+        assert.equal((await sales.post(`/crm/contracts/${contract._id}/delete`, {})).status, 403);
+
+        // Löschen (Admin)
+        assert.equal((await crm.get("/crm/contracts/kaputt")).status, 404);
+        assertRedirect(await crm.post(`/crm/contracts/${contract._id}/delete`, {}), "Vertrag löschen", "/crm/contracts");
+        saved = await Contract.findById(contract._id);
+        assert.equal(saved.isDeleted, true);
+        assert.equal((await crm.get(`/crm/contracts/${contract._id}`)).status, 404);
+        assert.doesNotMatch((await crm.get("/crm/contracts")).text, /Managed Services Smoke/);
+
+    });
+
     await t.test("CRM: Firma mit Adresse und Branche / Gruppen", async () => {
 
         const created = await crm.post("/crm/companies", {

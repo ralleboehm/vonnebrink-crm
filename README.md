@@ -379,10 +379,8 @@ Ticket-Anhänge und Asset-Dateien bleiben bewusst lokal (`storage/`).
   Download und Projektunterlage lassen sich „für das Kundenportal freigeben“. Das Portal zeigt sie
   noch nicht an; `document.service` liefert dafür schon `portalDocuments(firma)` und
   `getPortalDownload(id, firma)` (nur eigene, freigegebene Dokumente).
-- **Verträge (vorbereitet):** `models/contract.model.js` mit Status (Entwurf, Versendet, Gelesen,
-  Signiert, Aktiv, Abgelaufen, Gekündigt), Unterschrift, Laufzeit, Beginn/Ende, Kündigungsfrist,
-  Verlängerung und Version; Fristen berechnet `utils/contractRules.js`. Dokumente zu einem Vertrag
-  landen immer unter `Contracts/` und erscheinen im Dokumente-Reiter der Firma.
+- **Verträge:** Dokumente zu einem Vertrag landen immer unter `Contracts/` und erscheinen auf der
+  Vertragsseite und im Dokumente-Reiter der Firma (siehe Abschnitt Verträge).
 
 | Recht | Admin | Techniker | Vertrieb |
 |---|---|---|---|
@@ -398,6 +396,22 @@ und Log (`NEXTCLOUD_DEBUG=1` zeigt jede Anfrage). Fachlogik: `services/document.
 Ereignisse: `document.uploaded`, `.downloaded`, `.updated`, `.deleted`, `.shared`,
 `.versionCreated`. Die Tests laufen gegen einen Nextcloud-Nachbau (`test/helpers/fakeNextcloud.js`).
 
+## Verträge
+
+Menü **Kunden → Verträge** (`/crm/contracts`), außerdem eine Karte auf jeder Firmenseite.
+
+- **Vertrag:** Nummer (VTR-000001), Titel, Firma, Ansprechpartner, Status (Entwurf, Versendet,
+  Gelesen, Signiert, Aktiv, Abgelaufen, Gekündigt), Unterschrift, Version, Notizen.
+- **Fristen** werden aus Beginn, Laufzeit, Kündigungsfrist und automatischer Verlängerung berechnet
+  (wie § 188 BGB: 01.01. + 12 Monate → 31.12.; 31.01. + 1 Monat → 28./29.02.). Bei automatischer
+  Verlängerung zeigt das CRM immer die **laufende** Periode und deren „Kündigung bis“.
+- **Übersicht:** aktive Verträge, „Kündigungsfrist in 60 Tagen“, offene und Entwürfe; Filter nach
+  Status, Firma, Suche und „Frist bald“. Auf der Vertragsseite ein Hinweis, wenn die Frist naht oder
+  ein Vertrag ohne Verlängerung abgelaufen ist.
+- **Status** per Knopf weiterschalten (Entwurf → Versendet → Gelesen/Signiert → Aktiv → Gekündigt).
+- **Vertragsdokumente** direkt auf der Vertragsseite hochladen (Nextcloud, `Contracts/`).
+- Regeln und Fristen: `utils/contractRules.js`, Fachlogik: `services/contract.service.js`.
+
 ## Rollen
 
 | Bereich | Administrator | Techniker | Vertrieb |
@@ -408,6 +422,7 @@ Ereignisse: `document.uploaded`, `.downloaded`, `.updated`, `.deleted`, `.shared
 | Marketing (Kampagnen, Empfänger, Gruppen) | ✔ | – | ✔ |
 | Vertrieb (Pipeline, Verkaufschancen; Angebote später) | ✔ | – | ✔ |
 | Dokumente (Nextcloud) | ✔ | lesen, hochladen | Verträge, Angebote: lesen, hochladen |
+| Verträge | ✔ (auch löschen) | ansehen | ansehen, anlegen, bearbeiten |
 | Kundenumfragen (NPS) | ✔ | – | – |
 | Benutzer, Import & Export, Action1, E-Mail-Protokoll | ✔ | – | – |
 

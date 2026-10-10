@@ -7,6 +7,9 @@ const tagUtils = require("../../utils/tags");
 const opportunityService = require("../../services/opportunity.service");
 const salesRules = require("../../utils/salesRules");
 const { can } = require("../../core/permissions");
+const contractService = require("../../services/contract.service");
+const contractRules = require("../../utils/contractRules");
+const format = require("../../utils/format");
 
 // Alle Firmen anzeigen
 exports.index = async (req, res, next) => {
@@ -80,11 +83,12 @@ exports.show = async (req, res, next) => {
         // Verkaufschancen nur für Admin und Vertrieb
         const showSales = can(req.session.user, "sales.view");
 
-        const [recentTickets, assets, assetSummary, opportunities] = await Promise.all([
+        const [recentTickets, assets, assetSummary, opportunities, contracts] = await Promise.all([
             ticketService.getRecentByCompany(company._id, 5),
             assetService.getByCompany(company._id),
             assetService.summary(company._id),
-            showSales ? opportunityService.findByCompany(company._id) : null
+            showSales ? opportunityService.findByCompany(company._id) : null,
+            can(req.session.user, "contracts.view") ? contractService.findByCompany(company._id) : null
         ]);
 
         res.render("companies/show", {
@@ -97,7 +101,10 @@ exports.show = async (req, res, next) => {
             labels: assetLabels,
             opportunities,
             salesStageLabels: salesRules.STAGE_LABELS,
-            salesEuro: salesRules.formatEuro
+            salesEuro: salesRules.formatEuro,
+            contracts,
+            statuses: contractRules.STATUSES,
+            format
         });
 
     } catch (err) {

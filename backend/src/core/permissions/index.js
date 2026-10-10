@@ -78,6 +78,7 @@ const PERMISSIONS = Object.freeze({
     INVOICES_EDIT: "invoices.edit",
     CONTRACTS_VIEW: "contracts.view",
     CONTRACTS_EDIT: "contracts.edit",
+    CONTRACTS_DELETE: "contracts.delete",
     REPORTS_VIEW: "reports.view",
 
     // Kundenportal
@@ -114,9 +115,9 @@ const ROLE_PERMISSIONS = Object.freeze({
 
     admin: ["*"],
 
-    technician: [...INTERNAL_BASE, "tickets.*", "assets.*", "documents.view", "documents.upload"],
+    technician: [...INTERNAL_BASE, "tickets.*", "assets.*", "documents.view", "documents.upload", "contracts.view"],
 
-    sales: [...INTERNAL_BASE, "tickets.list", "assets.view", "marketing.*", "sales.*", "quotes.*", "documents.view", "documents.upload"],
+    sales: [...INTERNAL_BASE, "tickets.list", "assets.view", "marketing.*", "sales.*", "quotes.*", "documents.view", "documents.upload", "contracts.view", "contracts.edit"],
 
     accounting: ["companies.view", "contacts.view", "invoices.*", "contracts.*", "reports.view", "search.use", "notifications.view", "documents.view", "documents.upload"],
 
