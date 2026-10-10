@@ -438,8 +438,8 @@ Karten und Rollen: `utils/dashboardCards.js`, Daten: `services/dashboard.service
 | Bereich | Administrator | Techniker | Vertrieb |
 |---|---|---|---|
 | Firmen, Kontakte | ✔ | ✔ | ✔ |
-| Tickets | ✔ | ✔ | nur Liste (Nummer, Betreff, Firma, Status) – kein Öffnen, keine Nachrichten/Anhänge |
-| Assets | ✔ | ✔ | nur ansehen |
+| Tickets | ✔ | ✔ | – (nur Übersicht auf der Firmenseite: Nummer, Betreff, Status – kein Öffnen, nicht antworten) |
+| Assets | ✔ | ✔ | – |
 | Marketing (Kampagnen, Empfänger, Gruppen) | ✔ | – | ✔ |
 | Vertrieb (Pipeline, Verkaufschancen; Angebote später) | ✔ | – | ✔ |
 | Dokumente (Nextcloud) | ✔ | lesen, hochladen | Verträge, Angebote: lesen, hochladen |

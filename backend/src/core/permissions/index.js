@@ -16,8 +16,9 @@
 // Rollen (Stand: Rechte-Konzept Oktober 2026)
 //   Admin:     alles
 //   Techniker: Firmen, Kontakte, Tickets, Assets
-//   Vertrieb:  Firmen, Kontakte, Ticketliste OHNE Inhalt (tickets.list),
-//              Assets nur ansehen, Marketing, später Sales/Angebote
+//   Vertrieb:  Firmen, Kontakte, Marketing, Vertrieb, Verträge – keine
+//              Tickets und Assets (offene Tickets einer Firma sieht er nur
+//              als Übersicht auf der Firmenseite, ohne Inhalt)
 //
 // Später: Rollen/Rechte aus der Datenbank (models/role.model.js und
 // models/permission.model.js existieren bereits) – dann wird nur
@@ -117,7 +118,7 @@ const ROLE_PERMISSIONS = Object.freeze({
 
     technician: [...INTERNAL_BASE, "tickets.*", "assets.*", "documents.view", "documents.upload", "contracts.view"],
 
-    sales: [...INTERNAL_BASE, "tickets.list", "assets.view", "marketing.*", "sales.*", "quotes.*", "documents.view", "documents.upload", "contracts.view", "contracts.edit"],
+    sales: [...INTERNAL_BASE, "marketing.*", "sales.*", "quotes.*", "documents.view", "documents.upload", "contracts.view", "contracts.edit"],
 
     accounting: ["companies.view", "contacts.view", "invoices.*", "contracts.*", "reports.view", "search.use", "notifications.view", "documents.view", "documents.upload"],
 

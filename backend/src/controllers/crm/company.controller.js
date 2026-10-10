@@ -85,8 +85,8 @@ exports.show = async (req, res, next) => {
 
         const [recentTickets, assets, assetSummary, opportunities, contracts] = await Promise.all([
             ticketService.getRecentByCompany(company._id, 5),
-            assetService.getByCompany(company._id),
-            assetService.summary(company._id),
+            can(req.session.user, "assets.view") ? assetService.getByCompany(company._id) : [],
+            can(req.session.user, "assets.view") ? assetService.summary(company._id) : null,
             showSales ? opportunityService.findByCompany(company._id) : null,
             can(req.session.user, "contracts.view") ? contractService.findByCompany(company._id) : null
         ]);

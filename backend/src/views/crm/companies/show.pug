@@ -413,128 +413,130 @@ block content
     // Assets
     // =====================================================
 
-    .card.shadow-sm.mb-4
+    if can("assets.view")
 
-        .card-header.d-flex.justify-content-between.align-items-center.flex-wrap.gap-2
+        .card.shadow-sm.mb-4
 
-            div
+            .card-header.d-flex.justify-content-between.align-items-center.flex-wrap.gap-2
 
-                h5.mb-0
+                div
 
-                    i.bi.bi-pc-display.me-2
+                    h5.mb-0
 
-                    | Assets
+                        i.bi.bi-pc-display.me-2
 
-                small.text-muted
+                        | Assets
 
-                    | #{assetSummary.active} in Betrieb · #{assetSummary.workstations} Arbeitsplätze · #{assetSummary.servers} Server
-                    if assetSummary.criticalUpdates
+                    small.text-muted
 
-                        |  · 
+                        | #{assetSummary.active} in Betrieb · #{assetSummary.workstations} Arbeitsplätze · #{assetSummary.servers} Server
+                        if assetSummary.criticalUpdates
 
-                        span.text-danger #{assetSummary.criticalUpdates} mit fehlenden kritischen Updates
+                            |  · 
 
-            div
+                            span.text-danger #{assetSummary.criticalUpdates} mit fehlenden kritischen Updates
 
-                a.btn.btn-sm.btn-outline-primary.me-2(href=`/crm/assets?company=${company._id}`)
+                div
 
-                    i.bi.bi-list.me-2
+                    a.btn.btn-sm.btn-outline-primary.me-2(href=`/crm/assets?company=${company._id}`)
 
-                    | Alle anzeigen
+                        i.bi.bi-list.me-2
 
-                if can("assets.edit")
+                        | Alle anzeigen
 
-                    a.btn.btn-sm.btn-primary(href=`/crm/assets/new?company=${company._id}`)
+                    if can("assets.edit")
 
-                        i.bi.bi-plus-circle.me-2
+                        a.btn.btn-sm.btn-primary(href=`/crm/assets/new?company=${company._id}`)
 
-                        | Neues Asset
+                            i.bi.bi-plus-circle.me-2
 
-        .card-body.p-0
+                            | Neues Asset
 
-            if assets.length
+            .card-body.p-0
 
-                .table-responsive
+                if assets.length
 
-                    table.table.table-hover.align-middle.mb-0
+                    .table-responsive
 
-                        thead.table-light
+                        table.table.table-hover.align-middle.mb-0
 
-                            tr
-
-                                th(style="width: 1%")
-                                th Gerät
-                                th Typ
-                                th Betriebssystem
-                                th Benutzer
-                                th Status
-                                th Hinweise
-
-                        tbody
-
-                            each asset in assets
+                            thead.table-light
 
                                 tr
 
-                                    td
+                                    th(style="width: 1%")
+                                    th Gerät
+                                    th Typ
+                                    th Betriebssystem
+                                    th Benutzer
+                                    th Status
+                                    th Hinweise
 
-                                        +onlineDot(asset)
+                            tbody
 
-                                    td
+                                each asset in assets
 
-                                        a.text-decoration-none(href=`/crm/assets/${asset._id}`)
+                                    tr
 
-                                            strong= asset.name
+                                        td
 
-                                        if asset.serialNumber
+                                            +onlineDot(asset)
 
-                                            br
+                                        td
 
-                                            small.text-muted SN #{asset.serialNumber}
+                                            a.text-decoration-none(href=`/crm/assets/${asset._id}`)
 
-                                    td.text-nowrap
+                                                strong= asset.name
 
-                                        +typeLabel(asset.type)
+                                            if asset.serialNumber
 
-                                    td
+                                                br
 
-                                        small= asset.operatingSystem || "-"
+                                                small.text-muted SN #{asset.serialNumber}
 
-                                    td
+                                        td.text-nowrap
 
-                                        if asset.contact
+                                            +typeLabel(asset.type)
 
-                                            | #{asset.contact.firstName} #{asset.contact.lastName}
+                                        td
 
-                                        else if asset.lastUser
+                                            small= asset.operatingSystem || "-"
 
-                                            small.text-muted= asset.lastUser
+                                        td
 
-                                        else
+                                            if asset.contact
 
-                                            | -
+                                                | #{asset.contact.firstName} #{asset.contact.lastName}
 
-                                    td
+                                            else if asset.lastUser
 
-                                        +statusBadge(asset.status)
+                                                small.text-muted= asset.lastUser
 
-                                    td.text-nowrap
+                                            else
 
-                                        +action1Flags(asset)
+                                                | -
 
-            else
+                                        td
 
-                .p-4.text-center.text-muted
+                                            +statusBadge(asset.status)
 
-                    i.bi.bi-pc-display.display-6.d-block.mb-2
+                                        td.text-nowrap
 
-                    | Für diese Firma sind noch keine Assets erfasst.
+                                            +action1Flags(asset)
 
-                    if !(company.action1 && company.action1.organizationId)
+                else
 
-                        br
+                    .p-4.text-center.text-muted
 
-                        small Verknüpfen Sie die Firma unter „Action1“ mit einer Organisation, um Geräte automatisch zu übernehmen.
+                        i.bi.bi-pc-display.display-6.d-block.mb-2
+
+                        | Für diese Firma sind noch keine Assets erfasst.
+
+                        if !(company.action1 && company.action1.organizationId)
+
+                            br
+
+                            small Verknüpfen Sie die Firma unter „Action1“ mit einer Organisation, um Geräte automatisch zu übernehmen.
 
     // =====================================================
     // Letzte Tickets
@@ -550,13 +552,15 @@ block content
 
                 | Letzte Tickets
 
-            a.btn.btn-sm.btn-outline-primary(
-                href=`/crm/tickets?company=${company._id}`
-            )
+            if can("tickets.list")
 
-                i.bi.bi-list.me-2
+                a.btn.btn-sm.btn-outline-primary(
+                    href=`/crm/tickets?company=${company._id}`
+                )
 
-                | Alle Tickets anzeigen
+                    i.bi.bi-list.me-2
+
+                    | Alle Tickets anzeigen
 
         .card-body.p-0
 

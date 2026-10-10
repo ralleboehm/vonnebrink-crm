@@ -1550,12 +1550,12 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
 
     });
 
-    await t.test("Rollen: Vertrieb – Ticketliste ohne Inhalt, Assets lesen, Marketing", async () => {
+    await t.test("Rollen: Vertrieb – keine Tickets und Assets, Ticket-Übersicht nur bei der Firma", async () => {
 
         const sales = createClient(baseUrl);
         assertRedirect(await sales.post("/crm/login", { username: "smoke-sales", password: PASSWORD }), "Login Vertrieb");
 
-        for (const url of ["/crm", "/crm/companies", `/crm/companies/${company._id}`, "/crm/contacts", `/crm/contacts/${contact._id}`, "/crm/assets", `/crm/assets/${manualAsset._id}`, "/crm/marketing", "/crm/marketing/groups", "/crm/search?q=Smoke"]) {
+        for (const url of ["/crm", "/crm/companies", `/crm/companies/${company._id}`, "/crm/contacts", `/crm/contacts/${contact._id}`, "/crm/marketing", "/crm/marketing/groups", "/crm/search?q=Smoke"]) {
             assertPage(await sales.get(url), `Vertrieb ${url}`);
         }
 
@@ -1563,44 +1563,37 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         assert.match(salesDashboard, /Heute zu tun/, "Vertriebs-Dashboard");
         assert.match(salesDashboard, /Offene Chancen/);
         assert.doesNotMatch(salesDashboard, /Meine offenen Tickets|Verwaltete Assets/, "keine Technikkarten");
+        assert.doesNotMatch(salesDashboard, /href="\/crm\/tickets"|href="\/crm\/assets"/, "kein Service-Menü");
+        assert.doesNotMatch(salesDashboard, new RegExp(`/crm/tickets/${ticket._id}`), "Dashboard ohne Ticket-Link");
 
-        // Liste: Betreff und Status ja, aber kein Link ins Ticket
-        const list = await sales.get("/crm/tickets");
-        assertPage(list, "Vertrieb Ticketliste");
-        assert.match(list.text, /Smoke Drucker/);
-        assert.doesNotMatch(list.text, new RegExp(`/crm/tickets/${ticket._id}`), "kein Link ins Ticket");
-        assert.doesNotMatch(list.text, /\/crm\/tickets\/new/, "kein Neues Ticket");
+        // Firmenseite: offene Tickets als Übersicht (Betreff, Status) – ohne Link, ohne Assets
+        const companyPage = (await sales.get(`/crm/companies/${company._id}`)).text;
+        assert.match(companyPage, /Smoke Drucker/, "Ticket-Übersicht bei der Firma");
+        assert.doesNotMatch(companyPage, new RegExp(`/crm/tickets/${ticket._id}`), "Firma ohne Ticket-Link");
+        assert.doesNotMatch(companyPage, /\/crm\/tickets\?company=/, "kein „Alle Tickets anzeigen“");
+        assert.doesNotMatch(companyPage, /SMOKE-PC/, "keine Assets");
+        assert.doesNotMatch((await sales.get(`/crm/contacts/${contact._id}`)).text, /Zugewiesene Assets/);
 
-        // Suche in der Liste nicht in der Beschreibung
-        assert.doesNotMatch((await sales.get("/crm/tickets?search=Druckt")).text, /Smoke Drucker/, "Beschreibung nicht durchsuchbar");
-
-        assert.doesNotMatch((await sales.get(`/crm/companies/${company._id}`)).text, new RegExp(`/crm/tickets/${ticket._id}`), "Firma ohne Ticket-Link");
-        assert.doesNotMatch((await sales.get("/crm")).text, new RegExp(`/crm/tickets/${ticket._id}`), "Dashboard ohne Ticket-Link");
-
-        // Ticket selbst gesperrt
+        // Tickets und Assets gesperrt – auch die Liste
         const crmAttachment = await Attachment.findOne({ ticket: ticket._id, originalName: "crm.txt" });
 
-        for (const url of [`/crm/tickets/${ticket._id}`, `/crm/tickets/${ticket._id}/edit`, "/crm/tickets/new", `/crm/tickets/${ticket._id}/attachments/${crmAttachment._id}`]) {
+        for (const url of ["/crm/tickets", `/crm/tickets/${ticket._id}`, `/crm/tickets/${ticket._id}/edit`, "/crm/tickets/new", `/crm/tickets/${ticket._id}/attachments/${crmAttachment._id}`, "/crm/assets", `/crm/assets/${manualAsset._id}`, "/crm/assets/new"]) {
             assert.equal((await sales.get(url)).status, 403, `Vertrieb ${url}`);
         }
 
         const messages = await mongoose.connection.db.collection("ticketmessages").countDocuments();
-        assert.equal((await sales.post(`/crm/tickets/${ticket._id}/messages`, { message: "darf nicht" })).status, 403);
+        assert.equal((await sales.post(`/crm/tickets/${ticket._id}/messages`, { message: "darf nicht" })).status, 403, "nicht antworten");
         assert.equal(await mongoose.connection.db.collection("ticketmessages").countDocuments(), messages);
         assert.equal((await sales.post("/crm/tickets", { company: String(company._id), subject: "Vertrieb", description: "x" })).status, 403);
         assert.equal((await sales.post(`/crm/tickets/${ticket._id}/delete`, {})).status, 403);
-
-        // Assets: nur lesen
-        assert.equal((await sales.get("/crm/assets/new")).status, 403);
-        assert.equal((await sales.get(`/crm/assets/${manualAsset._id}/edit`)).status, 403);
         assert.equal((await sales.post(`/crm/assets/${manualAsset._id}/delete`, {})).status, 403);
         assert.ok(await Asset.exists({ _id: manualAsset._id, isDeleted: false }));
-        assert.doesNotMatch((await sales.get(`/crm/assets/${manualAsset._id}`)).text, /Asset löschen/);
 
-        // Suche: keine Tickets, kein Sprung ins Ticket
+        // Suche: keine Tickets und Assets, kein Sprung hinein
         assertPage(await sales.get("/crm/search?q=TIC-900001"), "Nummernsprung gesperrt");
         const suggest = JSON.parse((await sales.get("/crm/search/suggest?q=Smoke")).text);
         assert.equal(suggest.tickets.total, 0, "Vorschläge ohne Tickets");
+        assert.equal(suggest.assets.total, 0, "Vorschläge ohne Assets");
         assert.ok(suggest.companies.total >= 1);
 
         // Marketing ändern erlaubt
