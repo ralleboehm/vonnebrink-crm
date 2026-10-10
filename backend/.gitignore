@@ -7,3 +7,6 @@ logs/
 storage/imports/
 storage/temp/
 storage/tickets/
+
+# Alle Dateien der App (Anhänge, Uploads) – nie ins Repo
+storage/

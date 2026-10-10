@@ -66,6 +66,16 @@ app.set("views", [
 ]);
 
 // ----------------------------------------------------
+// Hinter nginx (VPS)
+// ----------------------------------------------------
+//
+// nginx auf demselben Server reicht https und die echte Besucher-IP weiter
+// (X-Forwarded-Proto / X-Forwarded-For). Nur Anfragen von 127.0.0.1 wird
+// das geglaubt – nötig für sichere Cookies und die Login-Sperre je IP.
+
+app.set("trust proxy", (process.env.TRUST_PROXY || "").trim() || "loopback");
+
+// ----------------------------------------------------
 // Static Files
 // ----------------------------------------------------
 
