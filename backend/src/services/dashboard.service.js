@@ -49,15 +49,18 @@ exports.getOverview = async (user, now = new Date()) => {
 
     // Mehrfach gebrauchte Abfragen nur einmal ausführen
     const once = {};
+    // Wichtig: das Ergebnis (Promise) merken, nicht die Mongoose-Abfrage –
+    // eine Abfrage lässt sich nur einmal ausführen.
     const shared = (key, load) => {
-        if (!once[key]) once[key] = load();
+        if (!once[key]) once[key] = Promise.resolve().then(load);
         return once[key];
     };
 
     const openOpportunities = () => shared("opps", () => Opportunity.find({ isDeleted: false, stage: { $in: salesRules.OPEN_STAGES } }, "-history")
         .populate("company", "companyName")
         .populate("owner", "firstName lastName")
-        .lean());
+        .lean()
+        .exec());
 
     const contractSummary = () => shared("contracts", () => contractService.summary(now));
 
