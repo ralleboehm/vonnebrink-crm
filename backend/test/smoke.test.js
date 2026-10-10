@@ -1200,10 +1200,11 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         assert.equal((await Campaign.findById(campaign._id)).status, "draft");
 
         // Versand mit (simuliertem) Mailserver
-        const original = { isConfigured: emailService.isConfigured, send: emailService.send, appUrl: process.env.APP_URL };
+        const original = { isConfigured: emailService.isConfigured, send: emailService.send, appUrl: process.env.APP_URL, portalUrl: process.env.PORTAL_URL };
         const outbox = [];
 
         emailService.isConfigured = () => true;
+        delete process.env.PORTAL_URL;
 
         // CRM nur im Büronetz: kein Versand (Abmeldelinks wären für Kunden tot)
         process.env.APP_URL = "http://192.168.178.35:3000";
@@ -1307,6 +1308,9 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
 
             if (original.appUrl === undefined) delete process.env.APP_URL;
             else process.env.APP_URL = original.appUrl;
+
+            if (original.portalUrl === undefined) delete process.env.PORTAL_URL;
+            else process.env.PORTAL_URL = original.portalUrl;
 
         }
 

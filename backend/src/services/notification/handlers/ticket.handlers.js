@@ -128,7 +128,7 @@ function ticketData(ticket, ctx) {
         priority: PRIORITY_LABELS[ticket.priority] || ticket.priority || "",
         category: CATEGORY_LABELS[ticket.category] || ticket.category || "",
         ticketLink: ctx.appUrl(`/crm/tickets/${ticket._id}`),
-        portalTicketLink: ctx.appUrl(`/portal/tickets/${ticket._id}`)
+        portalTicketLink: customerUrl(ctx, `/portal/tickets/${ticket._id}`)
     };
 
 }
@@ -275,6 +275,13 @@ function contactOf(ticket) {
 
 }
 
+// Links für Kunden zeigen aufs Portal (PORTAL_URL), interne aufs CRM
+function customerUrl(ctx, path) {
+
+    return typeof ctx.portalUrl === "function" ? ctx.portalUrl(path) : ctx.appUrl(path);
+
+}
+
 /**
  * Link ins Kundenportal nur, wenn der Kontakt sich dort auch anmelden kann
  */
@@ -285,7 +292,7 @@ async function portalLinkFor(ticket, ctx) {
     if (!contact || !contact._id || typeof ctx.hasActivePortalAccount !== "function") return undefined;
 
     return (await ctx.hasActivePortalAccount(contact._id))
-        ? ctx.appUrl(`/portal/tickets/${ticket._id}`)
+        ? customerUrl(ctx, `/portal/tickets/${ticket._id}`)
         : undefined;
 
 }

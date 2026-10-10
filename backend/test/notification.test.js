@@ -175,6 +175,22 @@ test("E-Mail: Konfiguration und Links aus der Umgebung", () => {
 
 });
 
+test("E-Mail: PORTAL_URL für Kunden-Links, sonst APP_URL", () => {
+
+    const env = { APP_URL: "https://crm.x.de", PORTAL_URL: "https://portal.x.de/" };
+
+    assert.equal(email.portalUrl("/portal/tickets/1", env), "https://portal.x.de/portal/tickets/1");
+    assert.equal(email.appUrl("/crm/tickets/1", env), "https://crm.x.de/crm/tickets/1");
+    assert.equal(email.portalUrl("/email/umfrage/abc", { APP_URL: "https://crm.x.de" }), "https://crm.x.de/email/umfrage/abc");
+
+    // Abmeldelinks hängen an der Kunden-Adresse
+    assert.equal(email.publicAppUrlProblem(env), null);
+    assert.equal(email.publicAppUrlProblem({ APP_URL: "http://192.168.1.5:3000", PORTAL_URL: "https://portal.x.de" }), null);
+    assert.match(email.publicAppUrlProblem({ APP_URL: "https://crm.x.de", PORTAL_URL: "http://192.168.1.5" }), /^PORTAL_URL zeigt auf 192\.168\.1\.5/);
+    assert.match(email.publicAppUrlProblem({ APP_URL: "http://localhost:3000" }), /^APP_URL zeigt auf localhost/);
+
+});
+
 test("E-Mail: ohne SMTP wird nichts verschickt, nur protokolliert", async () => {
 
     const saved = { host: process.env.SMTP_HOST, from: process.env.MAIL_FROM };
@@ -395,6 +411,11 @@ test("ticket.updated aus dem CRM: Antwort per E-Mail an den Kunden, interne Noti
     assert.equal(mail.data.message, "Bitte neu starten.");
     assert.equal(mail.data.portalLink, "https://crm.example.de/portal/tickets/t1");
     assert.equal(mail.data.noPortal, "");
+
+    // Eigene Portal-Adresse: Kunden-Link aufs Portal
+    ({ ctx, calls } = fakeContext({ portalUrl: (p) => `https://portal.example.de${p}` }));
+    await ticketHandlers.ticketUpdated({ ticket: "t1", kind: "message", source: "crm", authorName: "Ralf Böhm", message: "Bitte neu starten." }, ctx);
+    assert.equal(calls.emails[0].data.portalLink, "https://portal.example.de/portal/tickets/t1");
 
     // Datei
     ({ ctx, calls } = fakeContext());

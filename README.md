@@ -206,8 +206,11 @@ die globale Suche findet Assets auch über Seriennummer, IP und Benutzer, und
 ## Benachrichtigungen & E-Mail
 
 - **Glocke** in der Navigation: ungelesene Benachrichtigungen, Übersicht unter `/crm/notifications`.
-- **E-Mail** über Nodemailer, Einstellungen nur in der `.env` (`SMTP_*`, `MAIL_FROM`, `APP_URL`).
+- **E-Mail** über Nodemailer, Einstellungen nur in der `.env` (`SMTP_*`, `MAIL_FROM`, `APP_URL`, `PORTAL_URL`).
   Ohne `SMTP_HOST` werden Mails nicht verschickt, sondern nur im Log angezeigt.
+- **Zwei Adressen:** `APP_URL` (z. B. `https://crm.vonnebrink.com`) für Links an Mitarbeiter,
+  `PORTAL_URL` (z. B. `https://portal.vonnebrink.com`) für alles, was Kunden bekommen: Portal,
+  Ticket-Links, Umfrage, Abmelde- und Bestätigungslinks. Ohne `PORTAL_URL` gilt `APP_URL`.
 - **Vorlagen** in `backend/src/email-templates/` mit Platzhaltern wie `{{customerName}}`,
   `{{ticketNumber}}` und Abschnitten `{{#if agent}} … {{/if}}`.
 - **Neues Ticket** (CRM oder Portal): Glocke + E-Mail an Admins/Techniker, Eingangsbestätigung
@@ -279,7 +282,7 @@ Menü **Marketing** (Rollen: Admin und Vertrieb).
 
 Ohne Mailserver (`SMTP_HOST`, `MAIL_FROM` in der `.env`) lässt sich alles vorbereiten, aber nicht versenden.
 
-**Öffentliche Adresse nötig:** Kampagnen werden nur verschickt, wenn `APP_URL` eine aus dem Internet
+**Öffentliche Adresse nötig:** Kampagnen werden nur verschickt, wenn `PORTAL_URL` (bzw. `APP_URL`) eine aus dem Internet
 erreichbare Adresse ist (z. B. `APP_URL=https://crm.vonnebrink.com`), denn daraus entsteht der Abmeldelink.
 Mit `localhost`, `192.168.…` usw. ist „Senden“ gesperrt; Test-Mails an sich selbst gehen trotzdem.
 

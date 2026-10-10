@@ -146,7 +146,7 @@ function unsubscribeUrl(contact) {
 
     const token = contact && contact.marketing && contact.marketing.unsubscribeToken;
 
-    return token ? emailService.appUrl(`/email/abmelden/${token}`) : null;
+    return token ? emailService.portalUrl(`/email/abmelden/${token}`) : null;
 
 }
 
@@ -208,7 +208,7 @@ async function requestDoubleOptIn(contactId, { by } = {}) {
     const result = await emailService.sendTemplate("marketing-confirm", contact.email, {
         customerName: salutation ? `${salutation} ${contact.lastName}` : `${contact.firstName} ${contact.lastName}`.trim(),
         company: contact.company ? contact.company.companyName : "",
-        confirmLink: emailService.appUrl(`/email/bestaetigen/${token}`)
+        confirmLink: emailService.portalUrl(`/email/bestaetigen/${token}`)
     });
 
     return { contact, token, result };

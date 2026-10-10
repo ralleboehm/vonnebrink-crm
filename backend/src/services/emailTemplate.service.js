@@ -186,7 +186,7 @@ function htmlToText(html) {
  */
 function defaults(env = process.env) {
 
-    const { appUrl } = require("./email.service");
+    const { appUrl, portalUrl } = require("./email.service");
 
     const brandUrl = (env.MAIL_BRAND_URL || "https://vonnebrink.com").trim().replace(/\/+$/, "");
 
@@ -198,7 +198,7 @@ function defaults(env = process.env) {
         footerNote: "Diese E-Mail wurde automatisch erstellt.",
         year: new Date().getFullYear(),
         appUrl: appUrl("", env),
-        portalLink: appUrl("/portal", env)
+        portalLink: portalUrl("/portal", env)
     };
 
 }

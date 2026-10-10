@@ -7,7 +7,11 @@
 // Alle Einstellungen kommen aus der .env (siehe .env.example):
 //
 //   SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS
-//   MAIL_FROM, MAIL_REPLY_TO, APP_URL
+//   MAIL_FROM, MAIL_REPLY_TO, APP_URL, PORTAL_URL
+//
+// APP_URL    Adresse des CRM (Links für Mitarbeiter, z. B. crm.vonnebrink.com)
+// PORTAL_URL Adresse für Kunden (Portal, Umfrage, Abmelden, z. B.
+//            portal.vonnebrink.com). Leer = wie APP_URL.
 //
 // Ist SMTP_HOST nicht gesetzt, werden E-Mails NICHT verschickt, sondern
 // nur im Log angezeigt. So lässt sich lokal entwickeln, ohne dass Kunden
@@ -84,7 +88,8 @@ function configFromEnv(env = process.env) {
         pass: env.SMTP_PASS || "",
         from: (env.MAIL_FROM || "").trim(),
         replyTo: (env.MAIL_REPLY_TO || "").trim() || null,
-        appUrl: (env.APP_URL || "").trim().replace(/\/+$/, "")
+        appUrl: (env.APP_URL || "").trim().replace(/\/+$/, ""),
+        portalUrl: (env.PORTAL_URL || "").trim().replace(/\/+$/, "")
     };
 
 }
@@ -103,13 +108,29 @@ function isConfigured(env = process.env) {
 /**
  * Absolute Adresse für Links in E-Mails, z. B. appUrl("/portal")
  */
-function appUrl(path = "", env = process.env) {
-
-    const base = configFromEnv(env).appUrl || `http://localhost:${env.PORT || 3000}`;
+function joinUrl(base, path) {
 
     if (!path) return base;
 
     return `${base}${path.startsWith("/") ? "" : "/"}${path}`;
+
+}
+
+function appUrl(path = "", env = process.env) {
+
+    return joinUrl(configFromEnv(env).appUrl || `http://localhost:${env.PORT || 3000}`, path);
+
+}
+
+/**
+ * Absolute Adresse für Links an Kunden (Portal, Umfrage, Abmelden …):
+ * PORTAL_URL, sonst APP_URL
+ */
+function portalUrl(path = "", env = process.env) {
+
+    const config = configFromEnv(env);
+
+    return config.portalUrl ? joinUrl(config.portalUrl, path) : appUrl(path, env);
 
 }
 
@@ -145,12 +166,15 @@ function isPrivateHost(hostname) {
 }
 
 /**
- * Ist APP_URL eine Adresse, die Empfänger aus dem Internet öffnen können?
- * (Nötig für Abmeldelinks in Kampagnen.) Gibt eine Erklärung oder null zurück.
+ * Ist die Kunden-Adresse (PORTAL_URL, sonst APP_URL) aus dem Internet
+ * erreichbar? (Nötig für Abmeldelinks in Kampagnen.) Gibt eine Erklärung
+ * oder null zurück.
  */
 function publicAppUrlProblem(env = process.env) {
 
-    const url = configFromEnv(env).appUrl;
+    const config = configFromEnv(env);
+    const name = config.portalUrl ? "PORTAL_URL" : "APP_URL";
+    const url = config.portalUrl || config.appUrl;
 
     if (!url) {
         return "APP_URL ist in der .env nicht gesetzt – Abmeldelinks würden auf localhost zeigen.";
@@ -161,15 +185,15 @@ function publicAppUrlProblem(env = process.env) {
     try {
         parsed = new URL(url);
     } catch {
-        return `APP_URL „${url}“ ist keine gültige Adresse.`;
+        return `${name} „${url}“ ist keine gültige Adresse.`;
     }
 
     if (!/^https?:$/.test(parsed.protocol)) {
-        return `APP_URL „${url}“ muss mit https:// beginnen.`;
+        return `${name} „${url}“ muss mit https:// beginnen.`;
     }
 
     if (isPrivateHost(parsed.hostname)) {
-        return `APP_URL zeigt auf ${parsed.hostname} – diese Adresse können Kunden aus dem Internet nicht öffnen, die Abmeldelinks würden nicht funktionieren.`;
+        return `${name} zeigt auf ${parsed.hostname} – diese Adresse können Kunden aus dem Internet nicht öffnen, die Abmeldelinks würden nicht funktionieren.`;
     }
 
     return null;
@@ -485,6 +509,7 @@ module.exports = {
     configFromEnv,
     isConfigured,
     appUrl,
+    portalUrl,
     isPrivateHost,
     publicAppUrlProblem,
     withLogo,

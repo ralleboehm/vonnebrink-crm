@@ -323,6 +323,11 @@ function buildContext(overrides = {}) {
             return require("./email.service").appUrl(path);
         },
 
+        // Links für Kunden (PORTAL_URL, sonst APP_URL)
+        portalUrl(path = "") {
+            return require("./email.service").portalUrl(path);
+        },
+
         log(...args) {
             console.log("🔔", ...args);
         },

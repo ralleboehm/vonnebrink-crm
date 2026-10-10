@@ -123,7 +123,7 @@ async function createForTicket(ticket, now = new Date()) {
  */
 function links(survey) {
 
-    const base = emailService().appUrl(`/email/umfrage/${survey.token}`);
+    const base = emailService().portalUrl(`/email/umfrage/${survey.token}`);
     const result = { url: base };
 
     for (let score = 0; score <= 10; score++) {
