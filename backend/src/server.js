@@ -25,6 +25,9 @@ async function startServer() {
             console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             integrations.startAll();
 
+            // Erinnerungen an Kündigungsfristen (Glocke + Mail an Admin und Vertrieb)
+            require("./services/contractReminder.service").start();
+
             // Kampagnen, deren Versand ein Neustart unterbrochen hat
             require("./services/campaign.service").resumeInterrupted()
                 .catch((err) => console.error("❌ Kampagnen-Versand nicht fortgesetzt:", err.message));

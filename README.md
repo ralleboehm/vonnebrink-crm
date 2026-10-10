@@ -236,6 +236,7 @@ die globale Suche findet Assets auch über Seriennummer, IP und Benutzer, und
 | `portal-welcome` | Kunde | Portalzugang angelegt (mit Haken) |
 | `password-reset` | Kunde | Passwort zurückgesetzt (mit Haken) |
 | `marketing-confirm` | Kunde | Double-Opt-In angefordert |
+| `contract-reminder` | Admins, Vertrieb | Kündigungsfrist bzw. Vertragsende in 60/30/7 Tagen |
 - **E-Mail-Protokoll** (Benutzermenü → E-Mail-Protokoll, nur Admins): jede Vorlagen-Mail mit
   Ergebnis (verschickt / fehlgeschlagen mit Grund / nicht verschickt), Verbindungstest und
   Test-Mail an sich selbst. Einträge werden nach 180 Tagen gelöscht.
@@ -410,6 +411,12 @@ Menü **Kunden → Verträge** (`/crm/contracts`), außerdem eine Karte auf jede
   ein Vertrag ohne Verlängerung abgelaufen ist.
 - **Status** per Knopf weiterschalten (Entwurf → Versendet → Gelesen/Signiert → Aktiv → Gekündigt).
 - **Vertragsdokumente** direkt auf der Vertragsseite hochladen (Nextcloud, `Contracts/`).
+- **Erinnerungen:** 60, 30 und 7 Tage vor der Kündigungsfrist (ohne Kündigungsfrist: vor dem
+  Vertragsende) bekommen **nur Admins und Vertrieb** eine Glocke und eine E-Mail (Vorlage
+  `contract-reminder`). Gilt für signierte und aktive Verträge, jede Stufe genau einmal; nach einer
+  automatischen Verlängerung beginnt es für die neue Frist von vorn. Geprüft wird zwei Minuten nach
+  dem Start und danach alle 6 Stunden. Stufen ändern oder abschalten: `CONTRACT_REMINDER_DAYS=60,30,7`
+  bzw. `CONTRACT_REMINDER_DAYS=aus` in der `.env`.
 - Regeln und Fristen: `utils/contractRules.js`, Fachlogik: `services/contract.service.js`.
 
 ## Rollen

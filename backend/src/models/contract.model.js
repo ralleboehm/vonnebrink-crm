@@ -30,6 +30,9 @@ const contractSchema = new mongoose.Schema(
         renewalDate: { type: Date, default: null },
 
         version: { type: Number, min: 1, default: 1 },
+
+        // Bereits verschickte Erinnerungen ("notice:2026-09-30:30") – keine doppelten Meldungen
+        reminders: [{ _id: false, key: { type: String, maxlength: 60 }, sentAt: { type: Date } }],
         notes: { type: String, trim: true, maxlength: 5000, default: "" },
 
         isDeleted: { type: Boolean, default: false }

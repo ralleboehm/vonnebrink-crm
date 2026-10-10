@@ -802,6 +802,50 @@ test("Smoke-Test: CRM und Kundenportal", { skip: !ENABLED && "nur mit npm run te
         assertPage(await sales.get(`/crm/contracts/${contract._id}/edit`), "Vertrieb bearbeiten");
         assert.equal((await sales.post(`/crm/contracts/${contract._id}/delete`, {})).status, 403);
 
+        // Erinnerung: Kündigungsfrist in ~3 Wochen → Glocke + Mail an Admin und Vertrieb, nicht an Techniker
+        const reminderService = require("../src/services/contractReminder.service");
+        const emailService = require("../src/services/email.service");
+        const salesUser = await User.findOne({ username: "smoke-sales" });
+
+        const soon = await Contract.create({
+            title: "Firewall-Wartung",
+            contractNumber: "VTR-900077",
+            company: company._id,
+            status: "active",
+            endDate: new Date(Date.now() + 50 * 86400000),
+            noticePeriodMonths: 1,
+            renewalMonths: 12
+        });
+
+        await emailService.flush();
+        const mailsBefore = new Date();
+        const bellBefore = async (user) => Notification.countDocuments({ user: user._id, event: "contract.noticeDue" });
+        const [adminBefore, salesBefore, techBefore] = [await bellBefore(admin), await bellBefore(salesUser), await bellBefore(technician)];
+
+        const firstRun = await reminderService.run(new Date());
+        assert.ok(firstRun.sent.some((s) => s.contract === "VTR-900077"), "Erinnerung verschickt");
+        assert.equal(await bellBefore(admin), adminBefore + 1, "Admin: Glocke");
+        assert.equal(await bellBefore(salesUser), salesBefore + 1, "Vertrieb: Glocke");
+        assert.equal(await bellBefore(technician), techBefore, "Techniker: keine Glocke");
+
+        const note = await Notification.findOne({ user: admin._id, event: "contract.noticeDue" }).sort({ createdAt: -1 });
+        assert.match(note.title, /^Kündigungsfrist in \d+ Tagen – VTR-900077 Firewall-Wartung$/);
+        assert.equal(note.link, `/crm/contracts/${soon._id}`);
+
+        await emailService.flush();
+        const reminderMails = await EmailLog.find({ template: "contract-reminder", createdAt: { $gte: mailsBefore } }).lean();
+        const recipients = reminderMails.flatMap((m) => m.to).sort();
+        assert.deepEqual(recipients, ["admin@smoke.test", "sales@smoke.test"], "Mail nur an Admin und Vertrieb");
+
+        // Zweiter Lauf: nichts doppelt
+        const secondRun = await reminderService.run(new Date());
+        assert.equal(secondRun.sent.some((s) => s.contract === "VTR-900077"), false, "keine doppelte Erinnerung");
+        assert.equal(await bellBefore(admin), adminBefore + 1);
+        assert.equal((await Contract.findById(soon._id)).reminders.length, 1);
+
+        // Abgeschaltet
+        assert.deepEqual((await reminderService.run(new Date(), { CONTRACT_REMINDER_DAYS: "aus" })).sent, []);
+
         // Löschen (Admin)
         assert.equal((await crm.get("/crm/contracts/kaputt")).status, 404);
         assertRedirect(await crm.post(`/crm/contracts/${contract._id}/delete`, {}), "Vertrag löschen", "/crm/contracts");

@@ -241,3 +241,39 @@ test("Verträge: Statuswechsel per Knopf nur in erlaubter Reihenfolge", () => {
     assert.equal(contracts.currentPeriod({ status: "draft", endDate: new Date("2020-12-31T00:00:00Z") }, new Date("2026-10-10")).expired, false, "Entwurf ist nie abgelaufen");
 
 });
+
+test("Verträge: Erinnerungsstufen 60/30/7 Tage, jede nur einmal", () => {
+
+    const contracts = require("../src/utils/contractRules");
+
+    const contract = { status: "active", endDate: new Date("2026-12-31T00:00:00Z"), noticePeriodMonths: 2, renewalMonths: 12, reminders: [] };
+    const at = (iso) => contracts.reminderFor(contract, new Date(iso));
+
+    // Kündigung bis 31.10.2026
+    assert.equal(at("2026-08-01T10:00:00Z"), null, "zu früh (91 Tage)");
+    assert.equal(at("2026-09-01T10:00:00Z").stage, 60);
+    assert.equal(at("2026-10-10T10:00:00Z").stage, 30, "60 verpasst → nur 30, nicht beides");
+    assert.equal(at("2026-10-28T10:00:00Z").stage, 7);
+    assert.equal(at("2026-10-31T23:00:00Z").daysLeft, 0, "am Tag der Frist");
+    assert.equal(at("2026-11-01T10:00:00Z"), null, "Frist vorbei – nächste Periode erst später");
+
+    const thirty = at("2026-10-10T10:00:00Z");
+    assert.equal(thirty.key, "notice:2026-10-31:30");
+    assert.equal(thirty.kind, "notice");
+    assert.equal(contracts.reminderFor({ ...contract, reminders: [{ key: thirty.key }] }, new Date("2026-10-12T10:00:00Z")), null, "schon gemeldet");
+
+    // Nach der automatischen Verlängerung: neue Frist, neue Meldungen
+    assert.equal(at("2027-09-01T10:00:00Z").key, "notice:2027-10-31:60");
+
+    // Ohne Kündigungsfrist: Vertragsende; Entwurf/gekündigt: nie
+    assert.equal(contracts.reminderFor({ status: "active", endDate: new Date("2026-11-15T00:00:00Z") }, new Date("2026-11-01T10:00:00Z")).kind, "end");
+    assert.equal(contracts.reminderFor({ ...contract, status: "draft" }, new Date("2026-10-10T10:00:00Z")), null);
+    assert.equal(contracts.reminderFor({ ...contract, status: "terminated" }, new Date("2026-10-10T10:00:00Z")), null);
+    assert.equal(contracts.reminderFor({ status: "active" }, new Date()), null, "unbefristet ohne Frist");
+    assert.equal(contracts.reminderFor(contract, new Date("2026-10-10T10:00:00Z"), []), null, "abgeschaltet");
+
+    assert.deepEqual(contracts.reminderDays("30, 7;90"), [7, 30, 90]);
+    assert.deepEqual(contracts.reminderDays("aus"), []);
+    assert.deepEqual(contracts.reminderDays(""), [7, 30, 60]);
+
+});

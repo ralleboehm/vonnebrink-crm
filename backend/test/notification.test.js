@@ -78,11 +78,12 @@ test("Vorlagen: Kopf mit Betreff wird erkannt", () => {
 
 });
 
-test("Vorlagen: alle neun Vorlagen lassen sich rendern", async () => {
+test("Vorlagen: alle Vorlagen lassen sich rendern", async () => {
 
     const names = await templates.list();
 
     assert.deepEqual(names, [
+        "contract-reminder",
         "marketing-confirm",
         "password-reset",
         "portal-welcome",
@@ -620,5 +621,56 @@ test("E-Mail: Hintergrundversand versucht es zweimal und meldet das Ende", async
     // Ohne Datenbankverbindung schreibt das Protokoll nichts – hier geht es um den Ablauf
     assert.equal(email.MAX_ATTEMPTS, 2);
     assert.equal(typeof email.sendTestEmail, "function");
+
+});
+
+test("Vertrag: Kündigungsfrist naht → Glocke und Mail nur an Admin und Vertrieb", async () => {
+
+    const { contractNoticeDue, inDays } = require("../src/services/notification/handlers/contract.handlers");
+
+    const staff = [
+        { _id: "u1", firstName: "Ralf", email: "ralf@vonnebrink.com", role: "admin" },
+        { _id: "u3", firstName: "Vera", email: "", role: "sales" }
+    ];
+
+    let asked = 0;
+    const { ctx, calls } = fakeContext({ getContractStaff: async () => { asked++; return staff; } });
+
+    const contract = { _id: "k1", contractNumber: "VTR-000001", title: "Managed Services", company: { companyName: "Holz Müller GmbH" } };
+    const reminder = { key: "notice:2026-10-31:30", kind: "notice", deadline: new Date("2026-10-31T00:00:00Z"), daysLeft: 21, stage: 30, renewalDate: new Date("2027-01-01T00:00:00Z"), endDate: new Date("2026-12-31T00:00:00Z") };
+
+    const result = await contractNoticeDue({ contract, reminder }, ctx);
+
+    assert.equal(asked, 1, "Empfänger: getContractStaff (Admin + Vertrieb)");
+    assert.deepEqual(result, { contract: "VTR-000001", notified: 2, emails: 1, key: "notice:2026-10-31:30" });
+    assert.deepEqual(calls.notifications[0].ids, ["u1", "u3"]);
+
+    const note = calls.notifications[0].data;
+    assert.equal(note.title, "Kündigungsfrist in 21 Tagen – VTR-000001 Managed Services");
+    assert.match(note.message, /^Holz Müller GmbH: Ohne Kündigung bis 31\.10\.2026 verlängert er sich am 1\.1\.2027 automatisch\./);
+    assert.equal(note.type, "warning");
+    assert.equal(note.link, "/crm/contracts/k1");
+
+    assert.equal(calls.emails.length, 1, "nur mit E-Mail-Adresse");
+    assert.equal(calls.emails[0].template, "contract-reminder");
+    assert.equal(calls.emails[0].to, "ralf@vonnebrink.com");
+    assert.equal(calls.emails[0].data.contractLink, "https://crm.example.de/crm/contracts/k1");
+
+    // Vertragsende ohne Kündigungsfrist, kurz vorher → dringend
+    const end = await contractNoticeDue({ contract, reminder: { ...reminder, kind: "end", daysLeft: 1, renewalDate: null } }, fakeContext({ getContractStaff: async () => staff }).ctx);
+    assert.equal(end.notified, 2);
+
+    const second = fakeContext({ getContractStaff: async () => staff });
+    await contractNoticeDue({ contract, reminder: { ...reminder, kind: "end", daysLeft: 1 } }, second.ctx);
+    assert.equal(second.calls.notifications[0].data.title, "Vertrag endet morgen – VTR-000001 Managed Services");
+    assert.equal(second.calls.notifications[0].data.type, "danger");
+
+    assert.equal(inDays(0), "heute");
+
+    // Niemand da: kein Fehler
+    const none = fakeContext({ getContractStaff: async () => [] });
+    assert.deepEqual(await contractNoticeDue({ contract, reminder }, none.ctx), { contract: "VTR-000001", notified: 0, emails: 0, key: reminder.key });
+
+    await assert.rejects(contractNoticeDue({}, ctx), /ohne Vertrag/);
 
 });

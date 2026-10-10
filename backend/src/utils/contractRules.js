@@ -199,6 +199,62 @@ function currentPeriod(contract = {}, now = new Date()) {
 
 }
 
+// Erinnerungen so viele Tage vor der Kündigungsfrist (bzw. dem Vertragsende)
+const DEFAULT_REMINDER_DAYS = [60, 30, 7];
+
+/**
+ * Erinnerungsstufen aus der .env: "60,30,7" → [7, 30, 60]; "0"/"aus" → []
+ */
+function reminderDays(value) {
+
+    if (value === undefined || value === null || String(value).trim() === "") return [...DEFAULT_REMINDER_DAYS].sort((a, b) => a - b);
+
+    const text = String(value).trim().toLowerCase();
+
+    if (["0", "aus", "off", "nein", "false"].includes(text)) return [];
+
+    const days = text.split(/[,;\s]+/).map(Number).filter((n) => Number.isInteger(n) && n > 0 && n <= 365);
+
+    return [...new Set(days)].sort((a, b) => a - b);
+
+}
+
+/**
+ * Ist jetzt eine Erinnerung fällig?
+ *
+ * Bezug ist die Kündigungsfrist der laufenden Periode, ohne Kündigungsfrist
+ * das Vertragsende. Gemeldet wird die kleinste Stufe, die erreicht ist –
+ * eine verpasste 60-Tage-Meldung führt also nicht zu zwei Mails auf einmal.
+ *
+ * @returns {{key, kind: "notice"|"end", deadline: Date, daysLeft: number, stage: number}|null}
+ */
+function reminderFor(contract, now = new Date(), stages = DEFAULT_REMINDER_DAYS) {
+
+    if (!contract || !["signed", "active"].includes(contract.status) || !stages.length) return null;
+
+    const period = currentPeriod(contract, now);
+    const deadline = period.noticeDeadline || period.endDate;
+
+    if (!deadline) return null;
+
+    const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    const daysLeft = Math.round((deadline.getTime() - today) / (24 * 60 * 60 * 1000));
+
+    if (daysLeft < 0) return null;
+
+    const stage = [...stages].sort((a, b) => a - b).find((s) => daysLeft <= s);
+
+    if (!stage) return null;
+
+    const kind = period.noticeDeadline ? "notice" : "end";
+    const key = `${kind}:${deadline.toISOString().slice(0, 10)}:${stage}`;
+
+    if ((contract.reminders || []).some((r) => r.key === key)) return null;
+
+    return { key, kind, deadline, daysLeft, stage, renewalDate: period.renewalDate, endDate: period.endDate };
+
+}
+
 /**
  * Zahl aus dem Formular: "" → null, sonst ganze Zahl ≥ 0 (NaN bei Unsinn)
  */
@@ -269,6 +325,9 @@ module.exports = {
     deadlines,
     noticeDue,
     currentPeriod,
+    DEFAULT_REMINDER_DAYS,
+    reminderDays,
+    reminderFor,
     parseMonths,
     parseDate,
     validate

@@ -240,6 +240,18 @@ async function getPage(userId, options = {}) {
 /**
  * Aktive Support-Mitarbeiter (Admins und Techniker)
  */
+// Wer bekommt Vertragserinnerungen? Admins und Vertrieb.
+const CONTRACT_ROLES = ["admin", "sales"];
+
+async function getContractStaff() {
+
+    return User.find(
+        { active: true, role: { $in: CONTRACT_ROLES } },
+        "firstName lastName email role"
+    ).lean();
+
+}
+
 async function getSupportStaff() {
 
     return User.find(
@@ -277,6 +289,7 @@ function buildContext(overrides = {}) {
         notifyUser,
         notifyUsers,
         getSupportStaff,
+        getContractStaff,
 
         // Ticket mit Firma, Kontakt und Bearbeiter laden
         loadTicket(id) {

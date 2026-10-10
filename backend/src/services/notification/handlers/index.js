@@ -10,3 +10,4 @@
 
 require("./ticket.handlers");
 require("./portal.handlers");
+require("./contract.handlers");

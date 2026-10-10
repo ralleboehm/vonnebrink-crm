@@ -37,6 +37,9 @@ const EVENTS = Object.freeze({
     QUOTE_CREATED: "quote.created",
     INVOICE_CREATED: "invoice.created",
 
+    // Verträge – Nutzlast: { contract, reminder: { kind, deadline, daysLeft, stage } }
+    CONTRACT_NOTICE_DUE: "contract.noticeDue",
+
     // Dokumente (Nextcloud) – Nutzlast: { document, user, … }
     DOCUMENT_UPLOADED: "document.uploaded",
     DOCUMENT_DOWNLOADED: "document.downloaded",
